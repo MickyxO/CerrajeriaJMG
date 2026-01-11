@@ -12,7 +12,6 @@ const ventaRoutes = require("./routes/venta/venta.routes");
 const combosRoutes = require("./routes/combos/combos.routes");
 const cajaRoutes = require("./routes/caja/caja.routes");
 
-
 const app = express();
 app.use(cors());
 app.use(express.json());

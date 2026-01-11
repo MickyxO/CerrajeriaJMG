@@ -8,14 +8,50 @@ const VentaController = require("../../controllers/venta/venta.controller");
  *   get:
  *     tags:
  *       - Venta
- *     summary: Obtener todas las ventas
+ *     summary: "Obtener lista de ventas (por defecto: hoy)"
+ *     parameters:
+ *       - in: query
+ *         name: fechaInicio
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: fechaFin
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
  *     responses:
  *       200:
  *         description: Lista de ventas
  *       500:
- *         description: Error interno del servidor
+ *         description: Error interno
  */
 router.get("/getventas", VentaController.getAll);
+
+/**
+ * @swagger
+ * /getventa/{id}:
+ *   get:
+ *     tags:
+ *       - Venta
+ *     summary: Obtener el detalle de una venta por ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Detalle de la venta
+ *       404:
+ *         description: Venta no encontrada
+ *       500:
+ *         description: Error interno
+ */
+router.get("/getventa/:id", VentaController.getById);
 
 /**
  * @swagger
@@ -30,12 +66,14 @@ router.get("/getventas", VentaController.getAll);
  *         required: true
  *         schema:
  *           type: string
- *         description: Texto parcial para buscar ventas por nombre de cliente
+ *         description: Texto parcial para filtrar por nombre_cliente
  *     responses:
  *       200:
  *         description: Lista de ventas coincidentes
+ *       400:
+ *         description: Falta el parámetro q
  *       500:
- *         description: Error interno del servidor
+ *         description: Error interno
  */
 router.get("/buscarventacliente", VentaController.getByClienteName);
 
@@ -45,7 +83,7 @@ router.get("/buscarventacliente", VentaController.getByClienteName);
  *   get:
  *     tags:
  *       - Venta
- *     summary: Buscar ventas por fecha
+ *     summary: Buscar ventas por fecha específica
  *     parameters:
  *       - in: query
  *         name: fecha
@@ -56,9 +94,11 @@ router.get("/buscarventacliente", VentaController.getByClienteName);
  *         description: Fecha de la venta (YYYY-MM-DD)
  *     responses:
  *       200:
- *         description: Lista de ventas en la fecha indicada
+ *         description: Lista de ventas en esa fecha
+ *       400:
+ *         description: Falta el parámetro fecha
  *       500:
- *         description: Error interno del servidor
+ *         description: Error interno
  */
 router.get("/buscarventafecha", VentaController.getByFecha);
 
@@ -68,7 +108,7 @@ router.get("/buscarventafecha", VentaController.getByFecha);
  *   post:
  *     tags:
  *       - Venta
- *     summary: Registrar una nueva venta
+ *     summary: Crear una venta (cabecera + detalle) desde un carrito
  *     requestBody:
  *       required: true
  *       content:
@@ -76,27 +116,43 @@ router.get("/buscarventafecha", VentaController.getByFecha);
  *           schema:
  *             type: object
  *             properties:
- *               FechaVenta:
- *                 type: string
- *                 format: date
- *               IdCliente:
- *                 type: integer
- *               TotalVenta:
- *                 type: number
- *               MetodoPago:
- *                 type: string
+ *               datosVenta:
+ *                 type: object
+ *                 properties:
+ *                   idUsuario:
+ *                     type: integer
+ *                   total:
+ *                     type: number
+ *                   metodoPago:
+ *                     type: string
+ *                   nombreCliente:
+ *                     type: string
+ *                   notas:
+ *                     type: string
+ *               carrito:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     tipo:
+ *                       type: string
+ *                       description: ITEM o COMBO
+ *                     id:
+ *                       type: integer
+ *                     cantidad:
+ *                       type: integer
+ *                     precio:
+ *                       type: number
  *             example:
- *               FechaVenta: "2024-06-01"
- *               IdCliente: 1
- *               TotalVenta: 1500.50
- *               MetodoPago: "Efectivo"
+ *               datosVenta: {"idUsuario": 1, "total": 600.00, "metodoPago": "Efectivo", "nombreCliente": "Mostrador", "notas": ""}
+ *               carrito: [{"tipo": "ITEM", "id": 1, "cantidad": 1, "precio": 600.00}]
  *     responses:
  *       201:
- *         description: Venta registrada exitosamente
+ *         description: Venta creada exitosamente
  *       400:
- *         description: Error de validación
+ *         description: Error de validación / reglas de negocio
  *       500:
- *         description: Error interno del servidor
+ *         description: Error interno
  */
 router.post("/postventa", VentaController.create);
 
@@ -106,14 +162,13 @@ router.post("/postventa", VentaController.create);
  *   put:
  *     tags:
  *       - Venta
- *     summary: Actualizar una venta existente
+ *     summary: Actualizar metadatos de la venta (NombreCliente/Notas)
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID de la venta a actualizar
  *     requestBody:
  *       required: true
  *       content:
@@ -121,27 +176,20 @@ router.post("/postventa", VentaController.create);
  *           schema:
  *             type: object
  *             properties:
- *               FechaVenta:
+ *               NombreCliente:
  *                 type: string
- *                 format: date
- *               IdCliente:
- *                 type: integer
- *               TotalVenta:
- *                 type: number
- *               MetodoPago:
+ *               Notas:
  *                 type: string
  *             example:
- *               FechaVenta: "2024-06-02"
- *               IdCliente: 2
- *               TotalVenta: 2000.00
- *               MetodoPago: "Tarjeta"
+ *               NombreCliente: "Cliente X"
+ *               Notas: "Nota"
  *     responses:
  *       200:
- *         description: Venta actualizada exitosamente
+ *         description: Venta actualizada
  *       400:
  *         description: Error de validación
  *       500:
- *         description: Error interno del servidor
+ *         description: Error interno
  */
 router.put("/putventa/:id", VentaController.update);
 
@@ -158,14 +206,13 @@ router.put("/putventa/:id", VentaController.update);
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID de la venta a eliminar
  *     responses:
  *       200:
- *         description: Venta eliminada exitosamente
+ *         description: Eliminada correctamente
  *       400:
  *         description: No se puede eliminar
  *       500:
- *         description: Error interno del servidor
+ *         description: Error interno
  */
 router.delete("/deleteventa/:id", VentaController.delete);
 

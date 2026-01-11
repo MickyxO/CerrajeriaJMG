@@ -4,26 +4,26 @@ const ItemsController = require("../../controllers/items/items.controller");
 
 /**
  * @swagger
- * /getproductos:
+ * /getitems:
  *   get:
  *     tags:
- *       - Producto
- *     summary: Obtener todos los productos
+ *       - Items
+ *     summary: Obtener todos los items activos
  *     responses:
  *       200:
- *         description: Lista de productos
+ *         description: Lista de items
  *       500:
  *         description: Error interno del servidor
  */
-router.get("/getproductos", ItemsController.getAll);
+router.get("/getitems", ItemsController.getAll);
 
 /**
  * @swagger
- * /getproductos/categoria/{idCategoria}:
+ * /getitems/categoria/{idCategoria}:
  *   get:
  *     tags:
- *       - Producto
- *     summary: Obtener productos por ID de categoría
+ *       - Items
+ *     summary: Obtener items por ID de categoría
  *     parameters:
  *       - in: path
  *         name: idCategoria
@@ -33,63 +33,63 @@ router.get("/getproductos", ItemsController.getAll);
  *         description: ID de la categoría
  *     responses:
  *       200:
- *         description: Lista de productos de la categoría
+ *         description: Lista de items de la categoría
  *       500:
  *         description: Error interno del servidor
  */
-router.get("/getproductos/categoria/:idCategoria", ItemsController.getByCategoria);
+router.get("/getitems/categoria/:idCategoria", ItemsController.getByCategoria);
 
 /**
  * @swagger
- * /getproductos/marca/{idMarca}:
+ * /getitems/marca/{marca}:
  *   get:
  *     tags:
- *       - Producto
- *     summary: Obtener productos por ID de marca
+ *       - Items
+ *     summary: Obtener items por coincidencia de marca (compatibilidad_marca)
  *     parameters:
  *       - in: path
- *         name: idMarca
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID de la marca
- *     responses:
- *       200:
- *         description: Lista de productos de la marca
- *       500:
- *         description: Error interno del servidor
- */
-router.get("/getproductos/marca/:idMarca", ItemsController.getByMarca);
-
-/**
- * @swagger
- * /buscarproducto:
- *   get:
- *     tags:
- *       - Producto
- *     summary: Buscar productos por coincidencia parcial de nombre
- *     parameters:
- *       - in: query
- *         name: q
+ *         name: marca
  *         required: true
  *         schema:
  *           type: string
- *         description: Texto parcial para buscar productos
+ *         description: Texto o fragmento de marca para buscar en compatibilidad_marca
  *     responses:
  *       200:
- *         description: Lista de productos coincidentes
+ *         description: Lista de items coincidentes
  *       500:
  *         description: Error interno del servidor
  */
-router.get("/buscarproducto", ItemsController.searchByNombre);
+router.get("/getitems/marca/:marca", ItemsController.getByMarca);
 
 /**
  * @swagger
- * /postproducto:
+ * /buscaritems:
+ *   get:
+ *     tags:
+ *       - Items
+ *     summary: Buscar items por coincidencia parcial de nombre
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Texto parcial para buscar items
+ *     responses:
+ *       200:
+ *         description: Lista de items coincidentes
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get("/buscaritems", ItemsController.searchByNombre);
+
+/**
+ * @swagger
+ * /postitem:
  *   post:
  *     tags:
- *       - Producto
- *     summary: Crear un nuevo producto
+ *       - Items
+ *     summary: Crear un nuevo item
  *     requestBody:
  *       required: true
  *       content:
@@ -103,43 +103,62 @@ router.get("/buscarproducto", ItemsController.searchByNombre);
  *                 type: string
  *               IdCategoria:
  *                 type: integer
- *               Activo:
- *                 type: boolean
  *               PrecioVenta:
  *                 type: number
- *               IdMarca:
+ *               CostoReferencia:
+ *                 type: number
+ *                 nullable: true
+ *               EsServicio:
+ *                 type: boolean
+ *               StockActual:
+ *                type: integer
+ *               StockMinimo:
  *                 type: integer
+ *               CompatibilidadMarca:
+ *                 type: string
+ *                 nullable: true
+ *               TipoChip:
+ *                 type: string
+ *                 nullable: true
+ *               Frecuencia:
+ *                 type: string
+ *                 nullable: true
  *             example:
- *               Nombre: "Producto Ejemplo"
- *               Descripcion: "Descripción del producto"
+ *               Nombre: "Item Ejemplo"
+ *               Descripcion: "Descripción del item"
  *               IdCategoria: 1
- *               Activo: true
  *               PrecioVenta: 100.50
- *               IdMarca: 2
+ *               CostoReferencia: 80.00
+ *               EsServicio: false
+ *               StockActual: 10
+ *               StockMinimo: 2
+ *               CompatibilidadMarca: "Volkswagen"
+ *               TipoChip: "ID48"
+ *               Frecuencia: "433MHz"
  *     responses:
  *       201:
- *         description: Producto creado exitosamente
+ *         description: Item creado exitosamente
  *       400:
  *         description: Error de validación
  *       500:
  *         description: Error interno del servidor
  */
-router.post("/postproducto", ItemsController.create);
+router.post("/postitem", ItemsController.create);
 
 /**
  * @swagger
- * /putproducto/{id}:
+ * /putitem/{id}:
  *   put:
  *     tags:
- *       - Producto
- *     summary: Actualizar un producto existente
+ *       - Items
+ *     summary: Actualizar un item existente
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID del producto a actualizar
+ *         description: ID del item a actualizar
  *     requestBody:
  *       required: true
  *       content:
@@ -153,51 +172,73 @@ router.post("/postproducto", ItemsController.create);
  *                 type: string
  *               IdCategoria:
  *                 type: integer
- *               Activo:
- *                 type: boolean
  *               PrecioVenta:
  *                 type: number
- *               IdMarca:
+ *               CostoReferencia:
+ *                 type: number
+ *                 nullable: true
+ *               EsServicio:
+ *                 type: boolean
+ *               StockActual:
  *                 type: integer
+ *               StockMinimo:
+ *                 type: integer
+ *               CompatibilidadMarca:
+ *                 type: string
+ *                 nullable: true
+ *               TipoChip:
+ *                 type: string
+ *                 nullable: true
+ *               Frecuencia:
+ *                 type: string
+ *                 nullable: true
+ *               Activo:
+ *                 type: boolean
  *             example:
- *               Nombre: "Producto Actualizado"
+ *               Nombre: "Item Actualizado"
  *               Descripcion: "Nueva descripción"
  *               IdCategoria: 2
- *               Activo: true
  *               PrecioVenta: 150.00
- *               IdMarca: 3
+ *               CostoReferencia: 120.00
+ *               EsServicio: false
+ *               StockActual: 10
+ *               StockMinimo: 2
+ *               CompatibilidadMarca: "Nissan"
+ *               TipoChip: "ID46"
+ *               Frecuencia: "315MHz"
+ *               Activo: true
  *     responses:
  *       200:
- *         description: Producto actualizado exitosamente
+ *         description: Item actualizado exitosamente
  *       400:
  *         description: Error de validación
  *       500:
  *         description: Error interno del servidor
  */
-router.put("/putproducto/:id", ItemsController.update);
+router.put("/putitem/:id", ItemsController.update);
 
 /**
  * @swagger
- * /deleteproducto/{id}:
+ * /deleteitem/{id}:
  *   delete:
  *     tags:
- *       - Producto
- *     summary: Eliminar un producto por ID
+ *       - Items
+ *     summary: Eliminar (desactivar) un item por ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID del producto a eliminar
+ *         description: ID del item a desactivar
  *     responses:
  *       200:
- *         description: Producto eliminado exitosamente
+ *         description: Item desactivado correctamente
  *       400:
  *         description: No se puede eliminar
  *       500:
  *         description: Error interno del servidor
  */
-router.delete("/deleteproducto/:id", ItemsController.delete);
+router.delete("/deleteitem/:id", ItemsController.delete);
 
 module.exports = router;

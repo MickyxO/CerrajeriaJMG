@@ -1,5 +1,5 @@
 const pool = require("../../config/db");
-const { Caja, MovimientoCaja } = require("../../models/caja/caja.models");
+const { Caja, MovimientoCaja } = require("../../models/caja/caja.model.js");
 
 class CajaService {
 

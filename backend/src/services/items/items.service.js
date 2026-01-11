@@ -115,7 +115,7 @@ class ItemsService {
     async createItem(datos) {
         const { 
             Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia,
-            EsServicio, StockMinimo, CompatibilidadMarca, TipoChip, Frecuencia 
+            EsServicio, StockActual, StockMinimo, CompatibilidadMarca, TipoChip, Frecuencia 
         } = datos;
 
         if (!Nombre || !IdCategoria || !PrecioVenta) {
@@ -129,14 +129,14 @@ class ItemsService {
             const query = `
                 INSERT INTO items (
                     nombre, descripcion, id_categoria, precio_venta, costo_referencia,
-                    es_servicio, stock_minimo, compatibilidad_marca, tipo_chip, frecuencia, stock_actual
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0)
+                    es_servicio, stock_actual, stock_minimo, compatibilidad_marca, tipo_chip, frecuencia
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 RETURNING id_item
             `;
             
             const values = [
                 Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia || 0,
-                EsServicio || false, StockMinimo || 2, CompatibilidadMarca, TipoChip, Frecuencia
+                EsServicio || false, StockActual || 10, StockMinimo || 2, CompatibilidadMarca, TipoChip, Frecuencia
             ];
 
             const { rows } = await pool.query(query, values);

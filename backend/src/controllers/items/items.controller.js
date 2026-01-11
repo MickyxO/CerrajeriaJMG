@@ -23,7 +23,7 @@ class ItemsController {
         try {
             // Nota: en BD es `compatibilidad_marca` (texto). La ruta usa :idMarca,
             // pero aquí se interpreta como nombre/fragmento de marca.
-            const marca = req.params.nombreMarca ?? req.params.idMarca;
+            const marca = req.params.marca ?? req.params.nombreMarca ?? req.params.idMarca;
             const items = await ItemsService.getItemsPorMarca(marca);
             res.status(200).json(items);
         } catch (err) {
