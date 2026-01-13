@@ -11,6 +11,7 @@ const itemsRoutes = require("./routes/items/items.routes");
 const ventaRoutes = require("./routes/venta/venta.routes");
 const combosRoutes = require("./routes/combos/combos.routes");
 const cajaRoutes = require("./routes/caja/caja.routes");
+const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
 
 const app = express();
 app.use(cors());
@@ -21,6 +22,7 @@ app.use("/", itemsRoutes);
 app.use("/", ventaRoutes);
 app.use("/", combosRoutes);
 app.use("/", cajaRoutes);
+app.use("/", usuariosRoutes);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(SwaggerSpeci));
 

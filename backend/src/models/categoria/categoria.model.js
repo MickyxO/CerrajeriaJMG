@@ -1,7 +1,8 @@
 class Categoria {
-    constructor(IdCategoria, NombreCategoria) {
+    constructor(IdCategoria, NombreCategoria, Clasificacion) {
         this.IdCategoria = IdCategoria;
         this.NombreCategoria = NombreCategoria;
+        this.Clasificacion = Clasificacion;
     }
 }
 

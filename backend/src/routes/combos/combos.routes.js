@@ -79,6 +79,53 @@ router.post("/postcombo", CombosController.create);
 
 /**
  * @swagger
+ * /putcombo/{id}:
+ *   put:
+ *     tags:
+ *       - Combos
+ *     summary: Actualizar un combo (nombre/precio/items)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               NombreCombo:
+ *                 type: string
+ *               PrecioSugerido:
+ *                 type: number
+ *                 nullable: true
+ *               Items:
+ *                 type: array
+ *                 description: Estado final del combo (reemplaza lista)
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     IdItem:
+ *                       type: integer
+ *                     Cantidad:
+ *                       type: integer
+ *             example:
+ *               NombreCombo: "Paquete Jetta 2010 (Actualizado)"
+ *               PrecioSugerido: 650.00
+ *               Items: [{"IdItem": 1, "Cantidad": 1}, {"IdItem": 5, "Cantidad": 2}]
+ *     responses:
+ *       200:
+ *         description: Combo actualizado
+ *       400:
+ *         description: Error de validación
+ */
+router.put("/putcombo/:id", CombosController.update);
+
+/**
+ * @swagger
  * /deletecombo/{id}:
  *   delete:
  *     tags:

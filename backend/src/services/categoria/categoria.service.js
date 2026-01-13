@@ -3,14 +3,16 @@ const Categoria = require("../../models/categoria/categoria.model");
 
 class CategoriaService {
 
+    _mapRowToModel(row) {
+        return new Categoria(row.id_categoria, row.nombre, row.clasificacion);
+    }
+
     async getAllCategoria() {
         try {
             const { rows } = await pool.query("SELECT * FROM categorias ORDER BY id_categoria ASC");
             
             // Mapeamos snake_case (BD) a PascalCase (Modelo)
-            return rows.map(
-                row => new Categoria(row.id_categoria, row.nombre)
-            );
+            return rows.map(row => this._mapRowToModel(row));
         } catch (err) {
             console.error("Error obteniendo categorias: ", err.message);
             throw err;
@@ -20,29 +22,42 @@ class CategoriaService {
     async getCategoriaNombre(NombreC) {
         try {
 
-            const { rows } = await pool.query("SELECT * FROM categorias WHERE nombre = $1", [NombreC]);
+            const termino = (NombreC || '').toString().trim();
+            if (!termino) return null;
+
+            // Búsqueda parcial (case-insensitive)
+            const { rows } = await pool.query(
+                "SELECT * FROM categorias WHERE nombre ILIKE $1 ORDER BY id_categoria ASC",
+                [`%${termino}%`]
+            );
             
             if (rows.length === 0) return null;
             
             // Si hay resultados, los mapeamos
-            return rows.map(
-                row => new Categoria(row.id_categoria, row.nombre)
-            );  
+            return rows.map(row => this._mapRowToModel(row));
         } catch (err) {
             console.error("Error obteniendo categorias por nombre: ", err.message);
             throw err;
         }
     }
 
-    async postCategoria(nombre) { 
+    async postCategoria(nombre, clasificacion) { 
         if (!nombre) {
             throw new Error("El nombre de la categoria es obligatorio.");
         }
         
         try {
             // INSERT con RETURNING para obtener el ID generado
-            const query = "INSERT INTO categorias (nombre) VALUES ($1) RETURNING id_categoria";
-            const { rows } = await pool.query(query, [nombre]);
+            // `clasificacion` en BD es NOT NULL, pero tiene DEFAULT. Si no mandan nada, usamos DEFAULT.
+            let query = "INSERT INTO categorias (nombre) VALUES ($1) RETURNING id_categoria";
+            let values = [nombre];
+
+            if (clasificacion !== undefined && clasificacion !== null && String(clasificacion).trim() !== '') {
+                query = "INSERT INTO categorias (nombre, clasificacion) VALUES ($1, $2) RETURNING id_categoria";
+                values = [nombre, clasificacion];
+            }
+
+            const { rows } = await pool.query(query, values);
             
             return rows[0].id_categoria;
         } catch (err) {
@@ -51,24 +66,65 @@ class CategoriaService {
         }
     }
 
-    async updateCategoria(id, cuerpo) {
-        // Simplificado: En la nueva BD solo podemos actualizar el nombre
-        if (!cuerpo.NombreCategoria || cuerpo.NombreCategoria === '') {
+    async getCategoryByClassification(clasificacion) {
+        try {
+            const termino = (clasificacion || '').toString().trim();
+            if (!termino) return null;
 
-             const error = new Error("El nombre es obligatorio para actualizar.");
-             error.status = 400;
-             throw error;
+            const { rows } = await pool.query(
+                "SELECT * FROM categorias WHERE clasificacion ILIKE $1 ORDER BY id_categoria ASC",
+                [`%${termino}%`]
+            );
+            return rows.map(row => this._mapRowToModel(row));
+        } catch (err) {
+            console.error("Error obteniendo categorias por clasificación: ", err.message);
+            throw err;
+        }
+    }
+
+    async updateCategoria(id, cuerpo) {
+        const nombre = cuerpo?.NombreCategoria ?? cuerpo?.nombreCategoria;
+        const clasificacion = cuerpo?.Clasificacion ?? cuerpo?.clasificacion;
+
+        const sets = [];
+        const values = [];
+        let idx = 1;
+
+        if (nombre !== undefined) {
+            if (String(nombre).trim() === '') {
+                const error = new Error("El nombre es obligatorio para actualizar.");
+                error.status = 400;
+                throw error;
+            }
+            sets.push(`nombre = $${idx++}`);
+            values.push(nombre);
+        }
+
+        if (clasificacion !== undefined) {
+            if (String(clasificacion).trim() === '') {
+                const error = new Error("La clasificación no puede ser vacía.");
+                error.status = 400;
+                throw error;
+            }
+            sets.push(`clasificacion = $${idx++}`);
+            values.push(clasificacion);
+        }
+
+        if (sets.length === 0) {
+            const error = new Error("No hay campos válidos para actualizar.");
+            error.status = 400;
+            throw error;
         }
 
         try {
-            const query = "UPDATE categorias SET nombre = $1 WHERE id_categoria = $2 RETURNING *";
-            const values = [cuerpo.NombreCategoria, id];
+            const query = `UPDATE categorias SET ${sets.join(", ")} WHERE id_categoria = $${idx} RETURNING *`;
+            values.push(id);
 
             const { rowCount, rows } = await pool.query(query, values);
             
             if (rowCount === 0) return null;
 
-            return new Categoria(rows[0].id_categoria, rows[0].nombre);
+            return this._mapRowToModel(rows[0]);
         } catch (err) {
             console.error("Error al actualizar la categoria: ", err.message);
             throw err;

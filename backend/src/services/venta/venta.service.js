@@ -49,6 +49,15 @@ class VentaService {
             }
 
             // ---------------------------------------------------------
+            // PASO A.1: NOTAS (Opción A)
+            // Si el frontend NO manda notas, las construimos durante el PASO D
+            // y luego actualizamos la venta (UPDATE) antes del COMMIT.
+            // ---------------------------------------------------------
+            const notasOriginal = (datosVenta.notas ?? "").toString().trim();
+            const autoNotas = !notasOriginal;
+            const partesNotas = [];
+
+            // ---------------------------------------------------------
             // PASO B: INSERTAR CABECERA DE VENTA
             // ---------------------------------------------------------
             const insertVentaQuery = `
@@ -61,7 +70,7 @@ class VentaService {
                 datosVenta.nombreCliente || 'Mostrador',
                 datosVenta.total,
                 datosVenta.metodoPago,
-                datosVenta.notas
+                notasOriginal || null
             ]);
             
             const idVenta = resVenta.rows[0].id_venta;
@@ -84,18 +93,29 @@ class VentaService {
                 // === CASO 1: ITEM INDIVIDUAL (Producto o Servicio suelto) ===
                 if (elemento.tipo === 'ITEM') {
                     const subtotal = elemento.cantidad * elemento.precio;
+
+                    // Snapshot del item para que cambios posteriores no alteren el historial
+                    const resItem = await client.query(
+                        "SELECT nombre, es_servicio FROM items WHERE id_item = $1",
+                        [elemento.id]
+                    );
+                    if (resItem.rows.length === 0) {
+                        throw new Error(`Item no encontrado (ID ${elemento.id}).`);
+                    }
+                    const { nombre: nombreItemSnapshot, es_servicio: esServicio } = resItem.rows[0];
+
+                    if (autoNotas) {
+                        partesNotas.push(`${elemento.cantidad}x ${nombreItemSnapshot}`);
+                    }
                     
                     // 1. Insertar Detalle
                     await client.query(
-                        `INSERT INTO detalle_ventas (id_venta, id_item, cantidad, precio_unitario, subtotal)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [idVenta, elemento.id, elemento.cantidad, elemento.precio, subtotal]
+                        `INSERT INTO detalle_ventas (id_venta, id_item, cantidad, precio_unitario, subtotal, nombre_item_snapshot)
+                         VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [idVenta, elemento.id, elemento.cantidad, elemento.precio, subtotal, nombreItemSnapshot]
                     );
 
                     // 2. Descontar Inventario (Si NO es servicio)
-                    const resItem = await client.query("SELECT es_servicio FROM items WHERE id_item = $1", [elemento.id]);
-                    const esServicio = resItem.rows[0]?.es_servicio;
-
                     if (!esServicio) {
                         await client.query(
                             "UPDATE items SET stock_actual = stock_actual - $1 WHERE id_item = $2",
@@ -111,10 +131,24 @@ class VentaService {
 
                 // === CASO 2: COMBO (Lógica "Hardware Intocable") ===
                 } else if (elemento.tipo === 'COMBO') {
+
+                    // Snapshot de cabecera del combo
+                    const resCombo = await client.query(
+                        "SELECT nombre_combo FROM combos WHERE id_combo = $1",
+                        [elemento.id]
+                    );
+                    if (resCombo.rows.length === 0) {
+                        throw new Error(`Combo no encontrado (ID ${elemento.id}).`);
+                    }
+                    const nombreComboSnapshot = resCombo.rows[0].nombre_combo;
+
+                    if (autoNotas) {
+                        partesNotas.push(`${elemento.cantidad}x ${nombreComboSnapshot}`);
+                    }
                     
                     // 1. Obtener receta del combo
                     const resReceta = await client.query(
-                        `SELECT ci.id_item, ci.cantidad_default, i.precio_venta, i.es_servicio
+                        `SELECT ci.id_item, ci.cantidad_default, i.precio_venta, i.es_servicio, i.nombre
                          FROM combo_items ci
                          JOIN items i ON ci.id_item = i.id_item
                          WHERE ci.id_combo = $1`,
@@ -145,9 +179,16 @@ class VentaService {
 
                             // Insertar
                             await client.query(
-                                `INSERT INTO detalle_ventas (id_venta, id_item, cantidad, precio_unitario, subtotal)
-                                 VALUES ($1, $2, $3, $4, $5)`,
-                                [idVenta, item.id_item, cantidadTotal, precioLista, subtotalFijo]
+                                `INSERT INTO detalle_ventas (
+                                    id_venta, id_item, cantidad, precio_unitario, subtotal,
+                                    nombre_item_snapshot,
+                                    id_combo, nombre_combo_snapshot, precio_combo_unitario_snapshot, combo_cantidad_snapshot
+                                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                                [
+                                    idVenta, item.id_item, cantidadTotal, precioLista, subtotalFijo,
+                                    item.nombre,
+                                    elemento.id, nombreComboSnapshot, elemento.precio, elemento.cantidad
+                                ]
                             );
 
                             // Inventario + Kardex
@@ -172,9 +213,16 @@ class VentaService {
                                 const subtotalVariable = precioServicioUnitario * cantidadTotal;
 
                                 await client.query(
-                                    `INSERT INTO detalle_ventas (id_venta, id_item, cantidad, precio_unitario, subtotal)
-                                     VALUES ($1, $2, $3, $4, $5)`,
-                                    [idVenta, srv.id_item, cantidadTotal, precioServicioUnitario, subtotalVariable]
+                                    `INSERT INTO detalle_ventas (
+                                        id_venta, id_item, cantidad, precio_unitario, subtotal,
+                                        nombre_item_snapshot,
+                                        id_combo, nombre_combo_snapshot, precio_combo_unitario_snapshot, combo_cantidad_snapshot
+                                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                                    [
+                                        idVenta, srv.id_item, cantidadTotal, precioServicioUnitario, subtotalVariable,
+                                        srv.nombre,
+                                        elemento.id, nombreComboSnapshot, elemento.precio, elemento.cantidad
+                                    ]
                                 );
                             }
                         } else {
@@ -185,6 +233,15 @@ class VentaService {
                         }
                     }
                 }
+            }
+
+            // Guardar notas autogeneradas (si aplica)
+            if (autoNotas) {
+                const notasGeneradas = partesNotas.join(", ");
+                await client.query(
+                    "UPDATE ventas SET notas = $1 WHERE id_venta = $2",
+                    [notasGeneradas, idVenta]
+                );
             }
 
             await client.query('COMMIT'); // --- CONFIRMAR TODO ---
@@ -251,9 +308,17 @@ class VentaService {
 
             // 2. Lista de Productos
             const itemsQuery = `
-                SELECT dv.cantidad, dv.precio_unitario, dv.subtotal, i.nombre as nombre_producto
+                SELECT 
+                    dv.cantidad,
+                    dv.precio_unitario,
+                    dv.subtotal,
+                    COALESCE(dv.nombre_item_snapshot, i.nombre) as nombre_producto,
+                    dv.id_combo,
+                    dv.nombre_combo_snapshot,
+                    dv.precio_combo_unitario_snapshot,
+                    dv.combo_cantidad_snapshot
                 FROM detalle_ventas dv
-                JOIN items i ON dv.id_item = i.id_item
+                LEFT JOIN items i ON dv.id_item = i.id_item
                 WHERE dv.id_venta = $1
             `;
             const resItems = await pool.query(itemsQuery, [idVenta]);
@@ -270,6 +335,53 @@ class VentaService {
 
         } catch (err) {
             console.error("Error obteniendo detalle venta: ", err.message);
+            throw err;
+        }
+    }
+
+    // En VentaService.js
+
+    async getVentasDetalladasDia() {
+        try {
+            const query = `
+                SELECT 
+                    v.id_venta, 
+                    v.fecha_venta, 
+                    v.nombre_cliente, 
+                    v.total, 
+                    v.metodo_pago,
+                    v.notas,
+                    u.nombre_completo as vendedor,
+                    -- Aquí ocurre la magia: Creamos un array de objetos JSON con los items
+                    COALESCE(
+                        json_agg(
+                            json_build_object(
+                                'nombre_producto', COALESCE(dv.nombre_item_snapshot, i.nombre),
+                                'cantidad', dv.cantidad,
+                                'precio_unitario', dv.precio_unitario,
+                                'subtotal', dv.subtotal,
+                                'id_combo', dv.id_combo,
+                                'nombre_combo', dv.nombre_combo_snapshot,
+                                'precio_combo_unitario', dv.precio_combo_unitario_snapshot,
+                                'combo_cantidad', dv.combo_cantidad_snapshot
+                            )
+                        ) FILTER (WHERE dv.id_detalle IS NOT NULL), 
+                        '[]'
+                    ) as items
+                FROM ventas v
+                JOIN usuarios u ON v.id_usuario = u.id_usuario
+                LEFT JOIN detalle_ventas dv ON v.id_venta = dv.id_venta
+                LEFT JOIN items i ON dv.id_item = i.id_item
+                WHERE DATE(v.fecha_venta) = CURRENT_DATE
+                GROUP BY v.id_venta, u.nombre_completo
+                ORDER BY v.fecha_venta DESC
+            `;
+
+            const res = await pool.query(query);
+            return res.rows;
+            
+        } catch (err) {
+            console.error("Error obteniendo ventas detalladas: ", err.message);
             throw err;
         }
     }

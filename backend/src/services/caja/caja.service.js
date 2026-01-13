@@ -137,34 +137,51 @@ async getMovimientosDelDia() {
             // Normalizamos los nombres de las columnas (ej: total ahora se llama monto)
             // para que coincidan en el resultado final.
             const query = `
-                (
-                    SELECT 
-                        v.id_venta as id_referencia,
-                        v.total as monto,
-                        v.metodo_pago,
-                        'Venta #' || v.id_venta as concepto, -- Generamos un concepto automático
-                        v.fecha_venta as fecha_hora,
-                        'ENTRADA' as tipo_movimiento,
-                        u.nombre_completo
-                    FROM ventas v
-                    INNER JOIN usuarios u ON v.id_usuario = u.id_usuario
-                    WHERE DATE(v.fecha_venta) = CURRENT_DATE
-                )
-                UNION ALL
-                (
-                    SELECT 
-                        m.id_movimiento as id_referencia,
-                        m.monto,
-                        m.metodo_pago,
-                        m.concepto,
-                        m.fecha_hora,
-                        m.tipo_movimiento,
-                        u.nombre_completo
-                    FROM movimientos_caja m
-                    INNER JOIN usuarios u ON m.id_usuario = u.id_usuario
-                    WHERE DATE(m.fecha_hora) = CURRENT_DATE
-                )
-                ORDER BY fecha_hora ASC
+                SELECT * FROM (
+                    (
+                        SELECT 
+                            v.id_venta as id_referencia,
+                            v.total as monto,
+                            v.metodo_pago,
+                            v.notas as concepto, 
+                            v.fecha_venta as fecha_hora,
+                            'ENTRADA' as tipo_movimiento,
+                            u.nombre_completo,
+                            COALESCE(
+                                json_agg(
+                                    json_build_object(
+                                        'nombre_producto', i.nombre,
+                                        'cantidad', dv.cantidad,
+                                        'precio_unitario', dv.precio_unitario,
+                                        'subtotal', dv.subtotal
+                                    )
+                                ) FILTER (WHERE dv.id_detalle IS NOT NULL),
+                                '[]'::json
+                            ) as items
+                        FROM ventas v
+                        INNER JOIN usuarios u ON v.id_usuario = u.id_usuario
+                        LEFT JOIN detalle_ventas dv ON v.id_venta = dv.id_venta
+                        LEFT JOIN items i ON dv.id_item = i.id_item
+                        WHERE DATE(v.fecha_venta) = CURRENT_DATE
+                        GROUP BY v.id_venta, u.nombre_completo
+                    )
+                    UNION ALL
+                    (
+                        SELECT 
+                            m.id_movimiento as id_referencia,
+                            m.monto,
+                            m.metodo_pago,
+                            m.concepto,
+                            m.fecha_hora,
+                            m.tipo_movimiento,
+                            u.nombre_completo,
+                            '[]'::json as items
+                        FROM movimientos_caja m
+                        INNER JOIN usuarios u ON m.id_usuario = u.id_usuario
+                        WHERE DATE(m.fecha_hora) = CURRENT_DATE
+                    )
+                ) t
+                ORDER BY t.fecha_hora ASC
             `;
 
             const { rows } = await pool.query(query);
@@ -177,7 +194,8 @@ async getMovimientosDelDia() {
                 concepto: row.concepto,
                 fechaHora: row.fecha_hora,
                 tipo: row.tipo_movimiento,     // 'ENTRADA' o 'SALIDA'
-                usuario: row.nombre_completo
+                usuario: row.nombre_completo,
+                items: typeof row.items === 'string' ? JSON.parse(row.items) : (row.items ?? [])
             }));
 
         } catch (err) {
@@ -189,6 +207,21 @@ async getMovimientosDelDia() {
     // --- C. REPORTE DE CIERRE (Totales por método) ---
    async getResumenFinancieroDia() {
     try {
+
+        // Importante: después de cerrar caja, ya no existe una caja 'ABIERTA'.
+        // Para el resumen del día, tomamos la caja correspondiente a la fecha de hoy
+        // (sea ABIERTA o CERRADA).
+        const cajaHoyQuery = `
+            SELECT monto_inicial
+            FROM caja
+            WHERE fecha_apertura = CURRENT_DATE
+            ORDER BY hora_apertura DESC
+            LIMIT 1
+        `;
+
+        const resCajaHoy = await pool.query(cajaHoyQuery);
+        const monto_inicial = resCajaHoy.rows.length > 0 ? Number(resCajaHoy.rows[0].monto_inicial) : 0;
+
         // 1. VENTAS POR METODO (Para gráficas o desglose)
         const ventasQuery = `
             SELECT metodo_pago, SUM(total) as total_ventas
@@ -205,30 +238,38 @@ async getMovimientosDelDia() {
             GROUP BY metodo_pago
         `;
 
-        // 3. BALANCE TOTAL FINAL (Lo que pediste)
-        // Seleccionamos la suma de ventas y le restamos la suma de gastos
-        const totalQuery = `
-            SELECT (
-                (SELECT COALESCE(SUM(total), 0) FROM ventas WHERE DATE(fecha_venta) = CURRENT_DATE)
-                -
-                (SELECT COALESCE(SUM(monto), 0) FROM movimientos_caja WHERE DATE(fecha_hora) = CURRENT_DATE)
-            ) as balance_neto
+        // 3. Totales del día (para calcular balance neto sin inconsistencias)
+        const ventasTotalQuery = `
+            SELECT COALESCE(SUM(total), 0) as total_ventas
+            FROM ventas
+            WHERE DATE(fecha_venta) = CURRENT_DATE
+        `;
+        const gastosTotalQuery = `
+            SELECT COALESCE(SUM(monto), 0) as total_gastos
+            FROM movimientos_caja
+            WHERE DATE(fecha_hora) = CURRENT_DATE
         `;
 
-        // Ejecutamos las 3 consultas al mismo tiempo
-        const [resVentas, resGastos, resTotal] = await Promise.all([
+        // Ejecutamos consultas en paralelo
+        const [resVentas, resGastos, resVentasTotal, resGastosTotal] = await Promise.all([
             pool.query(ventasQuery),
             pool.query(gastosQuery),
-            pool.query(totalQuery)
+            pool.query(ventasTotalQuery),
+            pool.query(gastosTotalQuery)
         ]);
+
+        const totalVentas = Number(resVentasTotal.rows[0]?.total_ventas ?? 0);
+        const totalGastos = Number(resGastosTotal.rows[0]?.total_gastos ?? 0);
+        const balanceNeto = monto_inicial + totalVentas - totalGastos;
 
         // Estructuramos la respuesta
         return {
+            monto_inicial: monto_inicial,
             ventas_desglose: resVentas.rows, 
             gastos_desglose: resGastos.rows,
             // Accedemos a la primera fila y a la columna balance_neto
             // Nota: PostgreSQL devuelve esto como string a veces, usamos Number() o parseFloat() por seguridad
-            ganancia_dia: Number(resTotal.rows[0].balance_neto) 
+            ganancia_dia: balanceNeto
         };
 
     } catch (err) {

@@ -42,6 +42,16 @@ class CombosController {
             res.status(400).json({ error: err.message });
         }
     }
+
+    async update(req, res) {
+        try {
+            const id = req.params.id;
+            const comboActualizado = await CombosService.updateCombo(id, req.body);
+            return res.status(200).json({ message: "Combo actualizado correctamente.", combo: comboActualizado });
+        } catch (err) {
+            return res.status(400).json({ error: err.message });
+        }
+    }
 }
 
 module.exports = new CombosController();

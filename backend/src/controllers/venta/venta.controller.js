@@ -68,6 +68,16 @@ class VentaController {
 		}
 	}
 
+	// GET: Ventas del día con detalle (items agregados)
+	async getDetalladasDia(req, res) {
+		try {
+			const ventas = await VentaService.getVentasDetalladasDia();
+			return res.status(200).json(ventas);
+		} catch (err) {
+			return res.status(500).json({ error: err.message });
+		}
+	}
+
 	// POST: Crear una venta (datosVenta + carrito)
 	async create(req, res) {
 		try {

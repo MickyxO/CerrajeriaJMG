@@ -63,6 +63,28 @@ router.get("/getitems/marca/:marca", ItemsController.getByMarca);
 
 /**
  * @swagger
+ * /getitems/clasificacion/{clasificacion}:
+ *   get:
+ *     tags:
+ *       - Items
+ *     summary: Obtener items por coincidencia de clasificación (categorías.clasificacion)
+ *     parameters:
+ *       - in: path
+ *         name: clasificacion
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Texto o fragmento de clasificación para buscar en categorias.clasificacion
+ *     responses:
+ *       200:
+ *         description: Lista de items coincidentes
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get("/getitems/clasificacion/:clasificacion", ItemsController.getByClasificacion);
+
+/**
+ * @swagger
  * /buscaritems:
  *   get:
  *     tags:

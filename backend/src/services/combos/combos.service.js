@@ -31,7 +31,7 @@ class CombosService {
                     c.precio_sugerido_combo,
                     json_agg(
                         json_build_object(
-                            'id_item', i.id_item,
+                            'id_item', ci.id_item,
                             'nombre_item', it.nombre,
                             'cantidad_default', ci.cantidad_default
                         )
@@ -60,7 +60,7 @@ class CombosService {
                     c.precio_sugerido_combo,
                     json_agg(
                         json_build_object(
-                            'id_item', i.id_item,
+                            'id_item', ci.id_item,
                             'nombre_item', it.nombre,
                             'cantidad_default', ci.cantidad_default
                         )
@@ -151,6 +151,126 @@ class CombosService {
         } catch (err) {
             console.error("Error eliminando combo: ", err.message);
             throw err;
+        }
+    }
+
+    // Actualizar un combo: nombre, precio sugerido y su lista de items.
+    // Si se envía "Items", se interpreta como el ESTADO FINAL del combo:
+    // - Items: []  => deja el combo sin items
+    // - Items omitido => no toca las relaciones
+    async updateCombo(id, cuerpo) {
+        const { NombreCombo, PrecioSugerido, Items } = cuerpo || {};
+
+        const tieneCambiosCabecera = (NombreCombo !== undefined) || (PrecioSugerido !== undefined);
+        const tieneCambiosItems = (Items !== undefined);
+
+        if (!tieneCambiosCabecera && !tieneCambiosItems) {
+            throw new Error("No hay campos válidos para actualizar (NombreCombo, PrecioSugerido, Items).");
+        }
+
+        if (PrecioSugerido !== undefined && PrecioSugerido !== null && isNaN(PrecioSugerido)) {
+            throw new Error("El precio sugerido debe ser numérico o null.");
+        }
+
+        if (Items !== undefined && !Array.isArray(Items)) {
+            throw new Error("Items debe ser un arreglo.");
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Bloqueo para evitar carreras mientras actualizamos cabecera + relaciones
+            const existe = await client.query(
+                "SELECT 1 FROM combos WHERE id_combo = $1 FOR UPDATE",
+                [id]
+            );
+            if (existe.rowCount === 0) {
+                throw new Error("Combo no encontrado.");
+            }
+
+            // 1) Actualizar cabecera (si aplica)
+            if (tieneCambiosCabecera) {
+                const mapaCampos = {
+                    'NombreCombo': 'nombre_combo',
+                    'PrecioSugerido': 'precio_sugerido_combo'
+                };
+
+                const columnas = [];
+                const valores = [];
+                let contador = 1;
+
+                for (const [campoFront, campoBD] of Object.entries(mapaCampos)) {
+                    if (cuerpo[campoFront] !== undefined) {
+                        columnas.push(`${campoBD} = $${contador}`);
+                        valores.push(cuerpo[campoFront]);
+                        contador++;
+                    }
+                }
+
+                if (columnas.length > 0) {
+                    valores.push(id);
+                    const query = `UPDATE combos SET ${columnas.join(", ")} WHERE id_combo = $${contador}`;
+                    await client.query(query, valores);
+                }
+            }
+
+            // 2) Reemplazar lista de items (si aplica)
+            if (tieneCambiosItems) {
+                // Borramos estado anterior
+                await client.query("DELETE FROM combo_items WHERE id_combo = $1", [id]);
+
+                // Insertamos estado nuevo
+                if (Items.length > 0) {
+                    // Validación rápida: todos los IdItem deben existir
+                    const idsUnicos = [...new Set(Items.map(i => i?.IdItem).filter(v => v !== undefined && v !== null))];
+                    if (idsUnicos.length !== Items.length) {
+                        // Hay undefined/null o repetidos; igual permitimos repetidos? mejor bloquear
+                        // Si quieres permitir duplicados, lo ajustamos.
+                        const algunInvalido = Items.some(i => !i || i.IdItem === undefined || i.IdItem === null);
+                        if (algunInvalido) {
+                            throw new Error("Cada item debe incluir IdItem.");
+                        }
+                    }
+
+                    const resItems = await client.query(
+                        "SELECT id_item FROM items WHERE id_item = ANY($1::int[])",
+                        [idsUnicos]
+                    );
+                    const encontrados = new Set(resItems.rows.map(r => r.id_item));
+                    const faltantes = idsUnicos.filter(x => !encontrados.has(x));
+                    if (faltantes.length > 0) {
+                        throw new Error(`Los siguientes IdItem no existen: ${faltantes.join(', ')}`);
+                    }
+
+                    for (const item of Items) {
+                        if (!item || item.IdItem === undefined || item.IdItem === null) {
+                            throw new Error("Cada item debe incluir IdItem.");
+                        }
+
+                        const cantidad = (item.Cantidad === undefined || item.Cantidad === null) ? 1 : Number(item.Cantidad);
+                        if (!Number.isFinite(cantidad) || cantidad <= 0) {
+                            throw new Error("Cantidad debe ser un número mayor que 0.");
+                        }
+
+                        await client.query(
+                            `INSERT INTO combo_items (id_combo, id_item, cantidad_default)
+                             VALUES ($1, $2, $3)`,
+                            [id, item.IdItem, cantidad]
+                        );
+                    }
+                }
+            }
+
+            await client.query('COMMIT');
+            return await this.getComboById(id);
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("Error actualizando combo: ", err.message);
+            throw err;
+        } finally {
+            client.release();
         }
     }
 }

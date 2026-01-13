@@ -55,6 +55,21 @@ router.get("/getventa/:id", VentaController.getById);
 
 /**
  * @swagger
+ * /getventasdetalladasdia:
+ *   get:
+ *     tags:
+ *       - Venta
+ *     summary: Obtener ventas del día con detalle de items
+ *     responses:
+ *       200:
+ *         description: Lista de ventas del día con items agregados
+ *       500:
+ *         description: Error interno
+ */
+router.get("/getventasdetalladasdia", VentaController.getDetalladasDia);
+
+/**
+ * @swagger
  * /buscarventacliente:
  *   get:
  *     tags:

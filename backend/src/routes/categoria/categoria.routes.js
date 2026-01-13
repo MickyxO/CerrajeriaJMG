@@ -42,6 +42,30 @@ router.get("/getcategoria/:nombre", CategoriaController.getByName);
 
 /**
  * @swagger
+ * /getcategoriasclasificacion/{clasificacion}:
+ *   get:
+ *     tags:
+ *       - Categoria
+ *     summary: Obtener categorías por clasificación
+ *     parameters:
+ *       - in: path
+ *         name: clasificacion
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clasificación a filtrar (ej. Automotriz)
+ *     responses:
+ *       200:
+ *         description: Lista de categorías para esa clasificación
+ *       404:
+ *         description: No se encontraron categorías
+ *       500:
+ *         description: Error del servidor
+ */
+router.get("/getcategoriasclasificacion/:clasificacion", CategoriaController.getByClassification);
+
+/**
+ * @swagger
  * /postcategoria:
  *   post:
  *     tags:

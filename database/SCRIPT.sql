@@ -10,7 +10,8 @@ CREATE TABLE usuarios (
 -- 2. CATEGORIAS 
 CREATE TABLE categorias (
     id_categoria SERIAL PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL
+    nombre VARCHAR(50) NOT NULL,
+    clasificacion TEXT NOT NULL DEFAULT 'Producto Automotriz' -- Sera producto automotriz, producto residencial y servicios
 );
 
 -- 3. PRODUCTOS Y SERVICIOS (Items individuales)
@@ -28,7 +29,7 @@ CREATE TABLE items (
     stock_minimo INT DEFAULT 2, 
     
     -- Datos Automotrices
-    compatibilidad_marca VARCHAR(50), 
+    compatibilidad_marca VARCHAR(255), 
     tipo_chip VARCHAR(50), 
     frecuencia VARCHAR(20),
 
@@ -53,7 +54,14 @@ CREATE TABLE detalle_ventas (
     id_item INT REFERENCES items(id_item),
     cantidad INT NOT NULL,
     precio_unitario NUMERIC(10,2) NOT NULL, -- Precio al momento de la venta
-    subtotal NUMERIC(10,2) NOT NULL
+    subtotal NUMERIC(10,2) NOT NULL,
+
+    -- Snapshots: para que cambios posteriores en items/combos no alteren ventas históricas
+    nombre_item_snapshot VARCHAR(150),
+    id_combo INT REFERENCES combos(id_combo),
+    nombre_combo_snapshot VARCHAR(100),
+    precio_combo_unitario_snapshot NUMERIC(10,2),
+    combo_cantidad_snapshot INT
 );
 
 -- 6. MOVIMIENTOS DE INVENTARIO

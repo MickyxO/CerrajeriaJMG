@@ -40,6 +40,16 @@ class ItemsController {
         }
     }
 
+    async getByClasificacion(req, res) {
+        try {
+            const clasificacion = req.params.clasificacion ?? req.query.clasificacion ?? "";
+            const items = await ItemsService.getItemsPorClasificacion(clasificacion);
+            res.status(200).json(items);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    }
+
     async create(req, res) {
         try {
             const insertId = await ItemsService.createItem(req.body);

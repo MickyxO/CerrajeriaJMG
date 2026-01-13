@@ -112,6 +112,28 @@ class ItemsService {
         }
     }
 
+    async getItemsPorClasificacion(parcial) {
+        try {
+            const query = `
+                SELECT i.*, c.nombre as nombre_categoria
+                FROM items i
+                INNER JOIN categorias c ON i.id_categoria = c.id_categoria
+                WHERE c.clasificacion ILIKE $1 AND i.activo = TRUE
+            `; // <--- MODIFICADO: Agregado filtro activo
+
+            const { rows } = await pool.query(query, [`%${parcial}%`]);
+            return rows.map(row => {
+                const item = this._mapRowToModel(row);
+                item.NombreCategoria = row.nombre_categoria;
+                return item;
+            });
+        }
+        catch (err) {
+            console.error("Error buscando items por clasificación: ", err.message);
+            throw err;
+        }
+    }
+
     async createItem(datos) {
         const { 
             Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia,

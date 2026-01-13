@@ -25,12 +25,27 @@ class CategoriaController {
 
     async create(req, res) {
         try {
-            const { nombreCategoria, clasificacion } = req.body;
+            const nombreCategoria = req.body?.nombreCategoria ?? req.body?.NombreCategoria;
+            const clasificacion = req.body?.clasificacion ?? req.body?.Clasificacion;
             const id = await CategoriaService.postCategoria(nombreCategoria, clasificacion);
             res.status(201).json({ mensaje: "Categoría creada", id });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            // Errores típicos: validación/NOT NULL -> 400
+            res.status(400).json({ error: err.message });
         }
+    }
+
+    async getByClassification(req, res) {
+        try {
+            const clasificacion = req.params.clasificacion;
+            const categorias = await CategoriaService.getCategoryByClassification(clasificacion);
+            if (!categorias) {
+                return res.status(404).json({ mensaje: "Categoría no encontrada" });
+            }
+            res.status(200).json(categorias);
+        } catch (err) {
+             res.status(500).json({ error: err.message });
+        }   
     }
 
     async update(req, res) {
