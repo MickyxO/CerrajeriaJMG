@@ -2,9 +2,11 @@
 CREATE TABLE usuarios (
     id_usuario SERIAL PRIMARY KEY,
     nombre_completo VARCHAR(100) NOT NULL,
-    pin_acceso VARCHAR(4) NOT NULL, 
+    -- Debe almacenar hash bcrypt (≈60 chars), no el PIN en claro
+    pin_acceso VARCHAR(255) NOT NULL, 
     rol VARCHAR(20) DEFAULT 'empleado', 
-    activo BOOLEAN DEFAULT TRUE
+    activo BOOLEAN DEFAULT TRUE,
+    username VARCHAR(255) UNIQUE NOT NULL
 );
 
 -- 2. CATEGORIAS 

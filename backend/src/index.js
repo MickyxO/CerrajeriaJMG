@@ -14,7 +14,7 @@ const cajaRoutes = require("./routes/caja/caja.routes");
 const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
 
 const app = express();
-app.use(cors());
+app.use(cors()); 
 app.use(express.json());
 
 app.use("/", categoriaRoutes);

@@ -1,16 +1,19 @@
 const pool = require("../../config/db");
 const Usuarios = require("../../models/usuarios/usuarios.model");
+const bcrypt = require('bcryptjs');
 
 class UsuariosService {
 
     // Helper para convertir de base de datos (snake_case) a modelo (PascalCase)
+    // Importante: NUNCA exponer pin_acceso (hash) hacia el frontend.
     _mapRowToModel(row) {
         return new Usuarios(
             row.id_usuario,
             row.nombre_completo,
-            row.pin_acceso,
+            undefined,
             row.rol,
-            row.activo
+            row.activo,
+            row.username
         );
     }
 
@@ -41,50 +44,71 @@ class UsuariosService {
         }
     }
 
-    // Método especial para el Login en la PWA
-    async verificarPin(pin) {
+
+    async verificarPin(username, pin) {
         try {
-            // Buscamos si existe alguien con ese PIN y que esté activo
-            const query = "SELECT * FROM usuarios WHERE pin_acceso = $1 AND activo = TRUE";
-            const { rows } = await pool.query(query, [pin]);
+            if (!pin || !username) return null;
+
+            const query = "SELECT * FROM usuarios WHERE activo = TRUE AND username = $1";
+            const { rows } = await pool.query(query, [username]);
 
             if (rows.length === 0) return null;
 
-            // Retornamos el usuario encontrado para iniciar sesión
-            return this._mapRowToModel(rows[0]);
+            const row = rows[0];
+            const esValido = await bcrypt.compare(String(pin), row.pin_acceso);
+            if (esValido) return this._mapRowToModel(row);
+
+            return null;
         } catch (err) {
             console.error("Error verificando PIN: ", err.message);
             throw err;
         }
     }
 
+    _validarContrasena(pinAcceso) {
+        const value = String(pinAcceso ?? "");
+        const tieneNumero = /\d/.test(value);
+        const tieneSimbolo = /[.,\-]/.test(value);
+        if (value.length < 6 || !tieneNumero || !tieneSimbolo) {
+            throw new Error(
+                "La contraseña debe tener mínimo 6 caracteres e incluir al menos un número y un símbolo (.,-)."
+            );
+        }
+    }
+
     async createUsuario(datos) {
         const { NombreCompleto, PinAcceso, Rol } = datos;
+        const Username = datos?.Username ?? datos?.username;
 
-        if (!NombreCompleto || !PinAcceso) {
-            throw new Error("Nombre completo y PIN son obligatorios.");
+        if (!NombreCompleto || !PinAcceso || !Username) {
+            throw new Error("Nombre completo, contraseña y username son obligatorios.");
         }
 
-        if (PinAcceso.length !== 4) {
-            throw new Error("El PIN debe ser de 4 dígitos.");
-        }
+        this._validarContrasena(PinAcceso);
+
+        
 
         try {
-            // Validar que el PIN no esté repetido (opcional pero recomendado)
-            const pinCheck = await pool.query("SELECT 1 FROM usuarios WHERE pin_acceso = $1 AND activo = TRUE", [PinAcceso]);
-            if (pinCheck.rowCount > 0) {
-                throw new Error("Este PIN ya está en uso por otro usuario.");
+            // Validar username único (el constraint UNIQUE también lo hará, esto es solo para mensaje claro)
+            const existenteUsername = await pool.query(
+                "SELECT 1 FROM usuarios WHERE username = $1 LIMIT 1",
+                [Username]
+            );
+            if (existenteUsername.rows.length > 0) {
+                throw new Error("El username ya está en uso.");
             }
 
+            const pinEncriptado = await bcrypt.hash(String(PinAcceso), 10);
+
             const query = `
-                INSERT INTO usuarios (nombre_completo, pin_acceso, rol, activo)
-                VALUES ($1, $2, $3, TRUE)
+                INSERT INTO usuarios (nombre_completo, pin_acceso, rol, activo, username)
+                VALUES ($1, $2, $3, TRUE, $4)
                 RETURNING id_usuario
             `;
             
             // Si no mandan rol, Postgres usará el default 'empleado' si pasamos DEFAULT, 
             // pero aquí lo manejamos desde node:
-            const values = [NombreCompleto, PinAcceso, Rol || 'empleado'];
+            const values = [NombreCompleto, pinEncriptado, Rol || 'empleado', Username];
 
             const { rows } = await pool.query(query, values);
             return rows[0].id_usuario;
@@ -101,7 +125,8 @@ class UsuariosService {
             'NombreCompleto': 'nombre_completo',
             'PinAcceso': 'pin_acceso',
             'Rol': 'rol',
-            'Activo': 'activo'
+            'Activo': 'activo',
+            'Username': 'username'
         };
 
         const columnas = [];
@@ -109,11 +134,38 @@ class UsuariosService {
         let contador = 1;
 
         for (const [campoFront, campoBD] of Object.entries(mapaCampos)) {
-            if (cuerpo[campoFront] !== undefined && cuerpo[campoFront] !== '') {
+            if (cuerpo[campoFront] === undefined || cuerpo[campoFront] === '') continue;
+
+            if (campoFront === 'PinAcceso') {
+                this._validarContrasena(cuerpo[campoFront]);
+                const pinEncriptado = await bcrypt.hash(String(cuerpo[campoFront]), 10);
                 columnas.push(`${campoBD} = $${contador}`);
-                valores.push(cuerpo[campoFront]);
+                valores.push(pinEncriptado);
                 contador++;
+                continue;
             }
+
+            if (campoFront === 'Username') {
+                const nuevoUsername = String(cuerpo[campoFront]).trim();
+                if (!nuevoUsername) throw new Error("Username inválido.");
+
+                const existenteUsername = await pool.query(
+                    "SELECT 1 FROM usuarios WHERE username = $1 AND id_usuario <> $2 LIMIT 1",
+                    [nuevoUsername, id]
+                );
+                if (existenteUsername.rows.length > 0) {
+                    throw new Error("El username ya está en uso.");
+                }
+
+                columnas.push(`${campoBD} = $${contador}`);
+                valores.push(nuevoUsername);
+                contador++;
+                continue;
+            }
+
+            columnas.push(`${campoBD} = $${contador}`);
+            valores.push(cuerpo[campoFront]);
+            contador++;
         }
 
         if (columnas.length === 0) {

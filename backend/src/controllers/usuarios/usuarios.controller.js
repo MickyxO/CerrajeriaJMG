@@ -29,18 +29,18 @@ class UsuariosController {
     // Endpoint especial para la PWA (Login con PIN)
     async login(req, res) {
         try {
-            // Se espera que el front mande { "pin": "1234" }
-            const { pin } = req.body; 
+            // Se espera que el front mande { "username": "juan", "pin": "secreto" }
+            const { username, pin } = req.body; 
             
-            if (!pin) {
-                return res.status(400).json({ error: "El PIN es obligatorio" });
+            if (!username || !pin) {
+                return res.status(400).json({ error: "Username y contraseña son obligatorios" });
             }
 
-            const usuario = await UsuariosService.verificarPin(pin);
+            const usuario = await UsuariosService.verificarPin(username, pin);
 
             if (!usuario) {
                 // 401 Unauthorized es el código correcto para fallos de login
-                return res.status(401).json({ error: "PIN incorrecto o usuario inactivo" });
+                return res.status(401).json({ error: "Credenciales incorrectas o usuario inactivo" });
             }
 
             res.status(200).json({ message: "Acceso correcto", usuario });
