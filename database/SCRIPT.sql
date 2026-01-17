@@ -21,6 +21,7 @@ CREATE TABLE items (
     id_item SERIAL PRIMARY KEY,
     nombre VARCHAR(150) NOT NULL, 
     descripcion TEXT,
+    imagen_url TEXT,
     id_categoria INT REFERENCES categorias(id_categoria),
     precio_venta NUMERIC(10,2) NOT NULL,
     costo_referencia NUMERIC(10,2), 
@@ -46,7 +47,9 @@ CREATE TABLE ventas (
     nombre_cliente VARCHAR(100) DEFAULT 'Mostrador', 
     total NUMERIC(10,2) NOT NULL,
     metodo_pago VARCHAR(50) DEFAULT 'Efectivo', 
-    notas TEXT 
+    notas TEXT,
+    subtotal NUMERIC(10,2) DEFAULT 0,
+    monto_iva NUMERIC(10,2) DEFAULT 0 
 );
 
 -- 5. DETALLE DE VENTA

@@ -12,7 +12,8 @@ class Items {
         CompatibilidadMarca = null,
         TipoChip = null,
         Frecuencia = null,
-        Activo = true
+        Activo = true,
+        ImagenUrl = null
     ) {
         this.IdItem = IdItem;
         this.Nombre = Nombre;
@@ -27,6 +28,7 @@ class Items {
         this.TipoChip = TipoChip;
         this.Frecuencia = Frecuencia;
         this.Activo = Activo;
+        this.ImagenUrl = ImagenUrl;
     }
 }
 

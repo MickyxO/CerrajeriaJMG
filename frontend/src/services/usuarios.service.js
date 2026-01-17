@@ -2,13 +2,13 @@ import { apiRequest } from "./api";
 
 export const usuariosService = {
   /** Backend: GET /getusuarios */
-  getUsuarios() {
-    return apiRequest("/getusuarios");
+  getUsuarios({ incluyeInactivos } = {}) {
+    return apiRequest("/getusuarios", { params: { incluyeInactivos } });
   },
 
   /** Backend: GET /getusuario/:id */
-  getUsuario(id) {
-    return apiRequest(`/getusuario/${id}`);
+  getUsuario(id, { incluyeInactivos } = {}) {
+    return apiRequest(`/getusuario/${id}`, { params: { incluyeInactivos } });
   },
 
   /** Backend: POST /postusuario */

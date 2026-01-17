@@ -38,6 +38,49 @@ class CajaService {
         }
     }
 
+    async getCajaPorFecha(fecha) {
+        try {
+            const query = `
+                SELECT * FROM caja
+                WHERE fecha_apertura = $1::date
+                ORDER BY hora_apertura DESC
+                LIMIT 1
+            `;
+            const { rows } = await pool.query(query, [fecha]);
+            if (rows.length === 0) return null;
+            const r = rows[0];
+            return new Caja(
+                r.id_caja,
+                r.fecha_apertura,
+                r.hora_apertura,
+                r.monto_inicial,
+                r.monto_actual,
+                r.estado,
+                r.id_usuario_apertura
+            );
+        } catch (err) {
+            console.error("Error consultando caja por fecha: ", err.message);
+            throw err;
+        }
+    }
+
+    async getFechasCaja(limit = 60) {
+        try {
+            const lim = Number.isFinite(Number(limit)) ? Number(limit) : 60;
+            const query = `
+                SELECT DISTINCT fecha_apertura
+                FROM caja
+                ORDER BY fecha_apertura DESC
+                LIMIT $1
+            `;
+            const { rows } = await pool.query(query, [lim]);
+            return rows.map((r) => r.fecha_apertura);
+        } catch (err) {
+            console.error("Error obteniendo fechas de caja: ", err.message);
+            throw err;
+        }
+    }
+
     async abrirCaja(montoInicial, idUsuario) {
         if (montoInicial === undefined || montoInicial < 0) throw new Error("Monto inicial inválido.");
 
@@ -131,11 +174,14 @@ class CajaService {
         }
     }
 
-async getMovimientosDelDia() {
+async getMovimientosDelDia(fecha = null) {
         try {
             // Usamos UNION ALL para combinar Ventas (Entradas) y Movimientos (Salidas)
             // Normalizamos los nombres de las columnas (ej: total ahora se llama monto)
             // para que coincidan en el resultado final.
+            const filtroFechaVentas = fecha ? "DATE(v.fecha_venta) = $1::date" : "DATE(v.fecha_venta) = CURRENT_DATE";
+            const filtroFechaMovs = fecha ? "DATE(m.fecha_hora) = $1::date" : "DATE(m.fecha_hora) = CURRENT_DATE";
+
             const query = `
                 SELECT * FROM (
                     (
@@ -162,7 +208,7 @@ async getMovimientosDelDia() {
                         INNER JOIN usuarios u ON v.id_usuario = u.id_usuario
                         LEFT JOIN detalle_ventas dv ON v.id_venta = dv.id_venta
                         LEFT JOIN items i ON dv.id_item = i.id_item
-                        WHERE DATE(v.fecha_venta) = CURRENT_DATE
+                        WHERE ${filtroFechaVentas}
                         GROUP BY v.id_venta, u.nombre_completo
                     )
                     UNION ALL
@@ -178,13 +224,14 @@ async getMovimientosDelDia() {
                             '[]'::json as items
                         FROM movimientos_caja m
                         INNER JOIN usuarios u ON m.id_usuario = u.id_usuario
-                        WHERE DATE(m.fecha_hora) = CURRENT_DATE
+                        WHERE ${filtroFechaMovs}
                     )
                 ) t
                 ORDER BY t.fecha_hora ASC
             `;
 
-            const { rows } = await pool.query(query);
+            const params = fecha ? [fecha] : [];
+            const { rows } = await pool.query(query, params);
             
             // Retornamos un objeto estandarizado para que el Frontend no batalle
             return rows.map(row => ({
@@ -205,57 +252,93 @@ async getMovimientosDelDia() {
     }
 
     // --- C. REPORTE DE CIERRE (Totales por método) ---
-   async getResumenFinancieroDia() {
+    async getResumenFinancieroDia(fecha = null) {
     try {
 
         // Importante: después de cerrar caja, ya no existe una caja 'ABIERTA'.
         // Para el resumen del día, tomamos la caja correspondiente a la fecha de hoy
         // (sea ABIERTA o CERRADA).
-        const cajaHoyQuery = `
-            SELECT monto_inicial
-            FROM caja
-            WHERE fecha_apertura = CURRENT_DATE
-            ORDER BY hora_apertura DESC
-            LIMIT 1
-        `;
+                const cajaHoyQuery = fecha
+                        ? `
+                                SELECT monto_inicial
+                                FROM caja
+                                WHERE fecha_apertura = $1::date
+                                ORDER BY hora_apertura DESC
+                                LIMIT 1
+                            `
+                        : `
+                                SELECT monto_inicial
+                                FROM caja
+                                WHERE fecha_apertura = CURRENT_DATE
+                                ORDER BY hora_apertura DESC
+                                LIMIT 1
+                            `;
 
-        const resCajaHoy = await pool.query(cajaHoyQuery);
+                const resCajaHoy = fecha ? await pool.query(cajaHoyQuery, [fecha]) : await pool.query(cajaHoyQuery);
         const monto_inicial = resCajaHoy.rows.length > 0 ? Number(resCajaHoy.rows[0].monto_inicial) : 0;
 
         // 1. VENTAS POR METODO (Para gráficas o desglose)
-        const ventasQuery = `
-            SELECT metodo_pago, SUM(total) as total_ventas
-            FROM ventas 
-            WHERE DATE(fecha_venta) = CURRENT_DATE
-            GROUP BY metodo_pago
-        `;
+                const ventasQuery = fecha
+                        ? `
+                                SELECT metodo_pago, SUM(total) as total_ventas
+                                FROM ventas
+                                WHERE DATE(fecha_venta) = $1::date
+                                GROUP BY metodo_pago
+                            `
+                        : `
+                                SELECT metodo_pago, SUM(total) as total_ventas
+                                FROM ventas
+                                WHERE DATE(fecha_venta) = CURRENT_DATE
+                                GROUP BY metodo_pago
+                            `;
         
         // 2. GASTOS POR METODO (Para gráficas o desglose)
-        const gastosQuery = `
-            SELECT metodo_pago, SUM(monto) as total_gastos
-            FROM movimientos_caja
-            WHERE DATE(fecha_hora) = CURRENT_DATE
-            GROUP BY metodo_pago
-        `;
+                const gastosQuery = fecha
+                        ? `
+                                SELECT metodo_pago, SUM(monto) as total_gastos
+                                FROM movimientos_caja
+                                WHERE DATE(fecha_hora) = $1::date
+                                GROUP BY metodo_pago
+                            `
+                        : `
+                                SELECT metodo_pago, SUM(monto) as total_gastos
+                                FROM movimientos_caja
+                                WHERE DATE(fecha_hora) = CURRENT_DATE
+                                GROUP BY metodo_pago
+                            `;
 
         // 3. Totales del día (para calcular balance neto sin inconsistencias)
-        const ventasTotalQuery = `
-            SELECT COALESCE(SUM(total), 0) as total_ventas
-            FROM ventas
-            WHERE DATE(fecha_venta) = CURRENT_DATE
-        `;
-        const gastosTotalQuery = `
-            SELECT COALESCE(SUM(monto), 0) as total_gastos
-            FROM movimientos_caja
-            WHERE DATE(fecha_hora) = CURRENT_DATE
-        `;
+                const ventasTotalQuery = fecha
+                        ? `
+                                SELECT COALESCE(SUM(total), 0) as total_ventas
+                                FROM ventas
+                                WHERE DATE(fecha_venta) = $1::date
+                            `
+                        : `
+                                SELECT COALESCE(SUM(total), 0) as total_ventas
+                                FROM ventas
+                                WHERE DATE(fecha_venta) = CURRENT_DATE
+                            `;
+
+                const gastosTotalQuery = fecha
+                        ? `
+                                SELECT COALESCE(SUM(monto), 0) as total_gastos
+                                FROM movimientos_caja
+                                WHERE DATE(fecha_hora) = $1::date
+                            `
+                        : `
+                                SELECT COALESCE(SUM(monto), 0) as total_gastos
+                                FROM movimientos_caja
+                                WHERE DATE(fecha_hora) = CURRENT_DATE
+                            `;
 
         // Ejecutamos consultas en paralelo
+        const params = fecha ? [fecha] : [];
         const [resVentas, resGastos, resVentasTotal, resGastosTotal] = await Promise.all([
-            pool.query(ventasQuery),
-            pool.query(gastosQuery),
-            pool.query(ventasTotalQuery),
-            pool.query(gastosTotalQuery)
+            pool.query(ventasQuery, params),
+            pool.query(gastosQuery, params),
+            pool.query(ventasTotalQuery, params),
+            pool.query(gastosTotalQuery, params)
         ]);
 
         const totalVentas = Number(resVentasTotal.rows[0]?.total_ventas ?? 0);

@@ -5,6 +5,25 @@ class CajaController {
     // GET: Obtener el estado actual de la caja (si está abierta o cerrada)
     async getEstadoCaja(req, res) {
         try {
+            const { fecha } = req.query || {};
+
+            if (fecha) {
+                const caja = await CajaService.getCajaPorFecha(fecha);
+                if (!caja) {
+                    return res.status(200).json({
+                        success: true,
+                        estado: 'SIN_CAJA',
+                        data: null,
+                        message: "No hay caja registrada para la fecha indicada."
+                    });
+                }
+                return res.status(200).json({
+                    success: true,
+                    estado: caja.Estado || 'CERRADA',
+                    data: caja
+                });
+            }
+
             const caja = await CajaService.getCajaDelDia();
             if (!caja) {
                 return res.status(200).json({ 
@@ -19,6 +38,17 @@ class CajaController {
                 estado: 'ABIERTA', 
                 data: caja 
             });
+        } catch (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+    }
+
+    // GET: Obtener lista de fechas con caja registrada
+    async getFechasCaja(req, res) {
+        try {
+            const limit = req.query?.limit;
+            const fechas = await CajaService.getFechasCaja(limit);
+            return res.status(200).json({ success: true, data: fechas });
         } catch (err) {
             return res.status(500).json({ success: false, error: err.message });
         }
@@ -95,7 +125,8 @@ class CajaController {
     // GET: Obtener lista de movimientos del día
     async getMovimientos(req, res) {
         try {
-            const movimientos = await CajaService.getMovimientosDelDia();
+            const { fecha } = req.query || {};
+            const movimientos = await CajaService.getMovimientosDelDia(fecha || null);
             return res.status(200).json({ success: true, data: movimientos });
         } catch (err) {
             return res.status(500).json({ success: false, error: err.message });
@@ -105,7 +136,8 @@ class CajaController {
     // GET: Obtener el resumen financiero (Ventas, Gastos, Balance)
     async getResumenFinanciero(req, res) {
         try {
-            const resumen = await CajaService.getResumenFinancieroDia();
+            const { fecha } = req.query || {};
+            const resumen = await CajaService.getResumenFinancieroDia(fecha || null);
             return res.status(200).json({ success: true, data: resumen });
         } catch (err) {
             return res.status(500).json({ success: false, error: err.message });

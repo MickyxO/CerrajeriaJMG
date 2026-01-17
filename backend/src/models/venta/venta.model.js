@@ -6,7 +6,9 @@ class Venta {
         NombreCliente = 'Mostrador',
         Total,
         MetodoPago = 'Efectivo',
-        Notas = null
+        Notas = null,
+        Subtotal = null,
+        MontoIva = null
     ) {
         this.IdVenta = IdVenta;
         this.FechaVenta = FechaVenta;
@@ -15,6 +17,8 @@ class Venta {
         this.Total = Total;
         this.MetodoPago = MetodoPago;
         this.Notas = Notas;
+        this.Subtotal = Subtotal;
+        this.MontoIva = MontoIva;
     }
 }
 

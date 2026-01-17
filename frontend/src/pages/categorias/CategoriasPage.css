@@ -1,0 +1,89 @@
+.catPage {
+  display: grid;
+  gap: 14px;
+}
+
+.catTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.catTitle {
+  margin: 0;
+  color: var(--jmg-navy);
+}
+
+.catSubtitle {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.catTopActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.catGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 14px;
+}
+
+.catFilterRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.catMode {
+  display: inline-flex;
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.catModeBtn {
+  padding: 10px 12px;
+  background: transparent;
+  border: 0;
+  color: var(--jmg-text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.catModeBtn:hover {
+  background: rgba(3, 25, 64, 0.04);
+}
+
+.catModeActive {
+  background: rgba(255, 199, 0, 0.25);
+  color: var(--jmg-navy);
+}
+
+.catListMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.catCount {
+  color: var(--jmg-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 920px) {
+  .catGrid {
+    grid-template-columns: 1fr;
+  }
+}

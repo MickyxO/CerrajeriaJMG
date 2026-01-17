@@ -12,10 +12,14 @@ const ventaRoutes = require("./routes/venta/venta.routes");
 const combosRoutes = require("./routes/combos/combos.routes");
 const cajaRoutes = require("./routes/caja/caja.routes");
 const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
+const inventarioRoutes = require("./routes/inventario/inventario.routes");
 
 const app = express();
 app.use(cors()); 
 app.use(express.json());
+
+// Archivos subidos (imágenes)
+app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
 
 app.use("/", categoriaRoutes);
 app.use("/", itemsRoutes);
@@ -23,6 +27,7 @@ app.use("/", ventaRoutes);
 app.use("/", combosRoutes);
 app.use("/", cajaRoutes);
 app.use("/", usuariosRoutes);
+app.use("/", inventarioRoutes);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(SwaggerSpeci));
 

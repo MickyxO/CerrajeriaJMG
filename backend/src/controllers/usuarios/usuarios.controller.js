@@ -4,7 +4,9 @@ class UsuariosController {
 
     async getAll(req, res) {
         try {
-            const usuarios = await UsuariosService.getAllUsuarios();
+            const incluyeInactivosRaw = req.query?.incluyeInactivos;
+            const incluyeInactivos = incluyeInactivosRaw === true || incluyeInactivosRaw === 1 || incluyeInactivosRaw === 'true' || incluyeInactivosRaw === '1';
+            const usuarios = await UsuariosService.getAllUsuarios(incluyeInactivos);
             res.status(200).json(usuarios);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -14,7 +16,9 @@ class UsuariosController {
     async getById(req, res) {
         try {
             const id = req.params.id;
-            const usuario = await UsuariosService.getUsuarioById(id);
+            const incluyeInactivosRaw = req.query?.incluyeInactivos;
+            const incluyeInactivos = incluyeInactivosRaw === true || incluyeInactivosRaw === 1 || incluyeInactivosRaw === 'true' || incluyeInactivosRaw === '1';
+            const usuario = await UsuariosService.getUsuarioById(id, incluyeInactivos);
             
             if (!usuario) {
                 return res.status(404).json({ error: "Usuario no encontrado" });

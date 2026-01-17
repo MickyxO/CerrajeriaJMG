@@ -1,0 +1,448 @@
+.cajaPage {
+  display: grid;
+  gap: 14px;
+}
+
+.cajaTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cajaTitle h1 {
+  margin: 0;
+  color: var(--jmg-navy);
+}
+
+.cajaSubtitle {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.cajaTopActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cajaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--jmg-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--jmg-shadow);
+}
+
+.panelFull {
+  grid-column: 1 / -1;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
+  color: #fff;
+}
+
+.panelHead strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.panelBody {
+  padding: 12px 14px;
+}
+
+.dateRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dateActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.dateChips {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dateChip {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  color: var(--jmg-navy);
+}
+
+.dateChip:hover {
+  background: rgba(3, 25, 64, 0.03);
+}
+
+.dateChipActive {
+  background: rgba(255, 199, 0, 0.22);
+  border-color: rgba(255, 199, 0, 0.65);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.status {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--jmg-border);
+  background: rgba(3, 25, 64, 0.03);
+  font-weight: 700;
+}
+
+.statusError {
+  border-color: rgba(180, 35, 24, 0.25);
+  background: rgba(180, 35, 24, 0.06);
+  color: #7a271a;
+}
+
+.hint {
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.kpis {
+  display: grid;
+  gap: 10px;
+}
+
+.kpis4 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.kpi {
+  border: 1px solid var(--jmg-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(11, 31, 59, 0.02);
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--jmg-muted);
+  margin-bottom: 4px;
+}
+
+.kpiValue {
+  font-weight: 900;
+  color: var(--jmg-navy);
+}
+
+.meta {
+  display: grid;
+  gap: 6px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.meta strong {
+  color: var(--jmg-navy);
+}
+
+.openBox {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  color: var(--jmg-muted);
+  font-weight: 900;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.textInput {
+  width: 100%;
+  border: 1px solid var(--jmg-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  background: #fff;
+}
+
+.textInput:focus {
+  border-color: rgba(3, 25, 64, 0.45);
+  box-shadow: 0 0 0 4px rgba(255, 199, 0, 0.22);
+}
+
+.primary {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(3, 25, 64, 0.12);
+  background: var(--jmg-yellow);
+  color: var(--jmg-navy);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ghost {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ghost:hover {
+  background: rgba(3, 25, 64, 0.03);
+}
+
+.danger {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 35, 24, 0.25);
+  background: rgba(180, 35, 24, 0.06);
+  color: #7a271a;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.danger:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.closeActions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.closeCard {
+  margin-top: 12px;
+  border: 1px solid rgba(180, 35, 24, 0.18);
+  background: rgba(180, 35, 24, 0.04);
+  border-radius: 16px;
+  padding: 12px 12px;
+}
+
+.closeCardTitle {
+  font-weight: 950;
+  color: var(--jmg-navy);
+}
+
+.closeCardActions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.miniTitle {
+  font-weight: 900;
+  color: var(--jmg-navy);
+  margin-bottom: 8px;
+}
+
+.miniList {
+  display: grid;
+  gap: 8px;
+}
+
+.miniRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--jmg-border);
+  border-radius: 12px;
+}
+
+.miniRow span {
+  color: var(--jmg-muted);
+  font-weight: 800;
+}
+
+.miniRow strong {
+  color: var(--jmg-navy);
+}
+
+.movHead {
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.movHead strong {
+  font-size: 14px;
+}
+
+.movHead .pill {
+  height: 24px;
+  padding: 0 9px;
+}
+
+.movFilters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.movFilters::-webkit-scrollbar {
+  height: 8px;
+}
+
+.movFilters::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+}
+
+.cajaMovButton {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
+  border-radius: 999px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cajaMovButton:hover {
+  background: rgba(244, 194, 0, 0.18);
+  border-color: rgba(244, 194, 0, 0.55);
+}
+
+.cajaMovButtonActive {
+  background: rgba(244, 194, 0, 0.25);
+  border-color: rgba(244, 194, 0, 0.65);
+}
+
+.movList {
+  display: grid;
+}
+
+.movRow {
+  display: grid;
+  grid-template-columns: 86px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--jmg-border);
+  background: rgba(11, 31, 59, 0.03);
+  color: var(--jmg-navy);
+}
+
+.chipIn {
+  background: rgba(244, 194, 0, 0.22);
+  border-color: rgba(244, 194, 0, 0.65);
+}
+
+.chipOut {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.30);
+  color: #7f1d1d;
+}
+
+.movMain {
+  display: grid;
+  gap: 2px;
+}
+
+.movTitle {
+  font-weight: 800;
+  color: var(--jmg-navy);
+}
+
+.movSub {
+  color: var(--jmg-muted);
+  font-size: 12px;
+}
+
+.movAmount {
+  font-weight: 900;
+  color: var(--jmg-navy);
+}
+
+@media (max-width: 980px) {
+  .cajaGrid {
+    grid-template-columns: 1fr;
+  }
+  .split {
+    grid-template-columns: 1fr;
+  }
+}

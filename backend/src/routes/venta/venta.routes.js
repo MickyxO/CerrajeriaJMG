@@ -144,6 +144,9 @@ router.get("/buscarventafecha", VentaController.getByFecha);
  *                     type: string
  *                   notas:
  *                     type: string
+ *                   requiereFactura:
+ *                     type: boolean
+ *                     description: "Si es true, se calcula IVA (16%) y se suma al total"
  *               carrito:
  *                 type: array
  *                 items:
@@ -159,7 +162,7 @@ router.get("/buscarventafecha", VentaController.getByFecha);
  *                     precio:
  *                       type: number
  *             example:
- *               datosVenta: {"idUsuario": 1, "total": 600.00, "metodoPago": "Efectivo", "nombreCliente": "Mostrador", "notas": ""}
+ *               datosVenta: {"idUsuario": 1, "total": 600.00, "metodoPago": "Efectivo", "nombreCliente": "Mostrador", "notas": "", "requiereFactura": true}
  *               carrito: [{"tipo": "ITEM", "id": 1, "cantidad": 1, "precio": 600.00}]
  *     responses:
  *       201:

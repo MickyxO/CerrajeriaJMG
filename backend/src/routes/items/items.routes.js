@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const ItemsController = require("../../controllers/items/items.controller");
+const { uploadItemImage } = require("../../middlewares/upload");
 
 /**
  * @swagger
@@ -238,6 +239,42 @@ router.post("/postitem", ItemsController.create);
  *         description: Error interno del servidor
  */
 router.put("/putitem/:id", ItemsController.update);
+
+/**
+ * @swagger
+ * /putitemimagen/{id}:
+ *   put:
+ *     tags:
+ *       - Items
+ *     summary: Subir/actualizar la imagen de un item (multipart/form-data)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del item
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               imagen:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Imagen actualizada correctamente
+ *       400:
+ *         description: Error de validación
+ */
+router.put(
+	"/putitemimagen/:id",
+	uploadItemImage.single("imagen"),
+	ItemsController.uploadImagen
+);
 
 /**
  * @swagger

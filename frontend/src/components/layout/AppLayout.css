@@ -1,0 +1,236 @@
+:root {
+  --jmg-navy: #0b1f3b;
+  --jmg-navy-2: #0f2a52;
+  --jmg-yellow: #f4c200;
+  --jmg-white: #ffffff;
+  --jmg-bg: #f6f7fb;
+  --jmg-text: #0f172a;
+  --jmg-muted: #64748b;
+  --jmg-border: rgba(15, 23, 42, 0.12);
+  --jmg-shadow: 0 10px 30px rgba(2, 6, 23, 0.10);
+
+  --topbar-h: 56px;
+  --sidebar-w: 260px;
+}
+
+.appShell {
+  min-height: 100dvh;
+  background: var(--jmg-bg);
+  color: var(--jmg-text);
+}
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100dvh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+  background: var(--jmg-white);
+  border-right: 1px solid var(--jmg-border);
+  padding: calc(12px + env(safe-area-inset-top)) 12px 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--jmg-navy) 0%, var(--jmg-navy-2) 100%);
+  color: var(--jmg-white);
+}
+
+.brandMark {
+  width: 56px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--jmg-yellow);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: var(--jmg-navy);
+  letter-spacing: 0.6px;
+  font-size: 13px;
+}
+
+.brandText {
+  display: grid;
+  line-height: 1.05;
+}
+
+.brandText strong {
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+.brandText span {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.nav {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--jmg-text);
+  border: 1px solid transparent;
+}
+
+.navLink:hover {
+  background: rgba(11, 31, 59, 0.05);
+}
+
+.navLinkActive {
+  background: rgba(244, 194, 0, 0.25);
+  border-color: rgba(244, 194, 0, 0.55);
+}
+
+.navIcon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--jmg-navy);
+}
+
+.navLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.content {
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+  background: rgba(246, 247, 251, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--jmg-border);
+}
+
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconButton {
+  appearance: none;
+  border: 1px solid var(--jmg-border);
+  background: var(--jmg-white);
+  color: var(--jmg-navy);
+  border-radius: 12px;
+  height: 40px;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* El botón hamburguesa solo en móvil */
+.menuButton {
+  display: none;
+}
+
+.iconButton:hover {
+  background: rgba(11, 31, 59, 0.04);
+}
+
+.pageTitle {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.userBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.logoutButton {
+  appearance: none;
+  border: 1px solid var(--jmg-border);
+  background: var(--jmg-white);
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--jmg-navy);
+  font-weight: 700;
+}
+
+.logoutButton:hover {
+  background: rgba(244, 194, 0, 0.18);
+  border-color: rgba(244, 194, 0, 0.7);
+}
+
+.main {
+  padding: 14px;
+}
+
+/* Mobile drawer */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.45);
+  z-index: 40;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100dvh;
+  width: min(86vw, 320px);
+  background: var(--jmg-white);
+  border-right: 1px solid var(--jmg-border);
+  box-shadow: var(--jmg-shadow);
+  padding: calc(12px + env(safe-area-inset-top)) 12px 12px;
+  z-index: 50;
+  transform: translateX(-105%);
+  transition: transform 180ms ease;
+}
+
+.drawerOpen {
+  transform: translateX(0);
+}
+
+@media (max-width: 920px) {
+  .menuButton {
+    display: grid;
+  }
+
+  .layoutGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    padding: 12px;
+  }
+}

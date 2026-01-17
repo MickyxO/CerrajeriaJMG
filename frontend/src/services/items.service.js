@@ -2,30 +2,37 @@ import { apiRequest } from "./api";
 
 export const itemsService = {
   /** Backend: GET /getitems */
-  getItems() {
-    return apiRequest("/getitems");
+  getItems({ incluyeInactivos } = {}) {
+    return apiRequest("/getitems", { params: { incluyeInactivos: incluyeInactivos ? 1 : undefined } });
   },
 
   /** Backend: GET /getitems/categoria/:idCategoria */
-  getItemsPorCategoria(idCategoria) {
-    return apiRequest(`/getitems/categoria/${idCategoria}`);
+  getItemsPorCategoria(idCategoria, { incluyeInactivos } = {}) {
+    return apiRequest(`/getitems/categoria/${idCategoria}`, {
+      params: { incluyeInactivos: incluyeInactivos ? 1 : undefined },
+    });
   },
 
   /** Backend: GET /getitems/marca/:marca */
-  getItemsPorMarca(marca) {
-    return apiRequest(`/getitems/marca/${encodeURIComponent(marca)}`);
+  getItemsPorMarca(marca, { incluyeInactivos } = {}) {
+    return apiRequest(`/getitems/marca/${encodeURIComponent(marca)}`, {
+      params: { incluyeInactivos: incluyeInactivos ? 1 : undefined },
+    });
   },
 
   /** Backend: GET /getitems/clasificacion/:clasificacion */
-  getItemsPorClasificacion(clasificacion) {
+  getItemsPorClasificacion(clasificacion, { incluyeInactivos } = {}) {
     return apiRequest(
-      `/getitems/clasificacion/${encodeURIComponent(clasificacion)}`
+      `/getitems/clasificacion/${encodeURIComponent(clasificacion)}`,
+      { params: { incluyeInactivos: incluyeInactivos ? 1 : undefined } }
     );
   },
 
   /** Backend: GET /buscaritems?q=... */
-  buscarItems(q) {
-    return apiRequest("/buscaritems", { params: { q } });
+  buscarItems(q, { incluyeInactivos } = {}) {
+    return apiRequest("/buscaritems", {
+      params: { q, incluyeInactivos: incluyeInactivos ? 1 : undefined },
+    });
   },
 
   /** Backend: POST /postitem */
@@ -41,5 +48,12 @@ export const itemsService = {
   /** Backend: DELETE /deleteitem/:id */
   eliminarItem(id) {
     return apiRequest(`/deleteitem/${id}`, { method: "DELETE" });
+  },
+
+  /** Backend: PUT /putitemimagen/:id (multipart/form-data) */
+  subirImagen(id, file) {
+    const form = new FormData();
+    form.append("imagen", file);
+    return apiRequest(`/putitemimagen/${id}`, { method: "PUT", body: form });
   },
 };

@@ -2,8 +2,13 @@ import { apiRequest } from "./api";
 
 export const cajaService = {
   /** Backend: GET /getcajaestado */
-  getEstado() {
-    return apiRequest("/getcajaestado");
+  getEstado({ fecha } = {}) {
+    return apiRequest("/getcajaestado", { params: { fecha } });
+  },
+
+  /** Backend: GET /getcajasfechas */
+  getFechas({ limit } = {}) {
+    return apiRequest("/getcajasfechas", { params: { limit } });
   },
 
   /** Backend: POST /postabrircaja */
@@ -28,12 +33,12 @@ export const cajaService = {
   },
 
   /** Backend: GET /getmovimientoscaja */
-  getMovimientos() {
-    return apiRequest("/getmovimientoscaja");
+  getMovimientos({ fecha } = {}) {
+    return apiRequest("/getmovimientoscaja", { params: { fecha } });
   },
 
   /** Backend: GET /getresumencaja */
-  getResumen() {
-    return apiRequest("/getresumencaja");
+  getResumen({ fecha } = {}) {
+    return apiRequest("/getresumencaja", { params: { fecha } });
   },
 };

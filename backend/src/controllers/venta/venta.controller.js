@@ -86,13 +86,29 @@ class VentaController {
 			// 2) { idUsuario, total, metodoPago, nombreCliente, notas, carrito: [...] }
 			const body = req.body || {};
 
+			// Flag para IVA/factura (acepta varios nombres por compat)
+			const requiereFacturaRaw =
+				body?.datosVenta?.requiereFactura ??
+				body?.datosVenta?.requiere_factura ??
+				body?.requiereFactura ??
+				body?.requiere_factura;
+			const requiereFactura = requiereFacturaRaw === true || requiereFacturaRaw === 1 || requiereFacturaRaw === 'true';
+
 			const datosVenta = body.datosVenta ?? {
 				idUsuario: body.idUsuario,
 				total: body.total,
 				metodoPago: body.metodoPago,
 				nombreCliente: body.nombreCliente,
-				notas: body.notas
+				notas: body.notas,
+				subtotal: body.subtotal,
+				montoIva: body.montoIva,
+				requiereFactura
 			};
+
+			// Si viene en formato 1), garantizamos que el flag quede presente
+			if (datosVenta && datosVenta.requiereFactura === undefined) {
+				datosVenta.requiereFactura = requiereFactura;
+			}
 
 			const carrito = body.carrito ?? body.Carrito;
 

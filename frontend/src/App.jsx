@@ -1,35 +1,51 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Navigate, Route, Routes } from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
+import AppLayout from "./components/layout/AppLayout";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
+import LoginPage from "./pages/auth/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import PosPage from "./pages/pos/PosPage";
+import ItemsPage from "./pages/items/ItemsPage";
+import CombosPage from "./pages/combos/CombosPage";
+import CategoriasPage from "./pages/categorias/CategoriasPage";
+import VentasPage from "./pages/ventas/VentasPage";
+import VentaDetallePage from "./pages/ventas/VentaDetallePage";
+import CajaPage from "./pages/caja/CajaPage";
+import InventarioPage from "./pages/inventario/InventarioPage";
+import UsuariosPage from "./pages/usuarios/UsuariosPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import { CartProvider } from "./context/CartContext.jsx";
+
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
 
-export default App
+      {/* App protegida: si no hay usuario => /login */}
+      <Route element={<ProtectedRoute />}>
+        <Route
+          element={
+            <CartProvider>
+              <AppLayout />
+            </CartProvider>
+          }
+        >
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/pos" element={<PosPage />} />
+          <Route path="/items" element={<ItemsPage />} />
+          <Route path="/combos" element={<CombosPage />} />
+          <Route path="/categorias" element={<CategoriasPage />} />
+          <Route path="/ventas" element={<VentasPage />} />
+          <Route path="/ventas/:id" element={<VentaDetallePage />} />
+          <Route path="/caja" element={<CajaPage />} />
+          <Route path="/inventario" element={<InventarioPage />} />
+          <Route path="/usuarios" element={<UsuariosPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}

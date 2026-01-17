@@ -18,17 +18,18 @@ class ItemsService {
             row.compatibilidad_marca,
             row.tipo_chip,
             row.frecuencia,
-            row.activo // <--- AGREGADO: Para pasar el estado al modelo
+            row.activo, // <--- AGREGADO: Para pasar el estado al modelo
+            row.imagen_url
         );
     }
 
-    async getAllItems() {
+    async getAllItems({ incluyeInactivos = false } = {}) {
         try {
             const query = `
                 SELECT i.*, c.nombre as nombre_categoria 
                 FROM items i
                 INNER JOIN categorias c ON i.id_categoria = c.id_categoria
-                WHERE i.activo = TRUE
+                ${incluyeInactivos ? "" : "WHERE i.activo = TRUE"}
                 ORDER BY i.id_item ASC
             `;
             
@@ -46,13 +47,13 @@ class ItemsService {
         }
     }
 
-    async getItemsPorCategoria(idCategoria) {
+    async getItemsPorCategoria(idCategoria, { incluyeInactivos = false } = {}) {
         try {
             const query = `
                 SELECT i.*, c.nombre as nombre_categoria 
                 FROM items i
                 INNER JOIN categorias c ON i.id_categoria = c.id_categoria
-                WHERE i.id_categoria = $1 AND i.activo = TRUE
+                WHERE i.id_categoria = $1 ${incluyeInactivos ? "" : "AND i.activo = TRUE"}
             `; // <--- MODIFICADO: Agregado filtro activo
             
             const { rows } = await pool.query(query, [idCategoria]);
@@ -68,13 +69,13 @@ class ItemsService {
         }
     }
 
-    async getItemsPorMarca(nombreMarca) {
+    async getItemsPorMarca(nombreMarca, { incluyeInactivos = false } = {}) {
         try {
             const query = `
                 SELECT i.*, c.nombre as nombre_categoria 
                 FROM items i
                 INNER JOIN categorias c ON i.id_categoria = c.id_categoria
-                WHERE i.compatibilidad_marca ILIKE $1 AND i.activo = TRUE
+                WHERE i.compatibilidad_marca ILIKE $1 ${incluyeInactivos ? "" : "AND i.activo = TRUE"}
             `; // <--- MODIFICADO: Agregado filtro activo
             
             const { rows } = await pool.query(query, [`%${nombreMarca}%`]); 
@@ -90,13 +91,13 @@ class ItemsService {
         }
     }
 
-    async getItemsPorNombreParcial(parcial) {
+    async getItemsPorNombreParcial(parcial, { incluyeInactivos = false } = {}) {
         try {
             const query = `
                 SELECT i.*, c.nombre as nombre_categoria 
                 FROM items i
                 INNER JOIN categorias c ON i.id_categoria = c.id_categoria
-                WHERE i.nombre ILIKE $1 AND i.activo = TRUE
+                WHERE i.nombre ILIKE $1 ${incluyeInactivos ? "" : "AND i.activo = TRUE"}
             `; // <--- MODIFICADO: Agregado filtro activo
 
             const { rows } = await pool.query(query, [`%${parcial}%`]);
@@ -112,13 +113,13 @@ class ItemsService {
         }
     }
 
-    async getItemsPorClasificacion(parcial) {
+    async getItemsPorClasificacion(parcial, { incluyeInactivos = false } = {}) {
         try {
             const query = `
                 SELECT i.*, c.nombre as nombre_categoria
                 FROM items i
                 INNER JOIN categorias c ON i.id_categoria = c.id_categoria
-                WHERE c.clasificacion ILIKE $1 AND i.activo = TRUE
+                WHERE c.clasificacion ILIKE $1 ${incluyeInactivos ? "" : "AND i.activo = TRUE"}
             `; // <--- MODIFICADO: Agregado filtro activo
 
             const { rows } = await pool.query(query, [`%${parcial}%`]);
@@ -137,7 +138,8 @@ class ItemsService {
     async createItem(datos) {
         const { 
             Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia,
-            EsServicio, StockActual, StockMinimo, CompatibilidadMarca, TipoChip, Frecuencia 
+            EsServicio, StockActual, StockMinimo, CompatibilidadMarca, TipoChip, Frecuencia,
+            ImagenUrl
         } = datos;
 
         if (!Nombre || !IdCategoria || !PrecioVenta) {
@@ -151,14 +153,16 @@ class ItemsService {
             const query = `
                 INSERT INTO items (
                     nombre, descripcion, id_categoria, precio_venta, costo_referencia,
-                    es_servicio, stock_actual, stock_minimo, compatibilidad_marca, tipo_chip, frecuencia
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    es_servicio, stock_actual, stock_minimo, compatibilidad_marca, tipo_chip, frecuencia,
+                    imagen_url
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING id_item
             `;
             
             const values = [
                 Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia || 0,
-                EsServicio || false, StockActual || 10, StockMinimo || 2, CompatibilidadMarca, TipoChip, Frecuencia
+                EsServicio || false, StockActual || 10, StockMinimo || 2, CompatibilidadMarca, TipoChip, Frecuencia,
+                ImagenUrl || null
             ];
 
             const { rows } = await pool.query(query, values);
@@ -183,6 +187,7 @@ class ItemsService {
             'CompatibilidadMarca': 'compatibilidad_marca',
             'TipoChip': 'tipo_chip',
             'Frecuencia': 'frecuencia',
+            'ImagenUrl': 'imagen_url',
             'Activo': 'activo' 
         };
 
@@ -231,6 +236,18 @@ class ItemsService {
 
         } catch (err) {
             console.error("Error desactivando item: ", err.message);
+            throw err;
+        }
+    }
+
+    async setImagenUrl(idItem, imagenUrl) {
+        try {
+            const query = `UPDATE items SET imagen_url = $1 WHERE id_item = $2 RETURNING *`;
+            const { rowCount, rows } = await pool.query(query, [imagenUrl, idItem]);
+            if (rowCount === 0) throw new Error("Item no encontrado.");
+            return this._mapRowToModel(rows[0]);
+        } catch (err) {
+            console.error("Error actualizando imagen del item: ", err.message);
             throw err;
         }
     }

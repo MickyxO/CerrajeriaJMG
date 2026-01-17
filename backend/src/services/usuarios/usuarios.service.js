@@ -17,10 +17,11 @@ class UsuariosService {
         );
     }
 
-    async getAllUsuarios() {
+    async getAllUsuarios(incluyeInactivos = false) {
         try {
-
-            const query = "SELECT * FROM usuarios WHERE activo = TRUE ORDER BY nombre_completo ASC";
+            const query = incluyeInactivos
+                ? "SELECT * FROM usuarios ORDER BY nombre_completo ASC"
+                : "SELECT * FROM usuarios WHERE activo = TRUE ORDER BY nombre_completo ASC";
             const { rows } = await pool.query(query);
 
             return rows.map(row => this._mapRowToModel(row));
@@ -30,9 +31,11 @@ class UsuariosService {
         }
     }
 
-    async getUsuarioById(id) {
+    async getUsuarioById(id, incluyeInactivos = false) {
         try {
-            const query = "SELECT * FROM usuarios WHERE id_usuario = $1 AND activo = TRUE";
+            const query = incluyeInactivos
+                ? "SELECT * FROM usuarios WHERE id_usuario = $1"
+                : "SELECT * FROM usuarios WHERE id_usuario = $1 AND activo = TRUE";
             const { rows } = await pool.query(query, [id]);
 
             if (rows.length === 0) return null;

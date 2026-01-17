@@ -1,0 +1,96 @@
+.comboPage {
+  display: grid;
+  gap: 14px;
+}
+
+.comboTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.comboTitle {
+  margin: 0;
+  color: var(--jmg-navy);
+}
+
+.comboSubtitle {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.comboTopActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.comboGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 14px;
+}
+
+.comboFilterRow {
+  display: grid;
+  gap: 10px;
+}
+
+.comboBuilder {
+  display: grid;
+  gap: 10px;
+}
+
+.comboItemsList {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.comboItemRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--jmg-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.comboItemTitle {
+  font-weight: 900;
+  color: var(--jmg-navy);
+}
+
+.comboQtyInput {
+  width: 72px;
+  text-align: center;
+  border: 1px solid var(--jmg-border);
+  border-radius: 10px;
+  padding: 8px 8px;
+}
+
+.comboMini {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.comboSearchResults {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+@media (max-width: 920px) {
+  .comboGrid {
+    grid-template-columns: 1fr;
+  }
+}

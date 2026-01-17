@@ -1,5 +1,4 @@
 const pool = require("../../config/db");
-
 const { Venta, DetalleVenta } = require("../../models/venta/venta.model"); 
 
 class VentaService {
@@ -15,23 +14,41 @@ class VentaService {
             row.nombre_cliente,
             row.total,
             row.metodo_pago,
-            row.notas
+            row.notas,
+            // Agregamos los campos nuevos al modelo
+            row.subtotal,
+            row.monto_iva
         );
     }
 
     // =========================================================================
-    // 1. CREAR VENTA (Transacción Completa - Lógica Intacta)
+    // 1. CREAR VENTA (Con Cálculo de IVA y Seguridad de Montos)
     // =========================================================================
     async crearVenta(datosVenta, carrito) {
-        // datosVenta: { idUsuario, total, metodoPago, nombreCliente, notas }
+        // datosVenta: { idUsuario, metodoPago, nombreCliente, notas, requiereFactura (BOOLEAN) }
         // carrito: Array [{ tipo: 'ITEM'|'COMBO', id: 1, cantidad: 1, precio: 1600 }]
-        // Nota: 'precio' en el carrito debe ser el PRECIO UNITARIO final negociado.
-        // EL TIPO ES UNA BANDERA QUE VIENE DEL FRONTEND PARA SABER CÓMO PROCESARLO.
-
+        
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN'); 
+
+            const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
+            let sumaSubtotal = 0;
+
+            // Cálculo del IVA
+            let montoIVA = 0;
+            // Verificamos si el flag 'requiereFactura' viene en true
+            if (datosVenta.requiereFactura === true) {
+                sumaSubtotal = round2(datosVenta.total / 1.16);
+                montoIVA = round2(datosVenta.total - sumaSubtotal);
+            } else {
+                sumaSubtotal = round2(datosVenta.total);
+                montoIVA = 0;
+            }
+
+
 
             // ---------------------------------------------------------
             // PASO A: VALIDAR CAJA (Solo si es Efectivo)
@@ -49,73 +66,72 @@ class VentaService {
             }
 
             // ---------------------------------------------------------
-            // PASO A.1: NOTAS (Opción A)
-            // Si el frontend NO manda notas, las construimos durante el PASO D
-            // y luego actualizamos la venta (UPDATE) antes del COMMIT.
+            // PASO A.1: NOTAS 
             // ---------------------------------------------------------
             const notasOriginal = (datosVenta.notas ?? "").toString().trim();
             const autoNotas = !notasOriginal;
             const partesNotas = [];
 
+            // Agregamos nota automática si pide factura
+            if (datosVenta.requiereFactura) {
+                partesNotas.push("**REQUIERE FACTURA**");
+            }
+
             // ---------------------------------------------------------
-            // PASO B: INSERTAR CABECERA DE VENTA
+            // PASO B: INSERTAR CABECERA DE VENTA (Con Subtotal e IVA)
             // ---------------------------------------------------------
             const insertVentaQuery = `
-                INSERT INTO ventas (id_usuario, nombre_cliente, total, metodo_pago, notas)
-                VALUES ($1, $2, $3, $4, $5)
+                INSERT INTO ventas (id_usuario, nombre_cliente, subtotal, monto_iva, total, metodo_pago, notas)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING id_venta, fecha_venta
             `;
             const resVenta = await client.query(insertVentaQuery, [
                 datosVenta.idUsuario,
                 datosVenta.nombreCliente || 'Mostrador',
-                datosVenta.total,
+                sumaSubtotal,    // $ Valor neto
+                montoIVA,        // $ Impuesto
+                round2(datosVenta.total),      // $ Total a pagar
                 datosVenta.metodoPago,
                 notasOriginal || null
             ]);
             
             const idVenta = resVenta.rows[0].id_venta;
 
-            // ---------------------------------------------------------
-            // PASO C: ACTUALIZAR DINERO EN CAJA (Si aplica)
-            // ---------------------------------------------------------
             if (idCajaActual) {
                 await client.query(
                     "UPDATE caja SET monto_actual = monto_actual + $1 WHERE id_caja = $2",
-                    [datosVenta.total, idCajaActual]
+                    [round2(datosVenta.total), idCajaActual] 
                 );
             }
 
             // ---------------------------------------------------------
-            // PASO D: PROCESAR EL CARRITO (La Lógica Maestra)
+            // PASO D: PROCESAR EL CARRITO (Items y Combos)
             // ---------------------------------------------------------
             for (const elemento of carrito) {
                 
-                // === CASO 1: ITEM INDIVIDUAL (Producto o Servicio suelto) ===
+                // === CASO 1: ITEM INDIVIDUAL ===
                 if (elemento.tipo === 'ITEM') {
-                    const subtotal = elemento.cantidad * elemento.precio;
+                    const subtotalItem = round2(elemento.cantidad * elemento.precio);
 
-                    // Snapshot del item para que cambios posteriores no alteren el historial
+                    // Snapshot del item
                     const resItem = await client.query(
                         "SELECT nombre, es_servicio FROM items WHERE id_item = $1",
                         [elemento.id]
                     );
-                    if (resItem.rows.length === 0) {
-                        throw new Error(`Item no encontrado (ID ${elemento.id}).`);
-                    }
+                    if (resItem.rows.length === 0) throw new Error(`Item ID ${elemento.id} no encontrado.`);
+                    
                     const { nombre: nombreItemSnapshot, es_servicio: esServicio } = resItem.rows[0];
 
-                    if (autoNotas) {
-                        partesNotas.push(`${elemento.cantidad}x ${nombreItemSnapshot}`);
-                    }
+                    if (autoNotas) partesNotas.push(`${elemento.cantidad}x ${nombreItemSnapshot}`);
                     
-                    // 1. Insertar Detalle
+                    // Insertar Detalle
                     await client.query(
                         `INSERT INTO detalle_ventas (id_venta, id_item, cantidad, precio_unitario, subtotal, nombre_item_snapshot)
                          VALUES ($1, $2, $3, $4, $5, $6)`,
-                        [idVenta, elemento.id, elemento.cantidad, elemento.precio, subtotal, nombreItemSnapshot]
+                        [idVenta, elemento.id, elemento.cantidad, elemento.precio, subtotalItem, nombreItemSnapshot]
                     );
 
-                    // 2. Descontar Inventario (Si NO es servicio)
+                    // Descontar Inventario
                     if (!esServicio) {
                         await client.query(
                             "UPDATE items SET stock_actual = stock_actual - $1 WHERE id_item = $2",
@@ -124,29 +140,21 @@ class VentaService {
                         // Kardex
                         await client.query(
                             `INSERT INTO movimientos_inventario (id_item, tipo_movimiento, cantidad, id_usuario, comentario)
-                             VALUES ($1, 'VENTA', $2, $3, 'Venta Indiv. #' || $4)`,
+                             VALUES ($1, 'VENTA', $2, $3, 'Venta #' || $4)`,
                             [elemento.id, elemento.cantidad, datosVenta.idUsuario, idVenta]
                         );
                     }
 
-                // === CASO 2: COMBO (Lógica "Hardware Intocable") ===
+                // === CASO 2: COMBO ===
                 } else if (elemento.tipo === 'COMBO') {
-
-                    // Snapshot de cabecera del combo
-                    const resCombo = await client.query(
-                        "SELECT nombre_combo FROM combos WHERE id_combo = $1",
-                        [elemento.id]
-                    );
-                    if (resCombo.rows.length === 0) {
-                        throw new Error(`Combo no encontrado (ID ${elemento.id}).`);
-                    }
-                    const nombreComboSnapshot = resCombo.rows[0].nombre_combo;
-
-                    if (autoNotas) {
-                        partesNotas.push(`${elemento.cantidad}x ${nombreComboSnapshot}`);
-                    }
+                    // Snapshot Combo
+                    const resCombo = await client.query("SELECT nombre_combo FROM combos WHERE id_combo = $1", [elemento.id]);
+                    if (resCombo.rows.length === 0) throw new Error(`Combo ID ${elemento.id} no encontrado.`);
                     
-                    // 1. Obtener receta del combo
+                    const nombreComboSnapshot = resCombo.rows[0].nombre_combo;
+                    if (autoNotas) partesNotas.push(`${elemento.cantidad}x ${nombreComboSnapshot}`);
+                    
+                    // Obtener receta
                     const resReceta = await client.query(
                         `SELECT ci.id_item, ci.cantidad_default, i.precio_venta, i.es_servicio, i.nombre
                          FROM combo_items ci
@@ -157,41 +165,34 @@ class VentaService {
                     const ingredientes = resReceta.rows;
 
                     if (ingredientes.length > 0) {
-                        // Separar Físicos vs Servicios
                         const itemsFisicos = ingredientes.filter(i => !i.es_servicio);
                         const itemsServicio = ingredientes.filter(i => i.es_servicio);
 
-                        // Calcular costo total del Hardware (Precio Lista * Cantidad)
                         let costoHardwareUnitario = 0;
                         itemsFisicos.forEach(item => {
                             costoHardwareUnitario += (Number(item.precio_venta) * item.cantidad_default);
                         });
 
-                        // Calcular remanente para Mano de Obra (PrecioCobrado - CostoHardware)
-                        // elemento.precio es el precio UNITARIO del combo negociado
                         const remanenteUnitario = elemento.precio - costoHardwareUnitario;
 
-                        // --- A) REGISTRAR ITEMS FÍSICOS (Precio Fijo) ---
+                        // A) REGISTRAR ITEMS FÍSICOS
                         for (const item of itemsFisicos) {
                             const cantidadTotal = item.cantidad_default * elemento.cantidad;
                             const precioLista = Number(item.precio_venta);
-                            const subtotalFijo = precioLista * cantidadTotal;
+                            const subtotalFijo = round2(precioLista * cantidadTotal);
 
-                            // Insertar
                             await client.query(
                                 `INSERT INTO detalle_ventas (
                                     id_venta, id_item, cantidad, precio_unitario, subtotal,
-                                    nombre_item_snapshot,
-                                    id_combo, nombre_combo_snapshot, precio_combo_unitario_snapshot, combo_cantidad_snapshot
+                                    nombre_item_snapshot, id_combo, nombre_combo_snapshot, 
+                                    precio_combo_unitario_snapshot, combo_cantidad_snapshot
                                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
                                 [
                                     idVenta, item.id_item, cantidadTotal, precioLista, subtotalFijo,
-                                    item.nombre,
-                                    elemento.id, nombreComboSnapshot, elemento.precio, elemento.cantidad
+                                    item.nombre, elemento.id, nombreComboSnapshot, elemento.precio, elemento.cantidad
                                 ]
                             );
 
-                            // Inventario + Kardex
                             await client.query(
                                 "UPDATE items SET stock_actual = stock_actual - $1 WHERE id_item = $2",
                                 [cantidadTotal, item.id_item]
@@ -203,40 +204,32 @@ class VentaService {
                             );
                         }
 
-                        // --- B) REGISTRAR SERVICIOS (Absorben la Ganancia/Pérdida) ---
+                        // B) REGISTRAR SERVICIOS
                         if (itemsServicio.length > 0) {
-                            // Dividimos el remanente entre los servicios que tenga el combo (usualmente 1)
                             const precioServicioUnitario = remanenteUnitario / itemsServicio.length;
-
                             for (const srv of itemsServicio) {
                                 const cantidadTotal = srv.cantidad_default * elemento.cantidad;
-                                const subtotalVariable = precioServicioUnitario * cantidadTotal;
+                                const subtotalVariable = round2(precioServicioUnitario * cantidadTotal);
 
                                 await client.query(
                                     `INSERT INTO detalle_ventas (
                                         id_venta, id_item, cantidad, precio_unitario, subtotal,
-                                        nombre_item_snapshot,
-                                        id_combo, nombre_combo_snapshot, precio_combo_unitario_snapshot, combo_cantidad_snapshot
+                                        nombre_item_snapshot, id_combo, nombre_combo_snapshot, 
+                                        precio_combo_unitario_snapshot, combo_cantidad_snapshot
                                      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
                                     [
                                         idVenta, srv.id_item, cantidadTotal, precioServicioUnitario, subtotalVariable,
-                                        srv.nombre,
-                                        elemento.id, nombreComboSnapshot, elemento.precio, elemento.cantidad
+                                        srv.nombre, elemento.id, nombreComboSnapshot, elemento.precio, elemento.cantidad
                                     ]
                                 );
-                            }
-                        } else {
-                            // FALLBACK DE SEGURIDAD:
-                            if (remanenteUnitario !== 0 && itemsFisicos.length > 0) {
-                                console.warn(`Advertencia: El combo ID ${elemento.id} no tiene servicio configurado para absorber la variacion de precio.`);
                             }
                         }
                     }
                 }
             }
 
-            // Guardar notas autogeneradas (si aplica)
-            if (autoNotas) {
+            // Actualizar notas generadas
+            if (autoNotas && partesNotas.length > 0) {
                 const notasGeneradas = partesNotas.join(", ");
                 await client.query(
                     "UPDATE ventas SET notas = $1 WHERE id_venta = $2",
@@ -244,11 +237,11 @@ class VentaService {
                 );
             }
 
-            await client.query('COMMIT'); // --- CONFIRMAR TODO ---
+            await client.query('COMMIT');
             return idVenta;
 
         } catch (err) {
-            await client.query('ROLLBACK'); // --- DESHACER TODO SI FALLA ---
+            await client.query('ROLLBACK');
             console.error("Error creando venta: ", err.message);
             throw err;
         } finally {
@@ -257,11 +250,10 @@ class VentaService {
     }
 
     // =========================================================================
-    // 2. OBTENER LISTA DE VENTAS (Read)
+    // 2. OBTENER LISTA DE VENTAS (Read) - Actualizado para mostrar Subtotal e IVA
     // =========================================================================
     async getVentas(fechaInicio, fechaFin) {
         try {
-            // Si no mandan fechas, traemos las del día actual por defecto
             let filtro = "WHERE DATE(v.fecha_venta) = CURRENT_DATE";
             const params = [];
 
@@ -270,8 +262,11 @@ class VentaService {
                 params.push(fechaInicio, fechaFin);
             }
 
+            // Agregamos subtotal y monto_iva a la consulta
             const query = `
-                SELECT v.id_venta, v.fecha_venta, v.nombre_cliente, v.total, v.metodo_pago, v.notas,
+                SELECT v.id_venta, v.fecha_venta, v.nombre_cliente, 
+                       v.subtotal, v.monto_iva, v.total, 
+                       v.metodo_pago, v.notas,
                        u.nombre_completo as vendedor
                 FROM ventas v
                 JOIN usuarios u ON v.id_usuario = u.id_usuario
@@ -280,9 +275,6 @@ class VentaService {
             `;
             
             const res = await pool.query(query, params);
-            
-            // Retornamos tal cual para mantener tu vista intacta, 
-            // aunque si quisieras ser estricto podrías usar mapRowToModel aquí.
             return res.rows; 
         } catch (err) {
             console.error("Error obteniendo ventas: ", err.message);
@@ -295,7 +287,7 @@ class VentaService {
     // =========================================================================
     async getDetalleVenta(idVenta) {
         try {
-            // 1. Datos Generales
+            // 1. Datos Generales (Ya trae subtotal/iva porque usamos v.*)
             const ventaQuery = `
                 SELECT v.*, u.nombre_completo as vendedor 
                 FROM ventas v
@@ -323,14 +315,12 @@ class VentaService {
             `;
             const resItems = await pool.query(itemsQuery, [idVenta]);
 
-            // Aquí mezclamos el Modelo de Venta con los items extra
             const ventaModel = this._mapRowToModel(resVenta.rows[0]);
             
-            // Agregamos propiedades extra que no están en el modelo base pero son útiles para el frontend
             return {
                 ...ventaModel,
                 Vendedor: resVenta.rows[0].vendedor,
-                Items: resItems.rows // Array de objetos simples
+                Items: resItems.rows
             };
 
         } catch (err) {
@@ -339,8 +329,9 @@ class VentaService {
         }
     }
 
-    // En VentaService.js
-
+    // =========================================================================
+    // 4. REPORTE DETALLADO DEL DÍA - Actualizado con Subtotal/IVA
+    // =========================================================================
     async getVentasDetalladasDia() {
         try {
             const query = `
@@ -348,11 +339,12 @@ class VentaService {
                     v.id_venta, 
                     v.fecha_venta, 
                     v.nombre_cliente, 
+                    v.subtotal,
+                    v.monto_iva,
                     v.total, 
                     v.metodo_pago,
                     v.notas,
                     u.nombre_completo as vendedor,
-                    -- Aquí ocurre la magia: Creamos un array de objetos JSON con los items
                     COALESCE(
                         json_agg(
                             json_build_object(
@@ -387,15 +379,12 @@ class VentaService {
     }
 
     // =========================================================================
-    // 4. ACTUALIZAR VENTA (Update)
+    // 5. ACTUALIZAR VENTA (Update Metadatos)
     // =========================================================================
-    // NOTA: Solo permitimos editar metadatos (Cliente, Notas) para no corromper 
-    // inventario ni caja. Si hay error en montos, se debe cancelar y crear nueva.
     async updateVenta(id, cuerpo) {
         const mapaCampos = {
             'NombreCliente': 'nombre_cliente',
-            'Notas': 'notas',
-            // 'MetodoPago': 'metodo_pago' // Podrías descomentar si permites cambiar esto post-venta
+            'Notas': 'notas'
         };
 
         const columnas = [];
@@ -431,11 +420,8 @@ class VentaService {
     }
 
     // =========================================================================
-    // 5. ELIMINAR VENTA (Delete)
+    // 6. ELIMINAR VENTA
     // =========================================================================
-    // ADVERTENCIA: Esta función elimina el registro. Como tienes "ON DELETE CASCADE"
-    // en detalle_ventas, se borrarán los detalles.
-    // OJO: Esta versión simple NO devuelve el stock al inventario automáticamente.
     async deleteVenta(id) {
         try {
             const query = "DELETE FROM ventas WHERE id_venta = $1 RETURNING id_venta";

@@ -1,2 +1,8 @@
 node_modules
 .env
+
+# User-uploaded files (do not commit)
+uploads/*
+!uploads/.gitkeep
+uploads/items/*
+!uploads/items/.gitkeep

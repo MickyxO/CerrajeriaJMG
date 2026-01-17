@@ -1,0 +1,33 @@
+/* Global styles */
+
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.4;
+}
+
+body {
+  margin: 0;
+  background: #f6f7fb;
+  color: #0f172a;
+}
+
+input, button {
+  font: inherit;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+button {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+/* Mejor soporte táctil (PWA/móvil) */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}

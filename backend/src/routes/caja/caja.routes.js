@@ -9,6 +9,13 @@ const CajaController = require("../../controllers/caja/caja.controller");
  *     tags:
  *       - Caja
  *     summary: Obtener el estado actual de la caja (ABIERTA/CERRADA)
+ *     parameters:
+ *       - in: query
+ *         name: fecha
+ *         schema:
+ *           type: string
+ *           example: 2026-01-16
+ *         description: (Opcional) Fecha a consultar (YYYY-MM-DD). Si se envía, devuelve la caja registrada en esa fecha.
  *     responses:
  *       200:
  *         description: Estado de la caja del día
@@ -16,6 +23,28 @@ const CajaController = require("../../controllers/caja/caja.controller");
  *         description: Error interno
  */
 router.get("/getcajaestado", CajaController.getEstadoCaja);
+
+/**
+ * @swagger
+ * /getcajasfechas:
+ *   get:
+ *     tags:
+ *       - Caja
+ *     summary: Obtener fechas con caja registrada
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 60
+ *         description: (Opcional) Límite de fechas a devolver
+ *     responses:
+ *       200:
+ *         description: Lista de fechas
+ *       500:
+ *         description: Error interno
+ */
+router.get("/getcajasfechas", CajaController.getFechasCaja);
 
 /**
  * @swagger
@@ -125,6 +154,13 @@ router.post("/postgasto", CajaController.registrarGasto);
  *     tags:
  *       - Caja
  *     summary: Obtener lista de movimientos del día (ventas + salidas)
+ *     parameters:
+ *       - in: query
+ *         name: fecha
+ *         schema:
+ *           type: string
+ *           example: 2026-01-16
+ *         description: (Opcional) Fecha a consultar (YYYY-MM-DD)
  *     responses:
  *       200:
  *         description: Lista de movimientos
@@ -140,6 +176,13 @@ router.get("/getmovimientoscaja", CajaController.getMovimientos);
  *     tags:
  *       - Caja
  *     summary: Obtener el resumen financiero del día (ventas, gastos, balance)
+ *     parameters:
+ *       - in: query
+ *         name: fecha
+ *         schema:
+ *           type: string
+ *           example: 2026-01-16
+ *         description: (Opcional) Fecha a consultar (YYYY-MM-DD)
  *     responses:
  *       200:
  *         description: Resumen financiero

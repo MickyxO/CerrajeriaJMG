@@ -1,0 +1,252 @@
+.ventasPage {
+  display: grid;
+  gap: 14px;
+}
+
+.ventasTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ventasTitle {
+  margin: 0;
+  color: var(--jmg-navy);
+}
+
+.ventasSubtitle {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.ventasTopActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ventasChip {
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  color: var(--jmg-navy);
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ventasChip:hover {
+  background: rgba(3, 25, 64, 0.04);
+}
+
+.ventasPrimary {
+  border: 1px solid rgba(244, 194, 0, 0.65);
+  background: rgba(244, 194, 0, 0.22);
+  color: var(--jmg-navy);
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 1000;
+  cursor: pointer;
+}
+
+.ventasPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ventasGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--jmg-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--jmg-shadow);
+}
+
+.panelFull {
+  grid-column: 1 / -1;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
+  color: #fff;
+}
+
+.panelHead strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.panelBody {
+  padding: 12px 14px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.ventasFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ventasField {
+  display: grid;
+  gap: 6px;
+}
+
+.ventasField span {
+  font-size: 12px;
+  color: var(--jmg-muted);
+  font-weight: 800;
+}
+
+.ventasField input {
+  border: 1px solid var(--jmg-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 800;
+}
+
+.ventasFieldFull {
+  grid-column: 1 / -1;
+}
+
+.ventasMetaRow {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ventasCount {
+  color: var(--jmg-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.ventasError {
+  color: #b42318;
+  font-weight: 900;
+}
+
+.ventasTableWrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--jmg-border);
+  border-radius: 14px;
+}
+
+.ventasTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.ventasTable th,
+.ventasTable td {
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 13px;
+}
+
+.ventasTable th {
+  text-align: left;
+  color: var(--jmg-muted);
+  font-weight: 900;
+  background: rgba(3, 25, 64, 0.03);
+}
+
+.ventasRight {
+  text-align: right;
+}
+
+.ventasRow:hover {
+  background: rgba(3, 25, 64, 0.02);
+}
+
+.ventasId {
+  font-weight: 1000;
+  color: var(--jmg-navy);
+}
+
+.ventasDate {
+  font-weight: 900;
+}
+
+.ventasBadge {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(244, 194, 0, 0.22);
+  border: 1px solid rgba(244, 194, 0, 0.55);
+  color: var(--jmg-navy);
+  font-weight: 1000;
+  font-size: 11px;
+}
+
+.ventasTotal {
+  font-weight: 1000;
+}
+
+.ventasLink {
+  appearance: none;
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  border-radius: 999px;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 1000;
+  cursor: pointer;
+  color: var(--jmg-navy);
+}
+
+.ventasLink:hover {
+  background: rgba(3, 25, 64, 0.04);
+}
+
+.ventasEmpty {
+  text-align: center;
+  color: var(--jmg-muted);
+  padding: 22px 10px;
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .ventasFilters {
+    grid-template-columns: 1fr;
+  }
+}

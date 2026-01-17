@@ -1,0 +1,236 @@
+.ventaDetallePage {
+  display: grid;
+  gap: 14px;
+}
+
+.ventaDetalleTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ventaDetalleTitle {
+  margin: 0;
+  color: var(--jmg-navy);
+}
+
+.ventaDetalleSubtitle {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.ventaDetalleTopActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ventaBack {
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  color: var(--jmg-navy);
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 1000;
+  cursor: pointer;
+}
+
+.ventaBack:hover {
+  background: rgba(3, 25, 64, 0.04);
+}
+
+.ventaDetalleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--jmg-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--jmg-shadow);
+}
+
+.panelFull {
+  grid-column: 1 / -1;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
+  color: #fff;
+}
+
+.panelHead strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.panelBody {
+  padding: 12px 14px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.ventaLoading {
+  color: var(--jmg-muted);
+  font-weight: 900;
+}
+
+.ventaError {
+  color: #b42318;
+  font-weight: 900;
+}
+
+.ventaSummary {
+  display: grid;
+  gap: 10px;
+}
+
+.ventaSummaryRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ventaSummaryRow span {
+  color: var(--jmg-muted);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.ventaSummaryRow strong {
+  color: var(--jmg-navy);
+  font-weight: 1100;
+}
+
+.ventaSummaryTotal strong {
+  font-size: 16px;
+}
+
+.ventaNotes {
+  margin-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  padding-top: 10px;
+}
+
+.ventaNotesLabel {
+  color: var(--jmg-muted);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.ventaNotesText {
+  margin-top: 6px;
+  font-weight: 800;
+  color: var(--jmg-text);
+}
+
+.ventaCombos {
+  display: grid;
+  gap: 10px;
+}
+
+.ventaComboRow {
+  border: 1px solid var(--jmg-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(3, 25, 64, 0.02);
+}
+
+.ventaComboName {
+  font-weight: 1100;
+  color: var(--jmg-navy);
+}
+
+.ventaComboMeta {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.ventaCombosHint {
+  margin-top: 10px;
+  color: var(--jmg-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ventaTableWrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--jmg-border);
+  border-radius: 14px;
+}
+
+.ventaTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.ventaTable th,
+.ventaTable td {
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 13px;
+}
+
+.ventaTable th {
+  text-align: left;
+  color: var(--jmg-muted);
+  font-weight: 900;
+  background: rgba(3, 25, 64, 0.03);
+}
+
+.ventaRight {
+  text-align: right;
+}
+
+.ventaProd {
+  font-weight: 900;
+  color: var(--jmg-navy);
+}
+
+.ventaCombo {
+  color: var(--jmg-muted);
+  font-weight: 900;
+}
+
+.ventaEmpty {
+  text-align: center;
+  color: var(--jmg-muted);
+  padding: 22px 10px;
+  font-weight: 900;
+}
+
+@media (max-width: 920px) {
+  .ventaDetalleGrid {
+    grid-template-columns: 1fr;
+  }
+}

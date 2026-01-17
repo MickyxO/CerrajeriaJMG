@@ -1,9 +1,16 @@
 const ItemsService = require("../../services/items/items.service");
 
+function parseBool(value) {
+    if (value === true || value === false) return value;
+    const s = String(value ?? "").trim().toLowerCase();
+    return s === "1" || s === "true" || s === "yes" || s === "y";
+}
+
 class ItemsController {
     async getAll(req, res) {
         try {
-            const items = await ItemsService.getAllItems();
+            const incluyeInactivos = parseBool(req.query?.incluyeInactivos);
+            const items = await ItemsService.getAllItems({ incluyeInactivos });
             res.status(200).json(items);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -12,7 +19,8 @@ class ItemsController {
 
     async getByCategoria(req, res) {
         try {
-            const items = await ItemsService.getItemsPorCategoria(req.params.idCategoria);
+            const incluyeInactivos = parseBool(req.query?.incluyeInactivos);
+            const items = await ItemsService.getItemsPorCategoria(req.params.idCategoria, { incluyeInactivos });
             res.status(200).json(items);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -24,7 +32,8 @@ class ItemsController {
             // Nota: en BD es `compatibilidad_marca` (texto). La ruta usa :idMarca,
             // pero aquí se interpreta como nombre/fragmento de marca.
             const marca = req.params.marca ?? req.params.nombreMarca ?? req.params.idMarca;
-            const items = await ItemsService.getItemsPorMarca(marca);
+            const incluyeInactivos = parseBool(req.query?.incluyeInactivos);
+            const items = await ItemsService.getItemsPorMarca(marca, { incluyeInactivos });
             res.status(200).json(items);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -33,7 +42,8 @@ class ItemsController {
 
     async searchByNombre(req, res) {
         try {
-            const items = await ItemsService.getItemsPorNombreParcial(req.query.q || "");
+            const incluyeInactivos = parseBool(req.query?.incluyeInactivos);
+            const items = await ItemsService.getItemsPorNombreParcial(req.query.q || "", { incluyeInactivos });
             res.status(200).json(items);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -43,7 +53,8 @@ class ItemsController {
     async getByClasificacion(req, res) {
         try {
             const clasificacion = req.params.clasificacion ?? req.query.clasificacion ?? "";
-            const items = await ItemsService.getItemsPorClasificacion(clasificacion);
+            const incluyeInactivos = parseBool(req.query?.incluyeInactivos);
+            const items = await ItemsService.getItemsPorClasificacion(clasificacion, { incluyeInactivos });
             res.status(200).json(items);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -74,6 +85,22 @@ class ItemsController {
             const id = req.params.id;
             const result = await ItemsService.deleteItem(id);
             res.status(200).json({ message: "Item eliminado exitosamente", result });
+        } catch (err) {
+            res.status(400).json({ error: err.message });
+        }
+    }
+
+    async uploadImagen(req, res) {
+        try {
+            const id = req.params.id;
+            if (!req.file) {
+                return res.status(400).json({ error: "No se recibió archivo de imagen." });
+            }
+
+            const imagenUrl = `/uploads/items/${req.file.filename}`;
+            const result = await ItemsService.setImagenUrl(id, imagenUrl);
+
+            res.status(200).json({ message: "Imagen actualizada correctamente", result });
         } catch (err) {
             res.status(400).json({ error: err.message });
         }
