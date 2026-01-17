@@ -122,6 +122,32 @@ class CajaController {
         }
     }
 
+    // PUT: Actualizar un gasto (concepto/monto/metodo)
+    async actualizarGasto(req, res) {
+        try {
+            const id = req.params.id;
+            const result = await CajaService.actualizarGasto(id, req.body);
+            return res.status(200).json({ success: true, message: "Gasto actualizado correctamente.", data: result });
+        } catch (err) {
+            return res.status(400).json({ success: false, error: err.message });
+        }
+    }
+
+    // POST: Anular un gasto (pone monto=0 y revierte caja si fue efectivo)
+    async anularGasto(req, res) {
+        try {
+            const id = req.params.id;
+            const result = await CajaService.anularGasto(id, req.body || {});
+            return res.status(200).json({
+                success: true,
+                message: result.yaAnulado ? "Gasto ya estaba anulado." : "Gasto anulado correctamente.",
+                result
+            });
+        } catch (err) {
+            return res.status(400).json({ success: false, error: err.message });
+        }
+    }
+
     // GET: Obtener lista de movimientos del día
     async getMovimientos(req, res) {
         try {

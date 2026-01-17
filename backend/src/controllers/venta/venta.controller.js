@@ -138,6 +138,21 @@ class VentaController {
 		}
 	}
 
+	// POST: Anular venta (revierte inventario + caja si efectivo)
+	async anular(req, res) {
+		try {
+			const id = req.params.id;
+			const body = req.body || {};
+			const idUsuario = body.idUsuario ?? body.IdUsuario;
+			const motivo = body.motivo ?? body.Motivo;
+
+			const result = await VentaService.anularVenta(id, { idUsuario, motivo });
+			return res.status(200).json({ message: result.yaAnulada ? "Venta ya estaba anulada." : "Venta anulada.", result });
+		} catch (err) {
+			return res.status(400).json({ error: err.message });
+		}
+	}
+
 	// DELETE: Eliminar venta
 	async delete(req, res) {
 		try {

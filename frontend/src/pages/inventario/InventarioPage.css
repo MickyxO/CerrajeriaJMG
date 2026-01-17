@@ -37,7 +37,7 @@
 .panel {
   background: #fff;
   border: 1px solid var(--jmg-border);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--jmg-shadow);
 }
@@ -51,29 +51,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
   color: #fff;
 }
 
 .panelHead strong {
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .panelBody {
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  height: 24px;
   padding: 0 10px;
   border-radius: 999px;
   font-weight: 900;
-  font-size: 12px;
+  font-size: 11px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
@@ -83,7 +83,7 @@
   border: 1px solid var(--jmg-border);
   background: #fff;
   color: var(--jmg-navy);
-  height: 32px;
+  height: 30px;
   padding: 0 12px;
   border-radius: 999px;
   font-weight: 1000;
@@ -98,7 +98,7 @@
   border: 1px solid rgba(244, 194, 0, 0.65);
   background: rgba(244, 194, 0, 0.22);
   color: var(--jmg-navy);
-  height: 32px;
+  height: 30px;
   padding: 0 12px;
   border-radius: 999px;
   font-weight: 1100;
@@ -117,7 +117,7 @@
   border: 1px solid var(--jmg-border);
   background: #fff;
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   font-weight: 900;
   color: var(--jmg-navy);
 }
@@ -135,7 +135,7 @@
 }
 
 .invModeBtn {
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: transparent;
   border: 0;
   color: var(--jmg-text);
@@ -156,13 +156,22 @@
   margin-top: 12px;
 }
 
+.invSearchMode {
+  margin-top: 8px;
+  display: inline-flex;
+  border: 1px solid var(--jmg-border);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .invField {
   display: grid;
   gap: 6px;
 }
 
 .invField span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jmg-muted);
   font-weight: 800;
 }
@@ -170,7 +179,7 @@
 .invField input {
   border: 1px solid var(--jmg-border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   font-weight: 800;
 }
 
@@ -190,7 +199,7 @@
 }
 
 .invChip {
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 999px;
   border: 1px solid var(--jmg-border);
   background: #fff;
@@ -232,18 +241,18 @@
 
 .invList {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .invRow {
   border: 1px solid var(--jmg-border);
-  border-radius: 16px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 8px 10px;
   background: #fff;
   cursor: pointer;
   display: grid;
-  grid-template-columns: 84px 1fr auto;
-  gap: 12px;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
   align-items: center;
   text-align: left;
 }
@@ -262,19 +271,19 @@
 }
 
 .invImgWrap {
-  width: 84px;
-  height: 84px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(3, 25, 64, 0.02);
   overflow: hidden;
 }
 
 .invImg {
-  width: 84px;
-  height: 84px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
   background: #fff;
 }
@@ -282,7 +291,7 @@
 .invImgPlaceholder {
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   color: var(--jmg-muted);
 }
@@ -290,12 +299,13 @@
 .invRowName {
   font-weight: 1100;
   color: var(--jmg-navy);
+  font-size: 13px;
 }
 
 .invRowMeta {
   margin-top: 4px;
   color: var(--jmg-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -306,14 +316,14 @@
 }
 
 .invBadge {
-  height: 26px;
-  padding: 0 10px;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 1000;
-  font-size: 12px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -340,13 +350,13 @@
   justify-items: end;
   gap: 2px;
   color: var(--jmg-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 
 .invStock strong {
   color: var(--jmg-navy);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 1200;
 }
 
@@ -375,16 +385,109 @@
   flex-wrap: wrap;
 }
 
+.invDetailLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 260px;
+}
+
+.invPreview {
+  width: 180px;
+  height: 180px;
+  border-radius: 14px;
+  border: 1px solid var(--jmg-border);
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+  cursor: zoom-in;
+}
+
+.invPreview:disabled {
+  cursor: default;
+  opacity: 0.95;
+}
+
+.invPreview img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.invPreviewEmpty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--jmg-muted);
+}
+
+.invModal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(2, 6, 23, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.invModalInner {
+  width: min(980px, 96vw);
+  height: min(78vh, 760px);
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: 0 30px 90px rgba(2, 6, 23, 0.55);
+  position: relative;
+  overflow: hidden;
+  display: grid;
+}
+
+.invModalClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--jmg-navy);
+  font-weight: 1100;
+  cursor: pointer;
+}
+
+.invModalClose:hover {
+  background: rgba(244, 194, 0, 0.18);
+  border-color: rgba(244, 194, 0, 0.55);
+}
+
+.invModalImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
 .invDetailName {
   font-weight: 1200;
   color: var(--jmg-navy);
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .invDetailMeta {
   margin-top: 4px;
   color: var(--jmg-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -421,14 +524,14 @@
 .invTable {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 680px;
 }
 
 .invTable th,
 .invTable td {
-  padding: 10px 10px;
+  padding: 8px 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .invTable th {
@@ -444,7 +547,7 @@
 
 @media (max-width: 920px) {
   .invRow {
-    grid-template-columns: 84px 1fr;
+    grid-template-columns: 56px 1fr;
   }
 
   .invRowRight {
@@ -456,5 +559,10 @@
 
   .invFieldWide {
     min-width: 200px;
+  }
+
+  .invPreview {
+    width: 140px;
+    height: 140px;
   }
 }

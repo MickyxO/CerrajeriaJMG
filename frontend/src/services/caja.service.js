@@ -32,6 +32,16 @@ export const cajaService = {
     return apiRequest("/postgasto", { method: "POST", body: payload });
   },
 
+  /** Backend: PUT /putgasto/:id */
+  actualizarGasto(id, payload) {
+    return apiRequest(`/putgasto/${id}`, { method: "PUT", body: payload });
+  },
+
+  /** Backend: POST /anulargasto/:id */
+  anularGasto(id, payload) {
+    return apiRequest(`/anulargasto/${id}`, { method: "POST", body: payload });
+  },
+
   /** Backend: GET /getmovimientoscaja */
   getMovimientos({ fecha } = {}) {
     return apiRequest("/getmovimientoscaja", { params: { fecha } });

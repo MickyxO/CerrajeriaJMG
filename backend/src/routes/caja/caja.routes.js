@@ -149,6 +149,84 @@ router.post("/postgasto", CajaController.registrarGasto);
 
 /**
  * @swagger
+ * /putgasto/{id}:
+ *   put:
+ *     tags:
+ *       - Caja
+ *     summary: Actualizar un gasto (concepto/monto/metodo)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               Monto:
+ *                 type: number
+ *               Concepto:
+ *                 type: string
+ *               MetodoPago:
+ *                 type: string
+ *               IdUsuario:
+ *                 type: integer
+ *           example:
+ *             Monto: 150.00
+ *             Concepto: "Compra de thinner (corregido)"
+ *             MetodoPago: "Efectivo"
+ *             IdUsuario: 1
+ *     responses:
+ *       200:
+ *         description: Gasto actualizado
+ *       400:
+ *         description: Error de validación
+ *       500:
+ *         description: Error interno
+ */
+router.put("/putgasto/:id", CajaController.actualizarGasto);
+
+/**
+ * @swagger
+ * /anulargasto/{id}:
+ *   post:
+ *     tags:
+ *       - Caja
+ *     summary: Anular un gasto (pone monto=0 y revierte caja si fue efectivo)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               IdUsuario:
+ *                 type: integer
+ *               Motivo:
+ *                 type: string
+ *           example:
+ *             IdUsuario: 1
+ *             Motivo: "Registrado por error"
+ *     responses:
+ *       200:
+ *         description: Gasto anulado
+ *       400:
+ *         description: Error de validación
+ */
+router.post("/anulargasto/:id", CajaController.anularGasto);
+
+/**
+ * @swagger
  * /getmovimientoscaja:
  *   get:
  *     tags:

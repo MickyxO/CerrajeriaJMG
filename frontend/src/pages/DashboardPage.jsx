@@ -212,7 +212,7 @@ export default function DashboardPage() {
 
                 <div className="meta">
                   <div className="metaLine">
-                    <strong>Apertura:</strong> {String(cajaData?.FechaApertura ?? "-")}
+                    <strong>Apertura:</strong> {fmtDateTime(cajaData?.HoraApertura ?? cajaData?.FechaApertura)}
                   </div>
                   <div className="metaLine">
                     <strong>ID Caja:</strong> {cajaData?.IdCaja ?? "-"}

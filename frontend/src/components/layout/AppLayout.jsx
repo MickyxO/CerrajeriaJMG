@@ -4,6 +4,25 @@ import { useAuth } from "../../hooks/useAuth";
 
 import "./AppLayout.css";
 
+function BrandMarkLogo() {
+  return (
+    <img
+      src="/jmg-logo.png"
+      alt="Logo Cerrajería JMG"
+      loading="eager"
+      onError={(e) => {
+        const img = e.currentTarget;
+        if (!img.dataset.fallbackApplied) {
+          img.dataset.fallbackApplied = "1";
+          img.src = "/jmg-logo.jpg";
+          return;
+        }
+        img.style.display = "none";
+      }}
+    />
+  );
+}
+
 function IconMenu(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" {...props}>
@@ -170,7 +189,9 @@ export default function AppLayout() {
 
       <aside className={drawerOpen ? "drawer drawerOpen" : "drawer"} aria-label="Menú">
         <div className="brand" style={{ marginBottom: 12 }}>
-          <div className="brandMark">JMG</div>
+          <div className="brandMark" aria-hidden="true">
+            <BrandMarkLogo />
+          </div>
           <div className="brandText">
             <strong>Cerrajería JMG</strong>
             <span>Automotriz y Residencial</span>
@@ -194,7 +215,9 @@ export default function AppLayout() {
       <div className="layoutGrid">
         <aside className="sidebar" aria-label="Menú">
           <div className="brand">
-            <div className="brandMark">JMG</div>
+            <div className="brandMark" aria-hidden="true">
+              <BrandMarkLogo />
+            </div>
             <div className="brandText">
               <strong>Cerrajería JMG</strong>
               <span>Automotriz y Residencial</span>

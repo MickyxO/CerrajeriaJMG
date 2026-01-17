@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { categoriaService } from "../../services/categoria.service";
 import { itemsService } from "../../services/items.service";
 import { inventarioService } from "../../services/inventario.service";
+import { API_URL } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
 
 import "./InventarioPage.css";
@@ -20,6 +21,7 @@ function normalizeItem(row) {
     IdItem: row?.IdItem ?? row?.id_item ?? null,
     Nombre: row?.Nombre ?? row?.nombre ?? "",
     Descripcion: row?.Descripcion ?? row?.descripcion ?? "",
+    CompatibilidadMarca: row?.CompatibilidadMarca ?? row?.compatibilidad_marca ?? row?.Marca ?? row?.marca ?? "",
     IdCategoria: row?.IdCategoria ?? row?.id_categoria ?? null,
     NombreCategoria: row?.NombreCategoria ?? row?.nombre_categoria ?? "",
     EsServicio: row?.EsServicio ?? row?.es_servicio ?? false,
@@ -28,6 +30,19 @@ function normalizeItem(row) {
     ImagenUrl: row?.ImagenUrl ?? row?.imagen_url ?? null,
     Activo: row?.Activo ?? row?.activo ?? true,
   };
+}
+
+function resolveImagenUrl(value) {
+  const raw = (value ?? "").toString().trim();
+  if (!raw) return null;
+
+  // Absolute URLs are used as-is.
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  // Backend saves paths like /uploads/items/<file>
+  const normalized = raw.replace(/\\/g, "/");
+  if (normalized.startsWith("/")) return `${API_URL}${normalized}`;
+  return `${API_URL}/${normalized}`;
 }
 
 function formatDateTime(value) {
@@ -51,6 +66,8 @@ export default function InventarioPage() {
   const { user } = useAuth();
   const currentUserId = user?.IdUsuario ?? user?.id_usuario ?? null;
 
+  const [imgErrors, setImgErrors] = useState({});
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -62,6 +79,7 @@ export default function InventarioPage() {
   const [selectedClasificacion, setSelectedClasificacion] = useState("TODAS");
 
   const [q, setQ] = useState("");
+  const [searchMode, setSearchMode] = useState("NOMBRE"); // NOMBRE | MARCA
   const [soloAlertas, setSoloAlertas] = useState(false);
   const [incluyeInactivos, setIncluyeInactivos] = useState(false);
 
@@ -69,6 +87,8 @@ export default function InventarioPage() {
   const [stockEdits, setStockEdits] = useState({});
   const [comentarioAjuste, setComentarioAjuste] = useState("");
   const [isSavingStock, setIsSavingStock] = useState(false);
+
+  const [zoomSrc, setZoomSrc] = useState(null);
 
   const [movsLoading, setMovsLoading] = useState(false);
   const [movsError, setMovsError] = useState(null);
@@ -115,6 +135,10 @@ export default function InventarioPage() {
       })
       .filter((it) => {
         if (!query) return true;
+        if (searchMode === "MARCA") {
+          const marca = (it?.CompatibilidadMarca ?? "").toString().toLowerCase();
+          return marca.includes(query);
+        }
         const name = (it?.Nombre ?? "").toString().toLowerCase();
         const desc = (it?.Descripcion ?? "").toString().toLowerCase();
         return name.includes(query) || desc.includes(query);
@@ -124,7 +148,7 @@ export default function InventarioPage() {
         if (it.EsServicio) return false;
         return toNumber(it.StockActual, 0) <= toNumber(it.StockMinimo, 0);
       });
-  }, [itemsRaw, q, menuMode, selectedCategoriaId, selectedClasificacion, soloAlertas, incluyeInactivos, catById]);
+  }, [itemsRaw, q, searchMode, menuMode, selectedCategoriaId, selectedClasificacion, soloAlertas, incluyeInactivos, catById]);
 
   const selectedItem = useMemo(
     () => items.find((it) => String(it.IdItem) === String(selectedItemId)) || null,
@@ -287,8 +311,27 @@ export default function InventarioPage() {
             <div className="invSearchRow">
               <label className="invField invFieldFull">
                 <span>Buscar item</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nombre o descripción..." />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nombre, descripción o marca..." />
               </label>
+            </div>
+
+            <div className="invSearchMode" aria-label="Modo de búsqueda">
+              <button
+                type="button"
+                className={searchMode === "NOMBRE" ? "invModeBtn invModeActive" : "invModeBtn"}
+                onClick={() => setSearchMode("NOMBRE")}
+                title="Buscar por nombre o descripción"
+              >
+                Nombre/Desc.
+              </button>
+              <button
+                type="button"
+                className={searchMode === "MARCA" ? "invModeBtn invModeActive" : "invModeBtn"}
+                onClick={() => setSearchMode("MARCA")}
+                title="Buscar por marca"
+              >
+                Marca
+              </button>
             </div>
 
             {menuMode === "CATEGORIA" ? (
@@ -361,6 +404,8 @@ export default function InventarioPage() {
                 const min = toNumber(it.StockMinimo, 0);
                 const low = !it.EsServicio && stock <= min;
                 const selected = String(it.IdItem) === String(selectedItemId);
+                const imgSrc = resolveImagenUrl(it.ImagenUrl);
+                const showImg = Boolean(imgSrc) && !imgErrors[String(it.IdItem)];
                 return (
                   <button
                     key={it.IdItem}
@@ -377,8 +422,16 @@ export default function InventarioPage() {
                     onClick={() => openItem(it)}
                   >
                     <div className="invImgWrap">
-                      {it.ImagenUrl ? (
-                        <img className="invImg" src={it.ImagenUrl} alt={it.Nombre} />
+                      {showImg ? (
+                        <img
+                          className="invImg"
+                          src={imgSrc}
+                          alt={it.Nombre}
+                          loading="lazy"
+                          onError={() =>
+                            setImgErrors((s) => ({ ...s, [String(it.IdItem)]: true }))
+                          }
+                        />
                       ) : (
                         <div className="invImg invImgPlaceholder">Sin imagen</div>
                       )}
@@ -425,11 +478,38 @@ export default function InventarioPage() {
             ) : (
               <div className="invDetail">
                 <div className="invDetailTop">
-                  <div>
-                    <div className="invDetailName">{selectedItem.Nombre}</div>
-                    <div className="invDetailMeta">
-                      {selectedItem.NombreCategoria}
-                      {selectedItem.Clasificacion ? ` · ${selectedItem.Clasificacion}` : ""}
+                  <div className="invDetailLeft">
+                    <button
+                      type="button"
+                      className="invPreview"
+                      onClick={() => {
+                        const src = resolveImagenUrl(selectedItem.ImagenUrl);
+                        if (src) setZoomSrc(src);
+                      }}
+                      disabled={!selectedItem.ImagenUrl || imgErrors[String(selectedItem.IdItem)]}
+                      title={selectedItem.ImagenUrl ? "Click para ampliar" : "Sin imagen"}
+                    >
+                      {selectedItem.ImagenUrl && !imgErrors[String(selectedItem.IdItem)] ? (
+                        <img
+                          src={resolveImagenUrl(selectedItem.ImagenUrl)}
+                          alt={selectedItem.Nombre}
+                          loading="lazy"
+                          onError={() =>
+                            setImgErrors((s) => ({ ...s, [String(selectedItem.IdItem)]: true }))
+                          }
+                        />
+                      ) : (
+                        <div className="invPreviewEmpty">Sin imagen</div>
+                      )}
+                    </button>
+
+                    <div>
+                      <div className="invDetailName">{selectedItem.Nombre}</div>
+                      <div className="invDetailMeta">
+                        {selectedItem.NombreCategoria}
+                        {selectedItem.Clasificacion ? ` · ${selectedItem.Clasificacion}` : ""}
+                        {selectedItem.CompatibilidadMarca ? ` · ${selectedItem.CompatibilidadMarca}` : ""}
+                      </div>
                     </div>
                   </div>
 
@@ -541,6 +621,23 @@ export default function InventarioPage() {
           </div>
         </div>
       </div>
+
+      {zoomSrc ? (
+        <div className="invModal" role="dialog" aria-modal="true" onClick={() => setZoomSrc(null)}>
+          <div className="invModalInner" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="invModalClose"
+              onClick={() => setZoomSrc(null)}
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              ✕
+            </button>
+            <img className="invModalImg" src={zoomSrc} alt="Imagen del item" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

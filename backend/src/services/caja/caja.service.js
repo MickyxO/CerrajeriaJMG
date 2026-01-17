@@ -174,6 +174,164 @@ class CajaService {
         }
     }
 
+    async actualizarGasto(idMovimiento, datos) {
+        const id = Number(idMovimiento);
+        if (!Number.isFinite(id) || id <= 0) throw new Error("ID de movimiento inválido.");
+
+        const { Monto, Concepto, MetodoPago, IdUsuario } = datos || {};
+
+        // Reglas: permitimos actualizar concepto siempre; monto/metodo opcional.
+        if (Monto !== undefined && Number(Monto) <= 0) {
+            throw new Error("El monto debe ser mayor a 0.");
+        }
+
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // Bloqueamos la caja abierta (si existe) para no desbalancear en concurrente.
+            // También sirve como regla: no editar movimientos si no hay caja abierta.
+            const resCaja = await client.query(
+                "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE"
+            );
+            if (resCaja.rows.length === 0) {
+                throw new Error("No hay caja abierta hoy. No se permite editar gastos con caja cerrada.");
+            }
+            const idCajaHoy = resCaja.rows[0].id_caja;
+
+            // Leemos el movimiento actual y lo bloqueamos.
+            const resMov = await client.query(
+                "SELECT id_movimiento, id_caja, monto, metodo_pago, concepto FROM movimientos_caja WHERE id_movimiento = $1 FOR UPDATE",
+                [id]
+            );
+            if (resMov.rows.length === 0) throw new Error("Movimiento no encontrado.");
+
+            const mov = resMov.rows[0];
+            if (Number(mov.id_caja) !== Number(idCajaHoy)) {
+                throw new Error("Solo se pueden editar gastos del día (caja actual).");
+            }
+
+            const oldMonto = Number(mov.monto);
+            const oldMetodo = (mov.metodo_pago ?? '').toString();
+
+            const newMonto = Monto !== undefined ? Number(Monto) : oldMonto;
+            const newMetodo = MetodoPago !== undefined ? (MetodoPago ?? '').toString() : oldMetodo;
+            const newConcepto = Concepto !== undefined ? (Concepto ?? '').toString() : mov.concepto;
+
+            if (!newConcepto || !newConcepto.trim()) {
+                throw new Error("El concepto es requerido.");
+            }
+
+            // Ajuste de caja SOLO cuando cambia monto y/o metodo.
+            // Recordatorio: al registrar gasto, si fue Efectivo se restó monto_actual.
+            // Entonces al actualizar:
+            // - si antes era Efectivo: devolvemos oldMonto
+            // - si ahora es Efectivo: restamos newMonto
+            let cajaDelta = 0;
+            if (oldMetodo === 'Efectivo') cajaDelta += oldMonto;
+            if (newMetodo === 'Efectivo') cajaDelta -= newMonto;
+
+            const updateMovQuery = `
+                UPDATE movimientos_caja
+                SET monto = $1,
+                    metodo_pago = $2,
+                    concepto = $3,
+                    id_usuario = COALESCE($4, id_usuario)
+                WHERE id_movimiento = $5
+                RETURNING *
+            `;
+
+            const resUpdate = await client.query(updateMovQuery, [newMonto, newMetodo, newConcepto, IdUsuario, id]);
+
+            if (cajaDelta !== 0) {
+                await client.query(
+                    "UPDATE caja SET monto_actual = monto_actual + $1 WHERE id_caja = $2",
+                    [cajaDelta, idCajaHoy]
+                );
+            }
+
+            await client.query('COMMIT');
+            return resUpdate.rows[0];
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("Error actualizando gasto: ", err.message);
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    async anularGasto(idMovimiento, { IdUsuario, Motivo, idUsuario, motivo } = {}) {
+        const id = Number(idMovimiento);
+        if (!Number.isFinite(id) || id <= 0) throw new Error("ID de movimiento inválido.");
+
+        const userId = idUsuario ?? IdUsuario ?? null;
+        const motivoTxt = (motivo ?? Motivo ?? '').toString().trim();
+
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // Solo anulamos gastos del día con caja ABIERTA (no tocar cierres históricos)
+            const resCaja = await client.query(
+                "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE"
+            );
+            if (resCaja.rows.length === 0) {
+                throw new Error("No hay caja abierta hoy. No se permite anular gastos con caja cerrada.");
+            }
+            const idCajaHoy = resCaja.rows[0].id_caja;
+
+            const resMov = await client.query(
+                "SELECT id_movimiento, id_caja, monto, metodo_pago, concepto FROM movimientos_caja WHERE id_movimiento = $1 FOR UPDATE",
+                [id]
+            );
+            if (resMov.rows.length === 0) throw new Error("Movimiento no encontrado.");
+
+            const mov = resMov.rows[0];
+            if (Number(mov.id_caja) !== Number(idCajaHoy)) {
+                throw new Error("Solo se pueden anular gastos del día (caja actual).");
+            }
+
+            const concepto = (mov.concepto ?? '').toString();
+            const yaAnulado = concepto.includes('[ANULADO]') || Number(mov.monto ?? 0) === 0;
+            if (yaAnulado) {
+                await client.query('COMMIT');
+                return { idMovimiento: id, yaAnulado: true };
+            }
+
+            const oldMonto = Number(mov.monto ?? 0);
+            const oldMetodo = (mov.metodo_pago ?? '').toString();
+
+            // Al crear gasto: si fue Efectivo, se restó monto_actual.
+            // Al anular: devolvemos ese monto.
+            if (oldMetodo === 'Efectivo' && Number.isFinite(oldMonto) && oldMonto !== 0) {
+                await client.query(
+                    "UPDATE caja SET monto_actual = monto_actual + $1 WHERE id_caja = $2",
+                    [oldMonto, idCajaHoy]
+                );
+            }
+
+            const sello = `[ANULADO] ${new Date().toISOString()}${userId ? ` por usuario ${userId}` : ''}${motivoTxt ? ` · Motivo: ${motivoTxt}` : ''}`;
+            const conceptoFinal = concepto ? `${concepto}\n${sello}` : sello;
+
+            await client.query(
+                "UPDATE movimientos_caja SET monto = 0, concepto = $1, id_usuario = COALESCE($2, id_usuario) WHERE id_movimiento = $3",
+                [conceptoFinal, userId, id]
+            );
+
+            await client.query('COMMIT');
+            return { idMovimiento: id, yaAnulado: false };
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("Error anulando gasto: ", err.message);
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
 async getMovimientosDelDia(fecha = null) {
         try {
             // Usamos UNION ALL para combinar Ventas (Entradas) y Movimientos (Salidas)

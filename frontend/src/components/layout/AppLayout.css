@@ -46,16 +46,25 @@
 }
 
 .brandMark {
-  width: 56px;
-  height: 36px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: var(--jmg-yellow);
   display: grid;
   place-items: center;
+  padding: 6px;
+  overflow: hidden;
   font-weight: 900;
   color: var(--jmg-navy);
   letter-spacing: 0.6px;
   font-size: 13px;
+}
+
+.brandMark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .brandText {

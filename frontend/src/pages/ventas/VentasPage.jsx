@@ -217,11 +217,14 @@ export default function VentasPage() {
                   ) : null}
                   {ventas.map((v) => {
                     const requiereFactura = Number(v?.MontoIva ?? 0) > 0;
+                    const isAnulada =
+                      (v?.Notas && String(v.Notas).includes("[ANULADA]")) || Number(v?.Total ?? 0) === 0;
                     return (
                       <tr key={v.IdVenta} className="ventasRow">
                         <td className="ventasId">#{v.IdVenta}</td>
                         <td>
                           <div className="ventasDate">{formatDateTime(v.FechaVenta)}</div>
+                          {isAnulada ? <div className="ventasBadge" style={{ background: "rgba(239, 68, 68, 0.10)", borderColor: "rgba(239, 68, 68, 0.35)", color: "#b91c1c" }}>Anulada</div> : null}
                           {requiereFactura ? <div className="ventasBadge">Factura</div> : null}
                         </td>
                         <td>{v.NombreCliente || "Mostrador"}</td>

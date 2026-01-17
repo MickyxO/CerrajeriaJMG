@@ -108,6 +108,7 @@ export default function ItemsPage() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState({ type: "idle", message: "" });
   const [autoUploadOnCreate, setAutoUploadOnCreate] = useState(true);
+  const [zoomSrc, setZoomSrc] = useState(null);
 
   const isEditing = Boolean(form?.IdItem);
   const incluyeInactivos = estadoFiltro !== "ACTIVOS";
@@ -848,13 +849,22 @@ export default function ItemsPage() {
               </div>
 
               <div className="uploadBody">
-                <div className="preview">
+                <button
+                  type="button"
+                  className="preview"
+                  onClick={() => {
+                    const src = form?.ImagenUrl ? toImageUrl(form.ImagenUrl) : null;
+                    if (src) setZoomSrc(src);
+                  }}
+                  disabled={!form?.ImagenUrl}
+                  title={form?.ImagenUrl ? "Click para ampliar" : "Sin imagen"}
+                >
                   {form?.ImagenUrl ? (
                     <img src={toImageUrl(form.ImagenUrl)} alt="Imagen del item" />
                   ) : (
                     <div className="previewEmpty">Sin imagen</div>
                   )}
-                </div>
+                </button>
 
                 <div className="uploadControls">
                   <input
@@ -910,6 +920,28 @@ export default function ItemsPage() {
           </div>
         </section>
       </div>
+
+      {zoomSrc ? (
+        <div
+          className="imgModal"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setZoomSrc(null)}
+        >
+          <div className="imgModalInner" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="imgModalClose"
+              onClick={() => setZoomSrc(null)}
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              ✕
+            </button>
+            <img className="imgModalImg" src={zoomSrc} alt="Imagen del item" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

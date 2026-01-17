@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ventasService } from "../../services/ventas.service";
+import { useAuth } from "../../hooks/useAuth";
 
 import "./VentaDetallePage.css";
 
@@ -64,10 +65,16 @@ function normalizeLinea(l) {
 export default function VentaDetallePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ventaRaw, setVentaRaw] = useState(null);
+
+  const [showAnular, setShowAnular] = useState(false);
+  const [motivoAnular, setMotivoAnular] = useState("");
+  const [isAnulando, setIsAnulando] = useState(false);
+  const [anularError, setAnularError] = useState(null);
 
   const venta = useMemo(() => (ventaRaw ? normalizeVentaDetalle(ventaRaw) : null), [ventaRaw]);
   const lineas = useMemo(() => (venta?.Items ?? []).map(normalizeLinea), [venta]);
@@ -115,6 +122,28 @@ export default function VentaDetallePage() {
   }, [id]);
 
   const requiereFactura = Number(venta?.MontoIva ?? 0) > 0;
+  const isAnulada =
+    (venta?.Notas && String(venta.Notas).includes("[ANULADA]")) || Number(venta?.Total ?? 0) === 0;
+
+  async function handleAnular() {
+    if (!venta?.IdVenta) return;
+    setIsAnulando(true);
+    setAnularError(null);
+    try {
+      await ventasService.anularVenta(venta.IdVenta, {
+        idUsuario: user?.IdUsuario,
+        motivo: motivoAnular.trim() || undefined,
+      });
+      const res = await ventasService.getVenta(venta.IdVenta);
+      setVentaRaw(res);
+      setShowAnular(false);
+      setMotivoAnular("");
+    } catch (e) {
+      setAnularError(e?.message || "No se pudo anular");
+    } finally {
+      setIsAnulando(false);
+    }
+  }
 
   return (
     <div className="ventaDetallePage">
@@ -128,17 +157,87 @@ export default function VentaDetallePage() {
         </div>
 
         <div className="ventaDetalleTopActions">
+          {!isLoading && !error && venta?.IdVenta ? (
+            <button
+              type="button"
+              className="ventaBack"
+              onClick={() => setShowAnular(true)}
+              disabled={isAnulada || isAnulando}
+              title={isAnulada ? "Esta venta ya está anulada" : "Anular venta"}
+              style={{ borderColor: "rgba(239, 68, 68, 0.35)", color: "#b91c1c" }}
+            >
+              {isAnulada ? "Anulada" : "Anular"}
+            </button>
+          ) : null}
           <button type="button" className="ventaBack" onClick={() => navigate("/ventas")}>
             Volver
           </button>
         </div>
       </div>
 
+      {showAnular ? (
+        <div
+          className="ventaModal"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => !isAnulando && setShowAnular(false)}
+        >
+          <div className="ventaModalInner" onClick={(e) => e.stopPropagation()}>
+            <div className="ventaModalTitle">Anular venta #{venta?.IdVenta}</div>
+            <div className="ventaModalHint">
+              Esto revertirá inventario y, si fue en efectivo, ajustará la caja. Solo se permite anular ventas del día.
+            </div>
+
+            <label className="ventaModalField">
+              <span>Motivo (opcional)</span>
+              <input
+                value={motivoAnular}
+                onChange={(e) => setMotivoAnular(e.target.value)}
+                placeholder="Ej: Cantidad incorrecta"
+                disabled={isAnulando}
+              />
+            </label>
+
+            {anularError ? <div className="ventaModalError">{anularError}</div> : null}
+
+            <div className="ventaModalActions">
+              <button type="button" className="ventaBack" onClick={() => setShowAnular(false)} disabled={isAnulando}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="ventaBack"
+                onClick={handleAnular}
+                disabled={isAnulando}
+                style={{ background: "rgba(239, 68, 68, 0.10)", borderColor: "rgba(239, 68, 68, 0.35)", color: "#b91c1c" }}
+              >
+                {isAnulando ? "Anulando…" : "Anular definitivamente"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="ventaDetalleGrid">
         <div className="panel">
           <div className="panelHead">
             <strong>Resumen</strong>
-            {requiereFactura ? <span className="pill">Factura</span> : <span className="pill">Sin IVA</span>}
+            {isAnulada ? (
+              <span
+                className="pill"
+                style={{
+                  borderColor: "rgba(239, 68, 68, 0.45)",
+                  color: "#b91c1c",
+                  background: "rgba(239, 68, 68, 0.10)",
+                }}
+              >
+                Anulada
+              </span>
+            ) : requiereFactura ? (
+              <span className="pill">Factura</span>
+            ) : (
+              <span className="pill">Sin IVA</span>
+            )}
           </div>
           <div className="panelBody">
             {isLoading ? <div className="ventaLoading">Cargando...</div> : null}

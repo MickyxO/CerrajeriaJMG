@@ -213,6 +213,41 @@ router.put("/putventa/:id", VentaController.update);
 
 /**
  * @swagger
+ * /anularventa/{id}:
+ *   post:
+ *     tags:
+ *       - Venta
+ *     summary: Anular una venta (revierte inventario + caja si fue efectivo)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               idUsuario:
+ *                 type: integer
+ *               motivo:
+ *                 type: string
+ *           example:
+ *             idUsuario: 1
+ *             motivo: "Cantidad incorrecta"
+ *     responses:
+ *       200:
+ *         description: Venta anulada
+ *       400:
+ *         description: Error de validación/reglas de negocio
+ */
+router.post("/anularventa/:id", VentaController.anular);
+
+/**
+ * @swagger
  * /deleteventa/{id}:
  *   delete:
  *     tags:

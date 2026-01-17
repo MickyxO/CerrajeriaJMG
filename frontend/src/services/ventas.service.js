@@ -43,6 +43,14 @@ export const ventasService = {
 		});
 	},
 
+	/** Backend: POST /anularventa/:id */
+	anularVenta(id, { idUsuario, motivo } = {}) {
+		return apiRequest(`/anularventa/${id}`, {
+			method: "POST",
+			body: { idUsuario, motivo },
+		});
+	},
+
 	/** Backend: DELETE /deleteventa/:id */
 	eliminarVenta(id) {
 		return apiRequest(`/deleteventa/${id}`, { method: "DELETE" });

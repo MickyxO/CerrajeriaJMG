@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cajaService } from "../../services/caja.service";
+import { ventasService } from "../../services/ventas.service";
 import { useAuth } from "../../hooks/useAuth";
 
 import "./CajaPage.css";
@@ -65,6 +66,13 @@ export default function CajaPage() {
   const [isClosing, setIsClosing] = useState(false);
 
   const [filtro, setFiltro] = useState("TODOS"); // TODOS | ENTRADA | SALIDA
+
+  const [ventaAccion, setVentaAccion] = useState(null); // { id }
+  const [gastoAccion, setGastoAccion] = useState(null); // { id, monto, metodoPago, concepto }
+  const [motivoAccion, setMotivoAccion] = useState("");
+  const [editGasto, setEditGasto] = useState(null); // { id, montoStr, metodoPago, concepto }
+  const [accionError, setAccionError] = useState(null);
+  const [isAccionando, setIsAccionando] = useState(false);
 
   const didMountRef = useRef(false);
 
@@ -226,8 +234,208 @@ export default function CajaPage() {
     return list;
   }, [movimientos, filtro]);
 
+  const canMutate = isToday && estado === "ABIERTA";
+
+  function openAnularVenta(idVenta) {
+    setAccionError(null);
+    setMotivoAccion("");
+    setVentaAccion({ id: idVenta });
+  }
+
+  function openEditarGasto(m) {
+    setAccionError(null);
+    setMotivoAccion("");
+    setEditGasto({
+      id: m?.id,
+      montoStr: String(m?.monto ?? ""),
+      metodoPago: m?.metodoPago ?? "Efectivo",
+      concepto: m?.concepto ?? "",
+    });
+  }
+
+  function openAnularGasto(m) {
+    setAccionError(null);
+    setMotivoAccion("");
+    setGastoAccion({ id: m?.id, monto: m?.monto, metodoPago: m?.metodoPago, concepto: m?.concepto });
+  }
+
+  async function doAnularVenta() {
+    if (!ventaAccion?.id) return;
+    if (!userId) {
+      setAccionError("No se encontró el usuario (IdUsuario). Vuelve a iniciar sesión.");
+      return;
+    }
+    setIsAccionando(true);
+    setAccionError(null);
+    try {
+      await ventasService.anularVenta(ventaAccion.id, { idUsuario: userId, motivo: motivoAccion.trim() || undefined });
+      await refresh();
+      setVentaAccion(null);
+      setMotivoAccion("");
+    } catch (e) {
+      setAccionError(e?.message || "No se pudo anular la venta");
+    } finally {
+      setIsAccionando(false);
+    }
+  }
+
+  async function doGuardarGasto() {
+    if (!editGasto?.id) return;
+    if (!userId) {
+      setAccionError("No se encontró el usuario (IdUsuario). Vuelve a iniciar sesión.");
+      return;
+    }
+    const n = Number(editGasto.montoStr);
+    if (!Number.isFinite(n) || n <= 0) {
+      setAccionError("Monto inválido.");
+      return;
+    }
+    if (!editGasto.concepto || !editGasto.concepto.trim()) {
+      setAccionError("El concepto es requerido.");
+      return;
+    }
+
+    setIsAccionando(true);
+    setAccionError(null);
+    try {
+      await cajaService.actualizarGasto(editGasto.id, {
+        Monto: n,
+        Concepto: editGasto.concepto,
+        MetodoPago: editGasto.metodoPago,
+        IdUsuario: userId,
+      });
+      await refresh();
+      setEditGasto(null);
+    } catch (e) {
+      setAccionError(e?.message || "No se pudo actualizar el gasto");
+    } finally {
+      setIsAccionando(false);
+    }
+  }
+
+  async function doAnularGasto() {
+    if (!gastoAccion?.id) return;
+    if (!userId) {
+      setAccionError("No se encontró el usuario (IdUsuario). Vuelve a iniciar sesión.");
+      return;
+    }
+    setIsAccionando(true);
+    setAccionError(null);
+    try {
+      await cajaService.anularGasto(gastoAccion.id, { IdUsuario: userId, Motivo: motivoAccion.trim() || undefined });
+      await refresh();
+      setGastoAccion(null);
+      setMotivoAccion("");
+    } catch (e) {
+      setAccionError(e?.message || "No se pudo anular el gasto");
+    } finally {
+      setIsAccionando(false);
+    }
+  }
+
   return (
     <div className="cajaPage">
+      {ventaAccion ? (
+        <div className="cajaModal" role="dialog" aria-modal="true" onClick={() => !isAccionando && setVentaAccion(null)}>
+          <div className="cajaModalInner" onClick={(e) => e.stopPropagation()}>
+            <div className="cajaModalTitle">Anular venta #{ventaAccion.id}</div>
+            <div className="cajaModalHint">
+              Esto revierte inventario y, si fue en efectivo, ajusta la caja. Solo aplica para ventas del día.
+            </div>
+            <label className="cajaModalField">
+              <span>Motivo (opcional)</span>
+              <input value={motivoAccion} onChange={(e) => setMotivoAccion(e.target.value)} disabled={isAccionando} />
+            </label>
+            {accionError ? <div className="cajaModalError">{accionError}</div> : null}
+            <div className="cajaModalActions">
+              <button type="button" className="ghost" onClick={() => setVentaAccion(null)} disabled={isAccionando}>
+                Cancelar
+              </button>
+              <button type="button" className="danger" onClick={doAnularVenta} disabled={isAccionando}>
+                {isAccionando ? "Anulando…" : "Anular"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editGasto ? (
+        <div className="cajaModal" role="dialog" aria-modal="true" onClick={() => !isAccionando && setEditGasto(null)}>
+          <div className="cajaModalInner" onClick={(e) => e.stopPropagation()}>
+            <div className="cajaModalTitle">Editar gasto #{editGasto.id}</div>
+            <div className="cajaModalHint">Corrige monto, método o concepto. Solo aplica para el día con caja abierta.</div>
+
+            <div className="cajaModalGrid">
+              <label className="cajaModalField">
+                <span>Monto</span>
+                <input
+                  inputMode="decimal"
+                  value={editGasto.montoStr}
+                  onChange={(e) => setEditGasto((v) => ({ ...v, montoStr: e.target.value }))}
+                  disabled={isAccionando}
+                />
+              </label>
+
+              <label className="cajaModalField">
+                <span>Método</span>
+                <select
+                  className="cajaSelect"
+                  value={editGasto.metodoPago}
+                  onChange={(e) => setEditGasto((v) => ({ ...v, metodoPago: e.target.value }))}
+                  disabled={isAccionando}
+                >
+                  <option>Efectivo</option>
+                  <option>Transferencia</option>
+                  <option>Tarjeta</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="cajaModalField">
+              <span>Concepto</span>
+              <input
+                value={editGasto.concepto}
+                onChange={(e) => setEditGasto((v) => ({ ...v, concepto: e.target.value }))}
+                disabled={isAccionando}
+              />
+            </label>
+
+            {accionError ? <div className="cajaModalError">{accionError}</div> : null}
+            <div className="cajaModalActions">
+              <button type="button" className="ghost" onClick={() => setEditGasto(null)} disabled={isAccionando}>
+                Cancelar
+              </button>
+              <button type="button" className="primary" onClick={doGuardarGasto} disabled={isAccionando}>
+                {isAccionando ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {gastoAccion ? (
+        <div className="cajaModal" role="dialog" aria-modal="true" onClick={() => !isAccionando && setGastoAccion(null)}>
+          <div className="cajaModalInner" onClick={(e) => e.stopPropagation()}>
+            <div className="cajaModalTitle">Anular gasto #{gastoAccion.id}</div>
+            <div className="cajaModalHint">
+              Esto pondrá el monto en 0 y, si fue efectivo, restaurará el monto a caja. Solo aplica para el día con caja abierta.
+            </div>
+            <label className="cajaModalField">
+              <span>Motivo (opcional)</span>
+              <input value={motivoAccion} onChange={(e) => setMotivoAccion(e.target.value)} disabled={isAccionando} />
+            </label>
+            {accionError ? <div className="cajaModalError">{accionError}</div> : null}
+            <div className="cajaModalActions">
+              <button type="button" className="ghost" onClick={() => setGastoAccion(null)} disabled={isAccionando}>
+                Cancelar
+              </button>
+              <button type="button" className="danger" onClick={doAnularGasto} disabled={isAccionando}>
+                {isAccionando ? "Anulando…" : "Anular"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="cajaTop">
         <div className="cajaTitle">
           <h1>Caja del día</h1>
@@ -353,7 +561,7 @@ export default function CajaPage() {
                 </div>
                 <div className="meta">
                   <div>
-                    <strong>Apertura:</strong> {String(cajaData?.FechaApertura ?? "-")}
+                    <strong>Apertura:</strong> {fmtDateTime(cajaData?.HoraApertura ?? cajaData?.FechaApertura)}
                   </div>
                   <div>
                     <strong>ID Caja:</strong> {cajaData?.IdCaja ?? "-"}
@@ -510,6 +718,8 @@ export default function CajaPage() {
               <div className="movList">
                 {movimientosFiltrados.map((m) => {
                   const isEntrada = m?.tipo === "ENTRADA";
+                  const isAnulado =
+                    (m?.concepto && String(m.concepto).includes("[ANULAD")) || Number(m?.monto ?? 0) === 0;
                   return (
                     <div key={`${m?.tipo}-${m?.id}-${m?.fechaHora}`} className="movRow">
                       <span className={isEntrada ? "chip chipIn" : "chip chipOut"}>
@@ -521,7 +731,48 @@ export default function CajaPage() {
                           {fmtDateTime(m?.fechaHora)} · {m?.metodoPago || "-"} · {m?.usuario || "-"}
                         </div>
                       </div>
-                      <div className="movAmount">{fmtMoney(m?.monto)}</div>
+                      <div className="movRight">
+                        <div className="movAmount">{fmtMoney(m?.monto)}</div>
+                        <div className="movActions">
+                          {isEntrada ? (
+                            <>
+                              <button type="button" className="movLink" onClick={() => navigate(`/ventas/${m?.id}`)}>
+                                Ver
+                              </button>
+                              <button
+                                type="button"
+                                className="movDanger"
+                                onClick={() => openAnularVenta(m?.id)}
+                                disabled={!canMutate || isAnulado || isAccionando}
+                                title={!canMutate ? "Solo se puede anular con caja abierta hoy" : isAnulado ? "Ya anulada" : "Anular"}
+                              >
+                                Anular
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="movLink"
+                                onClick={() => openEditarGasto(m)}
+                                disabled={!canMutate || isAnulado || isAccionando}
+                                title={!canMutate ? "Solo se puede editar con caja abierta hoy" : isAnulado ? "Ya anulado" : "Editar"}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="movDanger"
+                                onClick={() => openAnularGasto(m)}
+                                disabled={!canMutate || isAnulado || isAccionando}
+                                title={!canMutate ? "Solo se puede anular con caja abierta hoy" : isAnulado ? "Ya anulado" : "Anular"}
+                              >
+                                Anular
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

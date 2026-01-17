@@ -3,6 +3,11 @@ const { Venta, DetalleVenta } = require("../../models/venta/venta.model");
 
 class VentaService {
 
+    _isAnuladaVentaRow(row) {
+        const notas = (row?.notas ?? "").toString();
+        return notas.includes("[ANULADA]") || Number(row?.total ?? 0) === 0;
+    }
+
     // =========================================================================
     // 0. HELPER: MAPEO DE BASE DE DATOS A MODELO
     // =========================================================================
@@ -420,7 +425,109 @@ class VentaService {
     }
 
     // =========================================================================
-    // 6. ELIMINAR VENTA
+    // 6. ANULAR VENTA (Revertir inventario + caja, sin borrar histórico)
+    // =========================================================================
+    async anularVenta(idVenta, { idUsuario, motivo } = {}) {
+        const id = Number(idVenta);
+        if (!Number.isFinite(id) || id <= 0) throw new Error("ID de venta inválido.");
+
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            const resVenta = await client.query(
+                "SELECT id_venta, fecha_venta, total, subtotal, monto_iva, metodo_pago, notas FROM ventas WHERE id_venta = $1 FOR UPDATE",
+                [id]
+            );
+            if (resVenta.rows.length === 0) throw new Error("Venta no encontrada.");
+
+            const venta = resVenta.rows[0];
+            if (this._isAnuladaVentaRow(venta)) {
+                await client.query('COMMIT');
+                return { idVenta: id, yaAnulada: true };
+            }
+
+            // Regla práctica: solo anular ventas del día.
+            const resDia = await client.query("SELECT DATE($1::timestamp) = CURRENT_DATE as es_hoy", [venta.fecha_venta]);
+            if (!resDia.rows[0]?.es_hoy) {
+                throw new Error("Solo se pueden anular ventas del día.");
+            }
+
+            const total = Number(venta.total ?? 0);
+            const metodoPago = (venta.metodo_pago ?? '').toString();
+
+            // Si fue efectivo, se requiere caja abierta hoy para revertir monto_actual.
+            let idCajaActual = null;
+            if (metodoPago === 'Efectivo') {
+                const resCaja = await client.query(
+                    "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE"
+                );
+                if (resCaja.rows.length === 0) {
+                    throw new Error("No hay caja abierta hoy. No se puede anular una venta en efectivo.");
+                }
+                idCajaActual = resCaja.rows[0].id_caja;
+            }
+
+            // 1) Revertir inventario (solo items físicos)
+            // Sumamos cantidades por item vendido, excluyendo servicios.
+            const stockUpdateQuery = `
+                WITH sumas AS (
+                    SELECT dv.id_item, SUM(dv.cantidad) AS qty
+                    FROM detalle_ventas dv
+                    WHERE dv.id_venta = $1
+                    GROUP BY dv.id_item
+                )
+                UPDATE items i
+                SET stock_actual = stock_actual + s.qty
+                FROM sumas s
+                WHERE i.id_item = s.id_item
+                  AND COALESCE(i.es_servicio, FALSE) = FALSE
+                RETURNING i.id_item, s.qty
+            `;
+            const resStock = await client.query(stockUpdateQuery, [id]);
+
+            // Kardex por cada item revertido
+            for (const r of resStock.rows) {
+                await client.query(
+                    `INSERT INTO movimientos_inventario (id_item, tipo_movimiento, cantidad, id_usuario, comentario)
+                     VALUES ($1, 'ANULACION_VENTA', $2, $3, 'Anulación venta #' || $4)`,
+                    [r.id_item, Number(r.qty), idUsuario ?? null, id]
+                );
+            }
+
+            // 2) Revertir caja si fue efectivo
+            if (idCajaActual && Number.isFinite(total) && total !== 0) {
+                await client.query(
+                    "UPDATE caja SET monto_actual = monto_actual - $1 WHERE id_caja = $2",
+                    [total, idCajaActual]
+                );
+            }
+
+            // 3) Marcar venta como anulada sin borrar: ponemos montos a 0 y agregamos nota.
+            const motivoTxt = (motivo ?? '').toString().trim();
+            const sello = `[ANULADA] ${new Date().toISOString()}${idUsuario ? ` por usuario ${idUsuario}` : ''}${motivoTxt ? ` · Motivo: ${motivoTxt}` : ''}`;
+            const notasNueva = (venta.notas ?? "").toString();
+            const notasFinal = notasNueva ? `${notasNueva}\n${sello}` : sello;
+
+            await client.query(
+                "UPDATE ventas SET total = 0, subtotal = 0, monto_iva = 0, notas = $1 WHERE id_venta = $2",
+                [notasFinal, id]
+            );
+
+            await client.query('COMMIT');
+            return { idVenta: id, yaAnulada: false };
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("Error anulando venta: ", err.message);
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    // =========================================================================
+    // 7. ELIMINAR VENTA
     // =========================================================================
     async deleteVenta(id) {
         try {
