@@ -62,6 +62,7 @@ export default function UsuariosPage() {
 
   const isEditing = Boolean(form?.IdUsuario);
   const currentUserId = currentUser?.IdUsuario ?? currentUser?.id_usuario ?? null;
+  const canEditSelectedUser = !isEditing || (currentUserId !== null && form?.IdUsuario === currentUserId);
 
   const usuarios = useMemo(() => {
     const list = (Array.isArray(usuariosRaw) ? usuariosRaw : []).map(normalizeUsuario);
@@ -164,6 +165,11 @@ export default function UsuariosPage() {
     setFormError(null);
     setFormStatus({ type: "idle", message: "" });
 
+    if (!canEditSelectedUser) {
+      setFormError("No es posible editar un usuario que no es el propio.");
+      return;
+    }
+
     const err = validate();
     if (err) {
       setFormError(err);
@@ -213,6 +219,12 @@ export default function UsuariosPage() {
 
   async function deactivateSelected() {
     if (!isEditing) return;
+
+    if (!canEditSelectedUser) {
+      setFormError("No es posible editar un usuario que no es el propio.");
+      return;
+    }
+
     if (form.IdUsuario === currentUserId) {
       setFormError("No puedes desactivar tu propio usuario mientras estás logueado.");
       return;
@@ -342,6 +354,10 @@ export default function UsuariosPage() {
             <span className="pill">{isEditing ? `#${form.IdUsuario}` : "Nuevo"}</span>
           </div>
           <div className="panelBody">
+            {isEditing && !canEditSelectedUser ? (
+              <div className="usrWarn">No es posible editar un usuario que no es el propio.</div>
+            ) : null}
+
             <div className="usrForm">
               <label className="usrField usrFieldFull">
                 <span>Nombre completo *</span>
@@ -349,6 +365,7 @@ export default function UsuariosPage() {
                   value={form.NombreCompleto}
                   onChange={(e) => setForm((s) => ({ ...s, NombreCompleto: e.target.value }))}
                   placeholder="Juan Pérez"
+                  disabled={!canEditSelectedUser}
                 />
               </label>
 
@@ -358,12 +375,17 @@ export default function UsuariosPage() {
                   value={form.Username}
                   onChange={(e) => setForm((s) => ({ ...s, Username: e.target.value }))}
                   placeholder="juan"
+                  disabled={!canEditSelectedUser}
                 />
               </label>
 
               <label className="usrField">
                 <span>Rol *</span>
-                <select value={form.Rol} onChange={(e) => setForm((s) => ({ ...s, Rol: e.target.value }))}>
+                <select
+                  value={form.Rol}
+                  onChange={(e) => setForm((s) => ({ ...s, Rol: e.target.value }))}
+                  disabled={!canEditSelectedUser}
+                >
                   <option value="empleado">Empleado</option>
                   <option value="admin">Admin</option>
                 </select>
@@ -374,6 +396,7 @@ export default function UsuariosPage() {
                   type="checkbox"
                   checked={Boolean(form.Activo)}
                   onChange={(e) => setForm((s) => ({ ...s, Activo: e.target.checked }))}
+                  disabled={!canEditSelectedUser}
                 />
                 <span>Activo</span>
               </label>
@@ -384,6 +407,7 @@ export default function UsuariosPage() {
                   value={form.PinAcceso}
                   onChange={(e) => setForm((s) => ({ ...s, PinAcceso: e.target.value }))}
                   placeholder={isEditing ? "Deja vacío para mantener" : "Ej: pass123,"}
+                  disabled={!canEditSelectedUser}
                 />
                 <div className="usrHint">Regla: mínimo 6 caracteres, incluye número y símbolo (.,-).</div>
               </label>
@@ -393,11 +417,23 @@ export default function UsuariosPage() {
             {formStatus?.type === "ok" ? <div className="usrOk">{formStatus.message}</div> : null}
 
             <div className="usrActions">
-              <button type="button" className="usrBtnPrimary" onClick={save} disabled={isSaving}>
+              <button
+                type="button"
+                className="usrBtnPrimary"
+                onClick={save}
+                disabled={isSaving || !canEditSelectedUser}
+                title={!canEditSelectedUser ? "Solo puedes editar tu propio usuario" : ""}
+              >
                 {isSaving ? "Guardando..." : "Guardar"}
               </button>
               {isEditing ? (
-                <button type="button" className="usrBtnDanger" onClick={deactivateSelected} disabled={isSaving}>
+                <button
+                  type="button"
+                  className="usrBtnDanger"
+                  onClick={deactivateSelected}
+                  disabled={isSaving || !canEditSelectedUser}
+                  title={!canEditSelectedUser ? "Solo puedes editar tu propio usuario" : ""}
+                >
                   Desactivar
                 </button>
               ) : null}

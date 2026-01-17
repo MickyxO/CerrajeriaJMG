@@ -280,6 +280,16 @@
   font-weight: 1000;
 }
 
+.usrWarn {
+  margin-top: 10px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 194, 0, 0.65);
+  background: rgba(244, 194, 0, 0.18);
+  color: var(--jmg-navy);
+  font-weight: 950;
+}
+
 .usrLoading {
   margin-top: 10px;
   color: var(--jmg-muted);
