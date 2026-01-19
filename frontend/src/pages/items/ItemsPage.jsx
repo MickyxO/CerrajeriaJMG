@@ -248,6 +248,11 @@ export default function ItemsPage() {
     const nextForm = {
       ...emptyForm(),
       ...selectedItem,
+      // Asegura inputs controlados (evita que se “quede” el valor previo si viene undefined/null)
+      Descripcion: selectedItem?.Descripcion ?? "",
+      CompatibilidadMarca: selectedItem?.CompatibilidadMarca ?? "",
+      TipoChip: selectedItem?.TipoChip ?? "",
+      Frecuencia: selectedItem?.Frecuencia ?? "",
       IdCategoria: selectedItem?.IdCategoria ?? "",
       PrecioVenta: selectedItem?.PrecioVenta ?? "",
       CostoReferencia: selectedItem?.CostoReferencia ?? "",

@@ -13,6 +13,7 @@ const combosRoutes = require("./routes/combos/combos.routes");
 const cajaRoutes = require("./routes/caja/caja.routes");
 const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
 const inventarioRoutes = require("./routes/inventario/inventario.routes");
+const reportesRoutes = require("./routes/reportes/reportes.routes");
 
 const app = express();
 app.use(cors()); 
@@ -28,6 +29,7 @@ app.use("/", combosRoutes);
 app.use("/", cajaRoutes);
 app.use("/", usuariosRoutes);
 app.use("/", inventarioRoutes);
+app.use("/", reportesRoutes);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(SwaggerSpeci));
 

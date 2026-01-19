@@ -115,6 +115,17 @@ function IconClipboard(props) {
   );
 }
 
+function IconBarChart(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-8" />
+      <path d="M22 20V8" />
+    </svg>
+  );
+}
+
 function IconUsers(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -141,6 +152,7 @@ function getPageTitle(pathname) {
     "/ventas": "Ventas",
     "/caja": "Caja",
     "/inventario": "Inventario",
+    "/reportes": "Reportes",
     "/usuarios": "Usuarios",
   };
   return map[pathname] || "";
@@ -164,6 +176,7 @@ export default function AppLayout() {
       { to: "/categorias", label: "Categorías", Icon: IconTag },
       { to: "/ventas", label: "Ventas", Icon: IconReceipt },
       { to: "/inventario", label: "Inventario", Icon: IconClipboard },
+      { to: "/reportes", label: "Reportes", Icon: IconBarChart },
       { to: "/usuarios", label: "Usuarios", Icon: IconUsers },
     ],
     []

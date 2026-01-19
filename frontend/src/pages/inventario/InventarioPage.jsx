@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { categoriaService } from "../../services/categoria.service";
 import { itemsService } from "../../services/items.service";
@@ -63,6 +64,7 @@ function toNumber(v, fallback = 0) {
 }
 
 export default function InventarioPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const currentUserId = user?.IdUsuario ?? user?.id_usuario ?? null;
 
@@ -509,6 +511,17 @@ export default function InventarioPage() {
                         {selectedItem.NombreCategoria}
                         {selectedItem.Clasificacion ? ` · ${selectedItem.Clasificacion}` : ""}
                         {selectedItem.CompatibilidadMarca ? ` · ${selectedItem.CompatibilidadMarca}` : ""}
+                      </div>
+
+                      <div style={{ marginTop: 8 }}>
+                        <button
+                          type="button"
+                          className="invBtn"
+                          onClick={() => navigate(`/reportes?itemId=${encodeURIComponent(String(selectedItem.IdItem))}&range=7d`)}
+                          title="Ver reporte de ventas para este producto"
+                        >
+                          Ver reportes
+                        </button>
                       </div>
                     </div>
                   </div>

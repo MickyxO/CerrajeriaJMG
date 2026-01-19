@@ -188,10 +188,6 @@ export default function CajaPage() {
       setCerrarError("No se encontró el usuario (IdUsuario). Vuelve a iniciar sesión.");
       return;
     }
-    if (!isToday) {
-      setCerrarError("Solo puedes cerrar la caja del día (hoy).");
-      return;
-    }
     if (estado !== "ABIERTA") {
       setCerrarError("No hay caja abierta para cerrar.");
       return;
@@ -217,7 +213,7 @@ export default function CajaPage() {
 
   useEffect(() => {
     // Si cambias de fecha o deja de estar abierta, cerramos el panel de cierre.
-    if (!isToday || estado !== "ABIERTA") {
+    if (estado !== "ABIERTA") {
       setShowCerrarCard(false);
       setCerrarError(null);
     }
@@ -568,7 +564,7 @@ export default function CajaPage() {
                   </div>
                 </div>
 
-                {estado === "ABIERTA" && isToday ? (
+                {estado === "ABIERTA" ? (
                   <div className="closeActions">
                     <button type="button" className="danger" onClick={openCerrarCard}>
                       Cerrar caja

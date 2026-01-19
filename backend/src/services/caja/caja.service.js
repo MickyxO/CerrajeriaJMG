@@ -17,14 +17,14 @@ class CajaService {
         );
     }
 
-
-
-    async getCajaDelDia() {
+    // Caja ABIERTA (cualquier fecha). Útil para cerrar una caja vieja que quedó abierta.
+    async getCajaAbierta() {
         try {
             const query = `
                 SELECT * FROM caja 
                 WHERE estado = 'ABIERTA' 
-                ORDER BY fecha_apertura DESC LIMIT 1
+                ORDER BY fecha_apertura DESC, hora_apertura DESC
+                LIMIT 1
             `;
             const { rows } = await pool.query(query);
             
@@ -34,6 +34,36 @@ class CajaService {
             return new Caja(r.id_caja, r.fecha_apertura, r.hora_apertura, r.monto_inicial, r.monto_actual, r.estado, r.id_usuario_apertura);
         } catch (err) {
             console.error("Error consultando caja: ", err.message);
+            throw err;
+        }
+    }
+
+    // Caja ABIERTA de HOY.
+    async getCajaDelDia() {
+        try {
+            const query = `
+                SELECT * FROM caja
+                WHERE estado = 'ABIERTA'
+                  AND fecha_apertura = CURRENT_DATE
+                ORDER BY hora_apertura DESC
+                LIMIT 1
+            `;
+            const { rows } = await pool.query(query);
+
+            if (rows.length === 0) return null;
+
+            const r = rows[0];
+            return new Caja(
+                r.id_caja,
+                r.fecha_apertura,
+                r.hora_apertura,
+                r.monto_inicial,
+                r.monto_actual,
+                r.estado,
+                r.id_usuario_apertura
+            );
+        } catch (err) {
+            console.error("Error consultando caja del día: ", err.message);
             throw err;
         }
     }
@@ -85,7 +115,7 @@ class CajaService {
         if (montoInicial === undefined || montoInicial < 0) throw new Error("Monto inicial inválido.");
 
         try {
-            const abierta = await this.getCajaDelDia();
+            const abierta = await this.getCajaAbierta();
             if (abierta) throw new Error("Ya existe una caja abierta. Debe cerrarla antes de abrir otra.");
 
             const query = `
@@ -105,7 +135,7 @@ class CajaService {
 
     async cerrarCaja(idUsuario, montoFinalFisico) {
         try {
-            const caja = await this.getCajaDelDia();
+            const caja = await this.getCajaAbierta();
             if (!caja) throw new Error("No hay caja abierta para cerrar.");
 
             const query = `
@@ -138,7 +168,7 @@ class CajaService {
         try {
             await client.query('BEGIN');
 
-            const queryCaja = "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' LIMIT 1 FOR UPDATE";
+            const queryCaja = "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE";
             const resCaja = await client.query(queryCaja);
             
             if (resCaja.rows.length === 0) throw new Error("No hay caja abierta. Abra la caja antes de registrar gastos.");
