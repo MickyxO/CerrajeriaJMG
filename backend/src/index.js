@@ -3,6 +3,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const express = require("express");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
+const { requireAuth } = require("./middlewares/auth");
 
 const SwaggerSpeci = require("./swagger/swaggerspecification");
 
@@ -29,6 +30,28 @@ if (corsOrigin) {
   app.use(cors());
 }
 app.use(express.json());
+
+// Auth global (JWT)
+// Excepciones: /health, /login, /api-docs (si aplica), /uploads (solo cuando se sirve localmente)
+// y /postusuario si habilitas bootstrap con ALLOW_PUBLIC_USER_CREATE=true.
+const allowPublicUserCreate = String(process.env.ALLOW_PUBLIC_USER_CREATE || "").toLowerCase() === "true";
+app.use((req, res, next) => {
+  const pathOnly = req.path || "";
+
+  if (pathOnly === "/health") return next();
+  if (pathOnly === "/login" && req.method === "POST") return next();
+  if (pathOnly === "/postusuario" && req.method === "POST" && allowPublicUserCreate) return next();
+
+  if (pathOnly.startsWith("/uploads")) {
+    if (process.env.SERVE_LOCAL_UPLOADS === "true" || process.env.NODE_ENV !== "production") {
+      return next();
+    }
+  }
+
+  if (pathOnly.startsWith("/api-docs")) return next();
+
+  return requireAuth(req, res, next);
+});
 
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });

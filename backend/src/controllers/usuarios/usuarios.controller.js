@@ -1,4 +1,5 @@
 const UsuariosService = require("../../services/usuarios/usuarios.service");
+const { signAccessToken } = require("../../middlewares/auth");
 
 class UsuariosController {
 
@@ -47,10 +48,24 @@ class UsuariosController {
                 return res.status(401).json({ error: "Credenciales incorrectas o usuario inactivo" });
             }
 
-            res.status(200).json({ message: "Acceso correcto", usuario });
+            const token = signAccessToken({
+                sub: usuario.IdUsuario,
+                username: usuario.Username,
+                rol: usuario.Rol,
+            });
+
+            res.status(200).json({ message: "Acceso correcto", usuario, token });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
+    }
+
+    async me(req, res) {
+        // req.auth lo setea el middleware requireAuth
+        res.status(200).json({
+            ok: true,
+            auth: req.auth || null,
+        });
     }
 
     async create(req, res) {

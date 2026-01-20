@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const UsuariosController = require("../../controllers/usuarios/usuarios.controller");
 const rateLimit = require("express-rate-limit");
+const { requireAuth } = require("../../middlewares/auth");
 
 const loginLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutos
@@ -83,6 +84,9 @@ router.get("/getusuario/:id", UsuariosController.getById);
  *         description: Error interno del servidor
  */
 router.post("/login", loginLimiter, UsuariosController.login);
+
+// Sesión actual (validación de token)
+router.get("/me", requireAuth, UsuariosController.me);
 
 /**
  * @swagger

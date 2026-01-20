@@ -5,6 +5,14 @@ export const API_URL = (import.meta.env?.VITE_API_URL || DEFAULT_API_URL).replac
 	""
 );
 
+function getStoredToken() {
+	try {
+		return localStorage.getItem("softsmith.token") || null;
+	} catch {
+		return null;
+	}
+}
+
 function buildUrl(path, params) {
 	const url = new URL(path, API_URL);
 
@@ -36,11 +44,13 @@ export async function apiRequest(
 ) {
 	const url = buildUrl(path, params);
 	const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+	const token = getStoredToken();
 
 	const response = await fetch(url, {
 		method,
 		headers: {
 			...(isFormData ? {} : { "Content-Type": "application/json" }),
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
 			...(headers || {}),
 		},
 		body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
