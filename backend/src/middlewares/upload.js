@@ -2,8 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 
+const { isCloudinaryConfigured } = require("../config/cloudinary");
+
 const ITEMS_UPLOAD_DIR = path.resolve(__dirname, "../../uploads/items");
-fs.mkdirSync(ITEMS_UPLOAD_DIR, { recursive: true });
+// Solo tiene sentido crear carpeta si vamos a guardar en disco.
+if (!isCloudinaryConfigured) {
+  fs.mkdirSync(ITEMS_UPLOAD_DIR, { recursive: true });
+}
 
 function makeSafeFilename(originalName) {
   const ext = path.extname(originalName || "").toLowerCase();
@@ -11,14 +16,16 @@ function makeSafeFilename(originalName) {
   return `${Date.now()}-${rand}${ext || ""}`;
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, ITEMS_UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    cb(null, makeSafeFilename(file.originalname));
-  },
-});
+const storage = isCloudinaryConfigured
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, ITEMS_UPLOAD_DIR);
+      },
+      filename: (req, file, cb) => {
+        cb(null, makeSafeFilename(file.originalname));
+      },
+    });
 
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/jpeg", "image/png", "image/webp"];

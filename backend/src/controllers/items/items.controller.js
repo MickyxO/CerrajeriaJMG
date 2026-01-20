@@ -1,4 +1,6 @@
 const ItemsService = require("../../services/items/items.service");
+const { isCloudinaryConfigured } = require("../../config/cloudinary");
+const { uploadBufferToCloudinary } = require("../../utils/cloudinaryUpload");
 
 function parseBool(value) {
     if (value === true || value === false) return value;
@@ -97,7 +99,25 @@ class ItemsController {
                 return res.status(400).json({ error: "No se recibió archivo de imagen." });
             }
 
-            const imagenUrl = `/uploads/items/${req.file.filename}`;
+            let imagenUrl;
+
+            if (isCloudinaryConfigured) {
+                if (!req.file.buffer) {
+                    return res.status(400).json({ error: "No se recibió contenido del archivo." });
+                }
+
+                const resultUpload = await uploadBufferToCloudinary(req.file.buffer, {
+                    folder: "softsmith/items",
+                    // Opcional: si quieres que reemplazar la imagen mantenga el mismo public_id
+                    // publicId: `item-${id}`,
+                });
+
+                imagenUrl = resultUpload.secure_url;
+            } else {
+                // Modo desarrollo/local: guardar en disco y exponerlo por /uploads
+                imagenUrl = `/uploads/items/${req.file.filename}`;
+            }
+
             const result = await ItemsService.setImagenUrl(id, imagenUrl);
 
             res.status(200).json({ message: "Imagen actualizada correctamente", result });

@@ -52,7 +52,23 @@ CREATE TABLE ventas (
     monto_iva NUMERIC(10,2) DEFAULT 0 
 );
 
--- 5. DETALLE DE VENTA
+-- 5. DEFINICIÓN DE COMBOS 
+CREATE TABLE combos (
+    id_combo SERIAL PRIMARY KEY,
+    nombre_combo VARCHAR(100) NOT NULL, 
+    precio_sugerido_combo NUMERIC(10,2) NULL 
+);
+
+-- 6. CONTENIDO DE LOS COMBOS
+-- Relaciona qué items componen el combo
+CREATE TABLE combo_items (
+    id_combo_item SERIAL PRIMARY KEY,
+    id_combo INT REFERENCES combos(id_combo) ON DELETE CASCADE,
+    id_item INT REFERENCES items(id_item), -- El componente (Chip, Espadín, etc.)
+    cantidad_default INT DEFAULT 1 -- Cuántos de este item lleva el combo
+);
+
+-- 7. DETALLE DE VENTA
 CREATE TABLE detalle_ventas (
     id_detalle SERIAL PRIMARY KEY,
     id_venta INT REFERENCES ventas(id_venta) ON DELETE CASCADE,
@@ -69,7 +85,7 @@ CREATE TABLE detalle_ventas (
     combo_cantidad_snapshot INT
 );
 
--- 6. MOVIMIENTOS DE INVENTARIO
+-- 8. MOVIMIENTOS DE INVENTARIO
 CREATE TABLE movimientos_inventario (
     id_movimiento SERIAL PRIMARY KEY,
     id_item INT REFERENCES items(id_item),
@@ -78,23 +94,6 @@ CREATE TABLE movimientos_inventario (
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     id_usuario INT REFERENCES usuarios(id_usuario),
     comentario TEXT 
-);
-
-
--- 7. DEFINICIÓN DE COMBOS 
-CREATE TABLE combos (
-    id_combo SERIAL PRIMARY KEY,
-    nombre_combo VARCHAR(100) NOT NULL, 
-    precio_sugerido_combo NUMERIC(10,2) NULL 
-);
-
--- 8. CONTENIDO DE LOS COMBOS
--- Relaciona qué items componen el combo
-CREATE TABLE combo_items (
-    id_combo_item SERIAL PRIMARY KEY,
-    id_combo INT REFERENCES combos(id_combo) ON DELETE CASCADE,
-    id_item INT REFERENCES items(id_item), -- El componente (Chip, Espadín, etc.)
-    cantidad_default INT DEFAULT 1 -- Cuántos de este item lleva el combo
 );
 
 -- 9. CONTROL DE CAJA (Corte de Caja)

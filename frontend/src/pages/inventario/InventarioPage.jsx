@@ -5,6 +5,7 @@ import { categoriaService } from "../../services/categoria.service";
 import { itemsService } from "../../services/items.service";
 import { inventarioService } from "../../services/inventario.service";
 import { API_URL } from "../../services/api";
+import { IMAGE_VARIANTS, resolveImageUrl } from "../../utils/image";
 import { useAuth } from "../../hooks/useAuth";
 
 import "./InventarioPage.css";
@@ -33,17 +34,8 @@ function normalizeItem(row) {
   };
 }
 
-function resolveImagenUrl(value) {
-  const raw = (value ?? "").toString().trim();
-  if (!raw) return null;
-
-  // Absolute URLs are used as-is.
-  if (/^https?:\/\//i.test(raw)) return raw;
-
-  // Backend saves paths like /uploads/items/<file>
-  const normalized = raw.replace(/\\/g, "/");
-  if (normalized.startsWith("/")) return `${API_URL}${normalized}`;
-  return `${API_URL}/${normalized}`;
+function resolveImagenUrl(value, variant) {
+  return resolveImageUrl(value, { apiBaseUrl: API_URL, variant });
 }
 
 function formatDateTime(value) {
@@ -406,7 +398,7 @@ export default function InventarioPage() {
                 const min = toNumber(it.StockMinimo, 0);
                 const low = !it.EsServicio && stock <= min;
                 const selected = String(it.IdItem) === String(selectedItemId);
-                const imgSrc = resolveImagenUrl(it.ImagenUrl);
+                const imgSrc = resolveImagenUrl(it.ImagenUrl, IMAGE_VARIANTS.THUMB);
                 const showImg = Boolean(imgSrc) && !imgErrors[String(it.IdItem)];
                 return (
                   <button
@@ -430,6 +422,7 @@ export default function InventarioPage() {
                           src={imgSrc}
                           alt={it.Nombre}
                           loading="lazy"
+                          decoding="async"
                           onError={() =>
                             setImgErrors((s) => ({ ...s, [String(it.IdItem)]: true }))
                           }
@@ -485,7 +478,7 @@ export default function InventarioPage() {
                       type="button"
                       className="invPreview"
                       onClick={() => {
-                        const src = resolveImagenUrl(selectedItem.ImagenUrl);
+                        const src = resolveImagenUrl(selectedItem.ImagenUrl, IMAGE_VARIANTS.ZOOM);
                         if (src) setZoomSrc(src);
                       }}
                       disabled={!selectedItem.ImagenUrl || imgErrors[String(selectedItem.IdItem)]}
@@ -493,9 +486,10 @@ export default function InventarioPage() {
                     >
                       {selectedItem.ImagenUrl && !imgErrors[String(selectedItem.IdItem)] ? (
                         <img
-                          src={resolveImagenUrl(selectedItem.ImagenUrl)}
+                          src={resolveImagenUrl(selectedItem.ImagenUrl, IMAGE_VARIANTS.PREVIEW)}
                           alt={selectedItem.Nombre}
                           loading="lazy"
+                          decoding="async"
                           onError={() =>
                             setImgErrors((s) => ({ ...s, [String(selectedItem.IdItem)]: true }))
                           }
@@ -647,7 +641,7 @@ export default function InventarioPage() {
             >
               ✕
             </button>
-            <img className="invModalImg" src={zoomSrc} alt="Imagen del item" />
+            <img className="invModalImg" src={zoomSrc} alt="Imagen del item" decoding="async" />
           </div>
         </div>
       ) : null}

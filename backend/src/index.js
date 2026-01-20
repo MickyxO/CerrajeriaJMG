@@ -16,11 +16,30 @@ const inventarioRoutes = require("./routes/inventario/inventario.routes");
 const reportesRoutes = require("./routes/reportes/reportes.routes");
 
 const app = express();
-app.use(cors()); 
+
+const corsOrigin = (process.env.CORS_ORIGIN || "").trim();
+if (corsOrigin) {
+  app.use(
+    cors({
+      origin: corsOrigin.split(",").map((s) => s.trim()),
+    })
+  );
+} else {
+  // Dev/local: CORS abierto
+  app.use(cors());
+}
 app.use(express.json());
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true });
+});
+
 // Archivos subidos (imágenes)
-app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
+// En producción se recomienda Cloudinary (no disco local). Si necesitas servir uploads locales,
+// activa SERVE_LOCAL_UPLOADS=true.
+if (process.env.SERVE_LOCAL_UPLOADS === "true" || process.env.NODE_ENV !== "production") {
+  app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
+}
 
 app.use("/", categoriaRoutes);
 app.use("/", itemsRoutes);
@@ -33,7 +52,7 @@ app.use("/", reportesRoutes);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(SwaggerSpeci));
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

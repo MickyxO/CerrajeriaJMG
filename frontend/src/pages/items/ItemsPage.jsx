@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { itemsService } from "../../services/items.service";
 import { categoriaService } from "../../services/categoria.service";
 import { API_URL } from "../../services/api";
+import { IMAGE_VARIANTS, resolveImageUrl } from "../../utils/image";
 
 import "./ItemsPage.css";
 
@@ -16,13 +17,8 @@ function formatMoney(n) {
   return num.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 }
 
-function toImageUrl(imagenUrl) {
-  if (!imagenUrl) return null;
-  try {
-    return new URL(imagenUrl, API_URL).toString();
-  } catch {
-    return null;
-  }
+function toImageUrl(imagenUrl, variant) {
+  return resolveImageUrl(imagenUrl, { apiBaseUrl: API_URL, variant });
 }
 
 function normalizeCategoria(row) {
@@ -99,7 +95,7 @@ export default function ItemsPage() {
   const [pageSize, setPageSize] = useState(15);
 
   const [selectedId, setSelectedId] = useState(null);
-  const [selectedSnapshot, setSelectedSnapshot] = useState(null);
+  const [_selectedSnapshot, setSelectedSnapshot] = useState(null);
   const [form, setForm] = useState(() => emptyForm());
   const initialFormRef = useRef(pickComparableForm(emptyForm()));
   const [formError, setFormError] = useState(null);
@@ -235,8 +231,6 @@ export default function ItemsPage() {
     if (!selectedId) return null;
     return items.find((i) => i?.IdItem === selectedId) || null;
   }, [items, selectedId]);
-
-  const activeSelection = selectedItem || selectedSnapshot;
 
   useEffect(() => {
     if (!selectedItem) return;
@@ -610,7 +604,7 @@ export default function ItemsPage() {
               ) : (
                 pagedItems.map((it) => {
                   const active = it?.IdItem === selectedId;
-                  const img = toImageUrl(it?.ImagenUrl);
+                  const img = toImageUrl(it?.ImagenUrl, IMAGE_VARIANTS.THUMB);
                   return (
                     <button
                       key={it.IdItem}
@@ -625,7 +619,11 @@ export default function ItemsPage() {
                     >
                       <div className="rowLeft">
                         <div className="thumb" aria-hidden="true">
-                          {img ? <img src={img} alt="" /> : <span>IMG</span>}
+                          {img ? (
+                            <img src={img} alt="" loading="lazy" decoding="async" />
+                          ) : (
+                            <span>IMG</span>
+                          )}
                         </div>
                         <div className="rowMain">
                           <div className="rowTitle">{it.Nombre}</div>
@@ -858,14 +856,19 @@ export default function ItemsPage() {
                   type="button"
                   className="preview"
                   onClick={() => {
-                    const src = form?.ImagenUrl ? toImageUrl(form.ImagenUrl) : null;
+                    const src = form?.ImagenUrl ? toImageUrl(form.ImagenUrl, IMAGE_VARIANTS.ZOOM) : null;
                     if (src) setZoomSrc(src);
                   }}
                   disabled={!form?.ImagenUrl}
                   title={form?.ImagenUrl ? "Click para ampliar" : "Sin imagen"}
                 >
                   {form?.ImagenUrl ? (
-                    <img src={toImageUrl(form.ImagenUrl)} alt="Imagen del item" />
+                    <img
+                      src={toImageUrl(form.ImagenUrl, IMAGE_VARIANTS.PREVIEW)}
+                      alt="Imagen del item"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
                     <div className="previewEmpty">Sin imagen</div>
                   )}
@@ -943,7 +946,7 @@ export default function ItemsPage() {
             >
               ✕
             </button>
-            <img className="imgModalImg" src={zoomSrc} alt="Imagen del item" />
+            <img className="imgModalImg" src={zoomSrc} alt="Imagen del item" decoding="async" />
           </div>
         </div>
       ) : null}
