@@ -50,7 +50,48 @@ app.use("/", usuariosRoutes);
 app.use("/", inventarioRoutes);
 app.use("/", reportesRoutes);
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(SwaggerSpeci));
+// Swagger UI
+// En producción, NO lo expongas públicamente por defecto.
+// - Para habilitar: ENABLE_SWAGGER=true
+// - Para proteger con usuario/clave: SWAGGER_USER / SWAGGER_PASS
+const enableSwagger = String(process.env.ENABLE_SWAGGER || "").toLowerCase() === "true";
+const isProd = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+const swaggerUser = (process.env.SWAGGER_USER || "").trim();
+const swaggerPass = process.env.SWAGGER_PASS || "";
+
+function swaggerAuth(req, res, next) {
+  if (!swaggerUser || !swaggerPass) return next();
+
+  const header = req.headers.authorization || "";
+  const [type, token] = header.split(" ");
+  if (type !== "Basic" || !token) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="api-docs"');
+    return res.status(401).send("Auth required");
+  }
+
+  let decoded = "";
+  try {
+    decoded = Buffer.from(token, "base64").toString("utf8");
+  } catch {
+    res.setHeader("WWW-Authenticate", 'Basic realm="api-docs"');
+    return res.status(401).send("Auth required");
+  }
+
+  const idx = decoded.indexOf(":");
+  const user = idx >= 0 ? decoded.slice(0, idx) : "";
+  const pass = idx >= 0 ? decoded.slice(idx + 1) : "";
+
+  if (user !== swaggerUser || pass !== swaggerPass) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="api-docs"');
+    return res.status(401).send("Invalid credentials");
+  }
+
+  return next();
+}
+
+if (!isProd || enableSwagger) {
+  app.use("/api-docs", swaggerAuth, swaggerUi.serve, swaggerUi.setup(SwaggerSpeci));
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
