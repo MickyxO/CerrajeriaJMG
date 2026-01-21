@@ -47,6 +47,28 @@ class ItemsService {
         }
     }
 
+    async getItemById(idItem, { incluyeInactivos = false } = {}) {
+        try {
+            const query = `
+                SELECT i.*, c.nombre as nombre_categoria
+                FROM items i
+                INNER JOIN categorias c ON i.id_categoria = c.id_categoria
+                WHERE i.id_item = $1 ${incluyeInactivos ? "" : "AND i.activo = TRUE"}
+                LIMIT 1
+            `;
+
+            const { rows } = await pool.query(query, [idItem]);
+            if (!rows || rows.length === 0) return null;
+
+            const item = this._mapRowToModel(rows[0]);
+            item.NombreCategoria = rows[0].nombre_categoria;
+            return item;
+        } catch (err) {
+            console.error("Error obteniendo item por ID: ", err.message);
+            throw err;
+        }
+    }
+
     async getItemsPorCategoria(idCategoria, { incluyeInactivos = false } = {}) {
         try {
             const query = `

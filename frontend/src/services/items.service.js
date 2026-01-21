@@ -6,6 +6,11 @@ export const itemsService = {
     return apiRequest("/getitems", { params: { incluyeInactivos: incluyeInactivos ? 1 : undefined } });
   },
 
+  /** Backend: GET /getitem/:id */
+  getItemPorId(id, { incluyeInactivos } = {}) {
+    return apiRequest(`/getitem/${id}`, { params: { incluyeInactivos: incluyeInactivos ? 1 : undefined } });
+  },
+
   /** Backend: GET /getitems/categoria/:idCategoria */
   getItemsPorCategoria(idCategoria, { incluyeInactivos } = {}) {
     return apiRequest(`/getitems/categoria/${idCategoria}`, {

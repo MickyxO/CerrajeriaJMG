@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { itemsService } from "../../services/items.service";
 import { categoriaService } from "../../services/categoria.service";
 import { API_URL } from "../../services/api";
@@ -84,7 +84,7 @@ export default function ItemsPage() {
   const [categorias, setCategorias] = useState([]);
 
   const [q, setQ] = useState("");
-  const [searchMode, setSearchMode] = useState("NOMBRE"); // NOMBRE | MARCA | CLASIFICACION
+  const [searchMode, setSearchMode] = useState("NOMBRE"); // NOMBRE | MARCA | CLASIFICACION | ID
   const [categoriaId, setCategoriaId] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("ACTIVOS"); // ACTIVOS | TODOS | INACTIVOS
 
@@ -130,12 +130,15 @@ export default function ItemsPage() {
     setPage(1);
   }
 
-  function applyEstadoFilter(list) {
-    const rows = Array.isArray(list) ? list : [];
-    if (estadoFiltro === "INACTIVOS") return rows.filter((i) => i?.Activo === false);
-    if (estadoFiltro === "TODOS") return rows;
-    return rows.filter((i) => i?.Activo !== false);
-  }
+  const applyEstadoFilter = useCallback(
+    (list) => {
+      const rows = Array.isArray(list) ? list : [];
+      if (estadoFiltro === "INACTIVOS") return rows.filter((i) => i?.Activo === false);
+      if (estadoFiltro === "TODOS") return rows;
+      return rows.filter((i) => i?.Activo !== false);
+    },
+    [estadoFiltro]
+  );
 
   async function loadInitial({ forceIncluyeInactivos } = {}) {
     setIsLoading(true);
@@ -170,6 +173,49 @@ export default function ItemsPage() {
       setError(null);
 
       const query = q.trim();
+
+      // Búsqueda directa por ID (tiene prioridad sobre categoría y otros modos)
+      if (searchMode === "ID") {
+        if (query.length === 0) {
+          try {
+            const its = await itemsService.getItems({ incluyeInactivos });
+            if (cancelled) return;
+            setItems(applyEstadoFilter(Array.isArray(its) ? its : []));
+            setPage(1);
+          } catch (e) {
+            if (cancelled) return;
+            setError(e?.message || "Error cargando items");
+          }
+          return;
+        }
+
+        const id = Number(query);
+        if (!Number.isInteger(id) || id <= 0) {
+          setItems([]);
+          setPage(1);
+          setError("Ingresa un ID válido (entero positivo).");
+          return;
+        }
+
+        try {
+          const item = await itemsService.getItemPorId(id, { incluyeInactivos });
+          if (cancelled) return;
+          const list = applyEstadoFilter(item ? [item] : []);
+          setItems(list);
+          setPage(1);
+        } catch (e) {
+          if (cancelled) return;
+          if (e?.status === 404) {
+            setItems([]);
+            setPage(1);
+            setError("Item no encontrado.");
+            return;
+          }
+          setError(e?.message || "Error buscando item por ID");
+        }
+        return;
+      }
+
       if (categoriaId) {
         try {
           const its = await itemsService.getItemsPorCategoria(categoriaId, { incluyeInactivos });
@@ -225,7 +271,7 @@ export default function ItemsPage() {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [q, searchMode, categoriaId, incluyeInactivos, estadoFiltro]);
+  }, [q, searchMode, categoriaId, incluyeInactivos, estadoFiltro, applyEstadoFilter]);
 
   const selectedItem = useMemo(() => {
     if (!selectedId) return null;
@@ -527,18 +573,19 @@ export default function ItemsPage() {
                 <span>Modo</span>
                 <select className="textInput" value={searchMode} onChange={(e) => setSearchMode(e.target.value)}>
                   <option value="NOMBRE">Nombre</option>
+                  <option value="ID">ID</option>
                   <option value="MARCA">Marca</option>
                   <option value="CLASIFICACION">Clasificación</option>
                 </select>
               </label>
 
               <label className="field">
-                <span>Búsqueda (mín. 2)</span>
+                <span>{searchMode === "ID" ? "Búsqueda (ID)" : "Búsqueda (mín. 2)"}</span>
                 <input
                   className="textInput"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Ej. chip, llave, Toyota…"
+                  placeholder={searchMode === "ID" ? "Ej. 123" : "Ej. chip, llave, Toyota…"}
                 />
               </label>
 

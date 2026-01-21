@@ -63,6 +63,27 @@ class ItemsController {
         }
     }
 
+    async getById(req, res) {
+        try {
+            const raw = req.params.id;
+            const id = Number(raw);
+            if (!Number.isInteger(id) || id <= 0) {
+                return res.status(400).json({ error: "ID inválido." });
+            }
+
+            const incluyeInactivos = parseBool(req.query?.incluyeInactivos);
+            const item = await ItemsService.getItemById(id, { incluyeInactivos });
+
+            if (!item) {
+                return res.status(404).json({ error: "Item no encontrado." });
+            }
+
+            return res.status(200).json(item);
+        } catch (err) {
+            return res.status(500).json({ error: err.message });
+        }
+    }
+
     async create(req, res) {
         try {
             const insertId = await ItemsService.createItem(req.body);

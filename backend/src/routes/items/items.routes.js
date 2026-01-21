@@ -20,6 +20,38 @@ router.get("/getitems", ItemsController.getAll);
 
 /**
  * @swagger
+ * /getitem/{id}:
+ *   get:
+ *     tags:
+ *       - Items
+ *     summary: Obtener un item por ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del item
+ *       - in: query
+ *         name: incluyeInactivos
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Si es true, permite devolver items inactivos
+ *     responses:
+ *       200:
+ *         description: Item encontrado
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Item no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get("/getitem/:id", ItemsController.getById);
+
+/**
+ * @swagger
  * /getitems/categoria/{idCategoria}:
  *   get:
  *     tags:
