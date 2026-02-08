@@ -61,4 +61,14 @@ export const itemsService = {
     form.append("imagen", file);
     return apiRequest(`/putitemimagen/${id}`, { method: "PUT", body: form });
   },
+
+  /** Backend: PUT /putitemimagenurl/:id (application/json) */
+  subirImagenDesdeUrl(id, url) {
+    return apiRequest(`/putitemimagenurl/${id}`, { method: "PUT", body: { url } });
+  },
+
+  /** Backend: DELETE /deleteitemimagen/:id */
+  eliminarImagen(id) {
+    return apiRequest(`/deleteitemimagen/${id}`, { method: "DELETE" });
+  },
 };

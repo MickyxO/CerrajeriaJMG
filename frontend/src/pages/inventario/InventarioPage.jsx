@@ -71,6 +71,7 @@ export default function InventarioPage() {
   const [menuMode, setMenuMode] = useState("CATEGORIA"); // CATEGORIA | CLASIFICACION
   const [selectedCategoriaId, setSelectedCategoriaId] = useState("TODAS");
   const [selectedClasificacion, setSelectedClasificacion] = useState("TODAS");
+  const [menuQuery, setMenuQuery] = useState("");
 
   const [q, setQ] = useState("");
   const [searchMode, setSearchMode] = useState("NOMBRE"); // NOMBRE | MARCA
@@ -202,7 +203,29 @@ export default function InventarioPage() {
     // Reset selections when switching menu modes
     setSelectedCategoriaId("TODAS");
     setSelectedClasificacion("TODAS");
+    setMenuQuery("");
   }, [menuMode]);
+
+  const categoriasFiltradas = useMemo(() => {
+    const q = menuQuery.trim().toLowerCase();
+    const list = Array.isArray(categorias) ? categorias : [];
+    if (!q) return list;
+    return list.filter((c) => {
+      const name = (c?.NombreCategoria ?? "").toString().toLowerCase();
+      const cl = (c?.Clasificacion ?? "").toString().toLowerCase();
+      return name.includes(q) || cl.includes(q);
+    });
+  }, [categorias, menuQuery]);
+
+  const clasificacionesFiltradas = useMemo(() => {
+    const q = menuQuery.trim().toLowerCase();
+    if (!q) return clasificaciones;
+    return (Array.isArray(clasificaciones) ? clasificaciones : []).filter((cl) =>
+      String(cl || "")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [clasificaciones, menuQuery]);
 
   useEffect(() => {
     if (selectedItemId) loadMovimientosForItem(selectedItemId);
@@ -328,49 +351,66 @@ export default function InventarioPage() {
               </button>
             </div>
 
-            {menuMode === "CATEGORIA" ? (
-              <div className="invChips">
+            <div className="invMenu">
+              <label className="invField invFieldFull">
+                <span>{menuMode === "CATEGORIA" ? "Categoría" : "Clasificación"}</span>
+                <input
+                  value={menuQuery}
+                  onChange={(e) => setMenuQuery(e.target.value)}
+                  placeholder={menuMode === "CATEGORIA" ? "Buscar categoría…" : "Buscar clasificación…"}
+                />
+              </label>
+
+              <div className="invMenuList" role="listbox" aria-label={menuMode === "CATEGORIA" ? "Categorías" : "Clasificaciones"}>
                 <button
                   type="button"
-                  className={selectedCategoriaId === "TODAS" ? "invChip invChipActive" : "invChip"}
-                  onClick={() => setSelectedCategoriaId("TODAS")}
+                  className={
+                    (menuMode === "CATEGORIA" && selectedCategoriaId === "TODAS") ||
+                    (menuMode === "CLASIFICACION" && selectedClasificacion === "TODAS")
+                      ? "invMenuItem invMenuItemActive"
+                      : "invMenuItem"
+                  }
+                  onClick={() => {
+                    if (menuMode === "CATEGORIA") setSelectedCategoriaId("TODAS");
+                    else setSelectedClasificacion("TODAS");
+                  }}
                 >
-                  Todas
+                  <span className="invMenuMain">Todas</span>
                 </button>
-                {(Array.isArray(categorias) ? categorias : []).map((c) => (
-                  <button
-                    key={c.IdCategoria}
-                    type="button"
-                    className={
-                      String(selectedCategoriaId) === String(c.IdCategoria) ? "invChip invChipActive" : "invChip"
-                    }
-                    onClick={() => setSelectedCategoriaId(c.IdCategoria)}
-                  >
-                    {c.NombreCategoria}
-                  </button>
-                ))}
+
+                {menuMode === "CATEGORIA"
+                  ? categoriasFiltradas
+                      .slice()
+                      .sort((a, b) => (a?.NombreCategoria ?? "").localeCompare(b?.NombreCategoria ?? ""))
+                      .map((c) => {
+                        const active = String(selectedCategoriaId) === String(c.IdCategoria);
+                        return (
+                          <button
+                            key={c.IdCategoria}
+                            type="button"
+                            className={active ? "invMenuItem invMenuItemActive" : "invMenuItem"}
+                            onClick={() => setSelectedCategoriaId(c.IdCategoria)}
+                          >
+                            <span className="invMenuMain">{c.NombreCategoria}</span>
+                            {c?.Clasificacion ? <span className="invMenuSub">{c.Clasificacion}</span> : null}
+                          </button>
+                        );
+                      })
+                  : clasificacionesFiltradas.map((cl) => {
+                      const active = selectedClasificacion === cl;
+                      return (
+                        <button
+                          key={cl}
+                          type="button"
+                          className={active ? "invMenuItem invMenuItemActive" : "invMenuItem"}
+                          onClick={() => setSelectedClasificacion(cl)}
+                        >
+                          <span className="invMenuMain">{cl}</span>
+                        </button>
+                      );
+                    })}
               </div>
-            ) : (
-              <div className="invChips">
-                <button
-                  type="button"
-                  className={selectedClasificacion === "TODAS" ? "invChip invChipActive" : "invChip"}
-                  onClick={() => setSelectedClasificacion("TODAS")}
-                >
-                  Todas
-                </button>
-                {clasificaciones.map((cl) => (
-                  <button
-                    key={cl}
-                    type="button"
-                    className={selectedClasificacion === cl ? "invChip invChipActive" : "invChip"}
-                    onClick={() => setSelectedClasificacion(cl)}
-                  >
-                    {cl}
-                  </button>
-                ))}
-              </div>
-            )}
+            </div>
 
             <div className="invMeta">
               <div>
@@ -500,7 +540,12 @@ export default function InventarioPage() {
                     </button>
 
                     <div>
-                      <div className="invDetailName">{selectedItem.Nombre}</div>
+                      <div className="invDetailNameRow">
+                        <div className="invDetailName">{selectedItem.Nombre}</div>
+                        <span className="invBadge invBadgeSvc" title="ID del item">
+                          #{selectedItem.IdItem}
+                        </span>
+                      </div>
                       <div className="invDetailMeta">
                         {selectedItem.NombreCategoria}
                         {selectedItem.Clasificacion ? ` · ${selectedItem.Clasificacion}` : ""}

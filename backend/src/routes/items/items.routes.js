@@ -310,6 +310,63 @@ router.put(
 
 /**
  * @swagger
+ * /putitemimagenurl/{id}:
+ *   put:
+ *     tags:
+ *       - Items
+ *     summary: Subir/actualizar la imagen de un item desde una URL (application/json)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del item
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *             example:
+ *               url: "https://example.com/imagen.jpg"
+ *     responses:
+ *       200:
+ *         description: Imagen actualizada correctamente
+ *       400:
+ *         description: Error de validación
+ */
+router.put("/putitemimagenurl/:id", ItemsController.uploadImagenDesdeUrl);
+
+/**
+ * @swagger
+ * /deleteitemimagen/{id}:
+ *   delete:
+ *     tags:
+ *       - Items
+ *     summary: Eliminar la imagen asociada a un item
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del item
+ *     responses:
+ *       200:
+ *         description: Imagen eliminada correctamente
+ *       400:
+ *         description: Error de validación
+ *       404:
+ *         description: Item no encontrado
+ */
+router.delete("/deleteitemimagen/:id", ItemsController.deleteImagen);
+
+/**
+ * @swagger
  * /deleteitem/{id}:
  *   delete:
  *     tags:

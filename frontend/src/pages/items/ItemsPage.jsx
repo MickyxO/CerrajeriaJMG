@@ -104,7 +104,9 @@ export default function ItemsPage() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState({ type: "idle", message: "" });
   const [autoUploadOnCreate, setAutoUploadOnCreate] = useState(true);
+  const [remoteImageUrl, setRemoteImageUrl] = useState("");
   const [zoomSrc, setZoomSrc] = useState(null);
+  const pasteZoneRef = useRef(null);
 
   const isEditing = Boolean(form?.IdItem);
   const incluyeInactivos = estadoFiltro !== "ACTIVOS";
@@ -473,6 +475,82 @@ export default function ItemsPage() {
       await loadInitial();
     } catch (e) {
       setUploadStatus({ type: "error", message: e?.message || "No se pudo subir imagen." });
+    }
+  }
+
+  async function handleDeleteImagen() {
+    setUploadStatus({ type: "idle", message: "" });
+    if (!form?.IdItem) return;
+    if (!form?.ImagenUrl) {
+      setUploadStatus({ type: "error", message: "Este item no tiene imagen." });
+      return;
+    }
+
+    const ok = window.confirm("¿Eliminar la imagen actual de este item?");
+    if (!ok) return;
+
+    try {
+      setUploadStatus({ type: "loading", message: "Eliminando imagen…" });
+      await itemsService.eliminarImagen(form.IdItem);
+      setForm((s) => ({ ...s, ImagenUrl: null }));
+      setUploadFile(null);
+      setRemoteImageUrl("");
+      setUploadStatus({ type: "success", message: "Imagen eliminada." });
+      await loadInitial({ forceIncluyeInactivos: incluyeInactivos });
+    } catch (e) {
+      setUploadStatus({ type: "error", message: e?.message || "No se pudo eliminar imagen." });
+    }
+  }
+
+  async function handleUploadImagenDesdeUrl() {
+    setUploadStatus({ type: "idle", message: "" });
+    if (!form?.IdItem) {
+      setUploadStatus({ type: "error", message: "Primero guarda el item para poder subir imagen." });
+      return;
+    }
+
+    const url = remoteImageUrl.trim();
+    if (!url) {
+      setUploadStatus({ type: "error", message: "Pega una URL primero." });
+      return;
+    }
+
+    try {
+      setUploadStatus({ type: "loading", message: "Subiendo desde URL…" });
+      const res = await itemsService.subirImagenDesdeUrl(form.IdItem, url);
+      const newImagenUrl = res?.result?.ImagenUrl || null;
+      if (newImagenUrl) setForm((s) => ({ ...s, ImagenUrl: newImagenUrl }));
+      setUploadStatus({ type: "success", message: "Imagen subida desde URL." });
+      setRemoteImageUrl("");
+      await loadInitial();
+    } catch (e) {
+      setUploadStatus({ type: "error", message: e?.message || "No se pudo subir desde URL." });
+    }
+  }
+
+  function handlePasteInZone(e) {
+    const dt = e?.clipboardData;
+    if (!dt) return;
+
+    const items = Array.from(dt.items || []);
+    const imageItem = items.find((it) => it.kind === "file" && String(it.type || "").startsWith("image/"));
+    if (imageItem) {
+      const file = imageItem.getAsFile?.();
+      if (file) {
+        const ext = (file.type || "image/png").split("/")[1] || "png";
+        const name = file.name && file.name !== "image.png" ? file.name : `clipboard-${Date.now()}.${ext}`;
+        const normalized = new File([file], name, { type: file.type || "image/png" });
+        setUploadFile(normalized);
+        setUploadStatus({ type: "idle", message: "" });
+        e.preventDefault();
+        return;
+      }
+    }
+
+    const text = String(dt.getData("text/plain") || "").trim();
+    if (text && /^https?:\/\//i.test(text)) {
+      setRemoteImageUrl(text);
+      setUploadStatus({ type: "idle", message: "" });
     }
   }
 
@@ -937,6 +1015,46 @@ export default function ItemsPage() {
                     disabled={uploadStatus.type === "loading"}
                   >
                     Subir imagen
+                  </button>
+
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={handleDeleteImagen}
+                    disabled={uploadStatus.type === "loading" || !isEditing || !form?.ImagenUrl}
+                    title={!isEditing ? "Primero guarda el item" : ""}
+                  >
+                    Eliminar imagen
+                  </button>
+                </div>
+
+                <div
+                  className="pasteZone"
+                  ref={pasteZoneRef}
+                  tabIndex={0}
+                  role="textbox"
+                  aria-label="Zona para pegar imágenes"
+                  onPaste={handlePasteInZone}
+                  onClick={() => pasteZoneRef.current?.focus?.()}
+                >
+                  <div className="pasteTitle">Pega una imagen aquí (Ctrl+V)</div>
+                  <div className="pasteHint">Tip: copia una imagen de Google y pégala aquí; luego presiona “Subir imagen”.</div>
+                </div>
+
+                <div className="remoteUrlRow">
+                  <input
+                    className="textInput"
+                    value={remoteImageUrl}
+                    onChange={(e) => setRemoteImageUrl(e.target.value)}
+                    placeholder="O pega una URL de imagen (http/https)…"
+                  />
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={handleUploadImagenDesdeUrl}
+                    disabled={uploadStatus.type === "loading"}
+                  >
+                    Subir desde URL
                   </button>
                 </div>
 

@@ -441,6 +441,39 @@
   flex-wrap: wrap;
 }
 
+.pasteZone {
+  border: 1px dashed rgba(3, 25, 64, 0.28);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(3, 25, 64, 0.02);
+  cursor: text;
+  outline: none;
+}
+
+.pasteZone:focus {
+  border-color: rgba(3, 25, 64, 0.45);
+  box-shadow: 0 0 0 4px rgba(255, 199, 0, 0.22);
+  background: rgba(255, 199, 0, 0.06);
+}
+
+.pasteTitle {
+  font-weight: 950;
+  color: var(--jmg-navy);
+}
+
+.pasteHint {
+  margin-top: 4px;
+  color: var(--jmg-muted);
+  font-size: 13px;
+}
+
+.remoteUrlRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
 @media (max-width: 980px) {
   .itemsGrid {
     grid-template-columns: 1fr;
