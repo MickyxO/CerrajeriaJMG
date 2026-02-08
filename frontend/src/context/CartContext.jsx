@@ -18,7 +18,7 @@ const initialState = {
 function cartReducer(state, action) {
 	switch (action.type) {
 		case "ADD": {
-			const { key, tipo, id, nombre, precio, cantidad = 1 } = action.payload;
+				const { key, tipo, id, nombre, precio, cantidad = 1, imagenUrl = null } = action.payload;
 			const nextQty = Math.max(1, Number(cantidad) || 1);
 			const nextPrice = normalizePrice(precio);
 
@@ -42,6 +42,7 @@ function cartReducer(state, action) {
 						tipo,
 						id,
 						nombre: nombre || "(sin nombre)",
+							imagenUrl,
 						precio: nextPrice,
 						cantidad: nextQty,
 					},
@@ -101,6 +102,7 @@ export function CartProvider({ children }) {
 				tipo: "ITEM",
 				id: item.IdItem,
 				nombre: item.Nombre,
+				imagenUrl: item.ImagenUrl || null,
 				precio: item.PrecioVenta,
 				cantidad,
 			},

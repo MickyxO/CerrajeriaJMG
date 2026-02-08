@@ -5,6 +5,8 @@ import { combosService } from "../../services/combos.service";
 import { categoriaService } from "../../services/categoria.service";
 import { ventasService } from "../../services/ventas.service";
 import { cajaService } from "../../services/caja.service";
+import { API_URL } from "../../services/api";
+import { IMAGE_VARIANTS, resolveImageUrl } from "../../utils/image";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
 
@@ -24,6 +26,10 @@ function toSafeString(v) {
   return (v ?? "").toString();
 }
 
+function resolveImagenUrl(value, variant) {
+  return resolveImageUrl(value, { apiBaseUrl: API_URL, variant });
+}
+
 export default function PosPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -33,6 +39,7 @@ export default function PosPage() {
 
   const [q, setQ] = useState("");
   const [showItems, setShowItems] = useState(true);
+  const [showServicios, setShowServicios] = useState(false);
   const [showCombos, setShowCombos] = useState(true);
   const [itemsResults, setItemsResults] = useState([]);
   const [combosAll, setCombosAll] = useState([]);
@@ -75,7 +82,7 @@ export default function PosPage() {
     const query = q.trim();
     setVentaStatus({ type: "idle", message: "" });
 
-    if (!showItems) {
+    if (!showItems && !showServicios) {
       setItemsResults([]);
       setIsSearching(false);
       return;
@@ -110,7 +117,17 @@ export default function PosPage() {
     }, 250);
 
     return () => clearTimeout(handle);
-  }, [q, showItems, categoriaId]);
+  }, [q, showItems, showServicios, categoriaId]);
+
+  const itemsOnlyResults = useMemo(() => {
+    const list = Array.isArray(itemsResults) ? itemsResults : [];
+    return list.filter((it) => !Boolean(it?.EsServicio));
+  }, [itemsResults]);
+
+  const serviciosResults = useMemo(() => {
+    const list = Array.isArray(itemsResults) ? itemsResults : [];
+    return list.filter((it) => Boolean(it?.EsServicio));
+  }, [itemsResults]);
 
   const combosFiltered = useMemo(() => {
     if (!showCombos) return [];
@@ -270,12 +287,20 @@ export default function PosPage() {
                   <span>Items</span>
                 </label>
                 <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={showServicios}
+                    onChange={(e) => setShowServicios(e.target.checked)}
+                  />
+                  <span>Servicios</span>
+                </label>
+                <label className="check">
                   <input type="checkbox" checked={showCombos} onChange={(e) => setShowCombos(e.target.checked)} />
                   <span>Combos</span>
                 </label>
               </div>
 
-              {showItems && categorias.length > 0 && (
+              {(showItems || showServicios) && categorias.length > 0 && (
                 <div className="posCatRow" aria-label="Categorías">
                   <button
                     type="button"
@@ -303,10 +328,12 @@ export default function PosPage() {
             {isSearching && <div className="hint">Buscando…</div>}
 
             <div className="results">
-              {showItems && itemsResults.length > 0 && (
+              {showItems && itemsOnlyResults.length > 0 && (
                 <>
                   <div className="resultsHeader">Items</div>
-                  {itemsResults.slice(0, 25).map((it) => (
+                  {itemsOnlyResults.slice(0, 25).map((it) => {
+                    const src = resolveImagenUrl(it?.ImagenUrl, IMAGE_VARIANTS.THUMB);
+                    return (
                     <button
                       type="button"
                       key={`item-${it.IdItem}`}
@@ -314,13 +341,56 @@ export default function PosPage() {
                       onClick={() => addItem(it, 1)}
                       title="Agregar al carrito"
                     >
-                      <div className="resultMain">
-                        <div className="resultName">{it.Nombre}</div>
-                        <div className="resultMeta">{it.NombreCategoria || ""}</div>
+                      <div className="resultLeft">
+                        <div className="resultThumb" aria-hidden="true">
+                          {src ? (
+                            <img src={src} alt="" loading="lazy" decoding="async" />
+                          ) : (
+                            <span>—</span>
+                          )}
+                        </div>
+                        <div className="resultMain">
+                          <div className="resultName">{it.Nombre}</div>
+                          <div className="resultMeta">{it.NombreCategoria || ""}</div>
+                        </div>
                       </div>
                       <div className="resultPrice">{formatMoney(it.PrecioVenta)}</div>
                     </button>
-                  ))}
+                    );
+                  })}
+                </>
+              )}
+
+              {showServicios && serviciosResults.length > 0 && (
+                <>
+                  <div className="resultsHeader">Servicios</div>
+                  {serviciosResults.slice(0, 25).map((it) => {
+                    const src = resolveImagenUrl(it?.ImagenUrl, IMAGE_VARIANTS.THUMB);
+                    return (
+                      <button
+                        type="button"
+                        key={`serv-${it.IdItem}`}
+                        className="resultRow"
+                        onClick={() => addItem(it, 1)}
+                        title="Agregar al carrito"
+                      >
+                        <div className="resultLeft">
+                          <div className="resultThumb" aria-hidden="true">
+                            {src ? (
+                              <img src={src} alt="" loading="lazy" decoding="async" />
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </div>
+                          <div className="resultMain">
+                            <div className="resultName">{it.Nombre}</div>
+                            <div className="resultMeta">{it.NombreCategoria || ""}</div>
+                          </div>
+                        </div>
+                        <div className="resultPrice">{formatMoney(it.PrecioVenta)}</div>
+                      </button>
+                    );
+                  })}
                 </>
               )}
 
@@ -345,7 +415,10 @@ export default function PosPage() {
                 </>
               )}
 
-              {q.trim().length >= 2 && itemsResults.length === 0 && combosFiltered.length === 0 && (
+              {q.trim().length >= 2 &&
+                (!showCombos || combosFiltered.length === 0) &&
+                (!showItems || itemsOnlyResults.length === 0) &&
+                (!showServicios || serviciosResults.length === 0) && (
                 <div className="hint">Sin resultados.</div>
               )}
               {q.trim().length < 2 && <div className="hint">Tip: escribe al menos 2 letras.</div>}
@@ -362,11 +435,30 @@ export default function PosPage() {
                 {lines.map((l) => (
                   <div key={l.key} className="cartRow">
                     <div className="cartMain">
-                      <div className="cartName">
-                        {l.nombre}
-                        <span className="chip">{l.tipo}</span>
+                      <div className="cartLeft">
+                        {l.tipo === "ITEM" ? (
+                          <div className="cartThumb" aria-hidden="true">
+                            {l.imagenUrl ? (
+                              <img
+                                src={resolveImagenUrl(l.imagenUrl, IMAGE_VARIANTS.THUMB)}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </div>
+                        ) : null}
+
+                        <div>
+                          <div className="cartName">
+                            {l.nombre}
+                            <span className="chip">{l.tipo}</span>
+                          </div>
+                          <div className="cartMeta">{formatMoney(l.precio)} c/u</div>
+                        </div>
                       </div>
-                      <div className="cartMeta">{formatMoney(l.precio)} c/u</div>
                     </div>
 
                     <div className="qty">
