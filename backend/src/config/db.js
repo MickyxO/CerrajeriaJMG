@@ -35,6 +35,18 @@ if (useWebSocket) {
 
 let pool;
 
+// ==========================================
+// Timezone de sesión (PostgreSQL)
+// ==========================================
+// Si el servidor/Neon está en UTC, funciones como CURRENT_DATE pueden cambiar de día
+// en horas de la tarde/noche según tu zona horaria local.
+// Configura DB_TIMEZONE (IANA) en el .env, por ejemplo: America/Santo_Domingo, America/Bogota.
+const sessionTimeZone =
+  process.env.DB_TIMEZONE ||
+  process.env.APP_TIMEZONE ||
+  process.env.TZ ||
+  null;
+
 if (useWebSocket) {
   const { Pool, neonConfig } = require('@neondatabase/serverless');
   const ws = require('ws');
@@ -57,6 +69,20 @@ if (useWebSocket) {
     idleTimeoutMillis: 40000,
     keepAlive: true,
   });
+}
+
+if (sessionTimeZone && typeof pool?.on === 'function') {
+  pool.on('connect', (client) => {
+    // set_config es seguro y evita interpolar strings en SQL.
+    client
+      .query("SELECT set_config('TimeZone', $1, true)", [sessionTimeZone])
+      .catch((err) => {
+        console.warn('⚠️ No se pudo aplicar DB_TIMEZONE en la sesión:', err.message);
+      });
+  });
+  console.log(`🕒 DB session timezone: ${sessionTimeZone}`);
+} else if (!sessionTimeZone) {
+  console.log('🕒 DB session timezone: (no configurado)');
 }
 
 pool.connect()

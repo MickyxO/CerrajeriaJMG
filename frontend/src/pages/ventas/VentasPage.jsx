@@ -55,6 +55,7 @@ export default function VentasPage() {
 
   const [fechaInicio, setFechaInicio] = useState(() => toDateInputValue(today));
   const [fechaFin, setFechaFin] = useState(() => toDateInputValue(today));
+  const [qIdVenta, setQIdVenta] = useState("");
   const [qCliente, setQCliente] = useState("");
 
   const [ventasRaw, setVentasRaw] = useState([]);
@@ -78,6 +79,21 @@ export default function VentasPage() {
     setIsLoading(true);
     setError(null);
     try {
+      const rawId = qIdVenta.trim();
+
+      // Si el usuario pone un ID, hacemos fetch directo por ID.
+      if (rawId) {
+        const cleaned = rawId.replace(/^#/, "").trim();
+        const id = Number(cleaned);
+        if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) {
+          throw new Error("ID de venta inválido.");
+        }
+
+        const venta = await ventasService.getVenta(id);
+        setVentasRaw(venta ? [venta] : []);
+        return;
+      }
+
       const res = await ventasService.getVentas({
         fechaInicio: fechaInicio || undefined,
         fechaFin: fechaFin || undefined,
@@ -167,6 +183,16 @@ export default function VentasPage() {
               <label className="ventasField">
                 <span>Fecha fin</span>
                 <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+              </label>
+
+              <label className="ventasField ventasFieldFull">
+                <span>ID venta</span>
+                <input
+                  value={qIdVenta}
+                  onChange={(e) => setQIdVenta(e.target.value)}
+                  placeholder="#123"
+                  inputMode="numeric"
+                />
               </label>
 
               <label className="ventasField ventasFieldFull">

@@ -30,6 +30,16 @@ function resolveImagenUrl(value, variant) {
   return resolveImageUrl(value, { apiBaseUrl: API_URL, variant });
 }
 
+function parseNumericIdQuery(value) {
+  const q = (value ?? "").toString().trim();
+  if (!q) return null;
+  const cleaned = q.startsWith("#") ? q.slice(1).trim() : q;
+  if (!/^\d+$/.test(cleaned)) return null;
+  const id = Number(cleaned);
+  if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) return null;
+  return id;
+}
+
 export default function PosPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,6 +53,7 @@ export default function PosPage() {
   const [showCombos, setShowCombos] = useState(true);
   const [itemsResults, setItemsResults] = useState([]);
   const [combosAll, setCombosAll] = useState([]);
+  const [comboIdResult, setComboIdResult] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
 
   const [categorias, setCategorias] = useState([]);
@@ -82,14 +93,21 @@ export default function PosPage() {
     const query = q.trim();
     setVentaStatus({ type: "idle", message: "" });
 
+    const numericId = parseNumericIdQuery(query);
+    if (!query) {
+      setComboIdResult(null);
+    }
+
     if (!showItems && !showServicios) {
       setItemsResults([]);
       setIsSearching(false);
       return;
     }
 
-    if (!categoriaId && query.length < 2) {
+    // Permitimos búsqueda por ID aunque no tenga 2 caracteres.
+    if (!categoriaId && query.length < 2 && !numericId) {
       setItemsResults([]);
+      setComboIdResult(null);
       setIsSearching(false);
       return;
     }
@@ -97,6 +115,41 @@ export default function PosPage() {
     const handle = setTimeout(async () => {
       setIsSearching(true);
       try {
+        // 1) Búsqueda directa por ID (item y/o combo)
+        if (numericId) {
+          const promises = [];
+
+          if (showItems || showServicios) {
+            promises.push(
+              itemsService
+                .getItemPorId(numericId)
+                .then((it) => ({ ok: true, it }))
+                .catch(() => ({ ok: false, it: null }))
+            );
+          } else {
+            promises.push(Promise.resolve({ ok: false, it: null }));
+          }
+
+          if (showCombos) {
+            promises.push(
+              combosService
+                .getCombo(numericId)
+                .then((c) => ({ ok: true, c }))
+                .catch(() => ({ ok: false, c: null }))
+            );
+          } else {
+            promises.push(Promise.resolve({ ok: false, c: null }));
+          }
+
+          const [itemRes, comboRes] = await Promise.all(promises);
+
+          setItemsResults(itemRes?.ok && itemRes.it ? [itemRes.it] : []);
+          setComboIdResult(comboRes?.ok && comboRes.c ? comboRes.c : null);
+          return;
+        }
+
+        setComboIdResult(null);
+
         if (categoriaId) {
           const res = await itemsService.getItemsPorCategoria(categoriaId);
           let list = Array.isArray(res) ? res : [];
@@ -111,13 +164,14 @@ export default function PosPage() {
         }
       } catch {
         setItemsResults([]);
+        setComboIdResult(null);
       } finally {
         setIsSearching(false);
       }
     }, 250);
 
     return () => clearTimeout(handle);
-  }, [q, showItems, showServicios, categoriaId]);
+  }, [q, showItems, showServicios, showCombos, categoriaId]);
 
   const itemsOnlyResults = useMemo(() => {
     const list = Array.isArray(itemsResults) ? itemsResults : [];
@@ -131,10 +185,17 @@ export default function PosPage() {
 
   const combosFiltered = useMemo(() => {
     if (!showCombos) return [];
-    const query = q.trim().toLowerCase();
-    if (query.length < 2) return [];
-    return combosAll.filter((c) => toSafeString(c?.NombreCombo).toLowerCase().includes(query));
-  }, [q, combosAll, showCombos]);
+    const query = q.trim();
+
+    const numericId = parseNumericIdQuery(query);
+    if (numericId) {
+      return comboIdResult ? [comboIdResult] : [];
+    }
+
+    const ql = query.toLowerCase();
+    if (ql.length < 2) return [];
+    return combosAll.filter((c) => toSafeString(c?.NombreCombo).toLowerCase().includes(ql));
+  }, [q, combosAll, showCombos, comboIdResult]);
 
   const carritoPayload = useMemo(
     () =>
@@ -279,7 +340,7 @@ export default function PosPage() {
                 className="textInput"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar (mín 2 letras)…"
+                placeholder="Buscar (mín 2 letras o ID)…"
               />
               <div className="toggleRow">
                 <label className="check">
@@ -421,7 +482,9 @@ export default function PosPage() {
                 (!showServicios || serviciosResults.length === 0) && (
                 <div className="hint">Sin resultados.</div>
               )}
-              {q.trim().length < 2 && <div className="hint">Tip: escribe al menos 2 letras.</div>}
+              {q.trim().length < 2 && !parseNumericIdQuery(q) && (
+                <div className="hint">Tip: escribe al menos 2 letras (o un ID).</div>
+              )}
             </div>
           </section>
 
