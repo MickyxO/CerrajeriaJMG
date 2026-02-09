@@ -23,6 +23,16 @@ const databaseUrl = new URL(process.env.DATABASE_URL);
 // Evita parámetros que a veces dan problemas con clientes Node.
 databaseUrl.searchParams.delete('channel_binding');
 
+// Si configuramos la TZ vía options, se aplica desde el inicio de la sesión (sin condiciones de carrera).
+if (sessionTimeZone) {
+  const existingOptions = databaseUrl.searchParams.get('options') || '';
+  const hasTimeZone = /TimeZone\s*=|timezone\s*=|TimeZone\b/.test(existingOptions);
+  if (!hasTimeZone) {
+    const nextOptions = `${existingOptions} -c TimeZone=${sessionTimeZone}`.trim();
+    databaseUrl.searchParams.set('options', nextOptions);
+  }
+}
+
 // Extraemos el hostname para logs/SSL
 const url = databaseUrl;
 
