@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { categoriaService } from "../../services/categoria.service";
+import { useConfirmModal } from "../../hooks/useConfirmModal";
 
 import "./CategoriasPage.css";
 
@@ -27,6 +28,8 @@ function pickComparable(form) {
 }
 
 export default function CategoriasPage() {
+  const { confirm, modal } = useConfirmModal();
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -50,9 +53,15 @@ export default function CategoriasPage() {
     return JSON.stringify(current) !== JSON.stringify(baseline);
   }, [form]);
 
-  function confirmDiscardIfDirty() {
+  async function confirmDiscardIfDirty() {
     if (!isDirty) return true;
-    return window.confirm("Tienes cambios sin guardar. ¿Deseas descartarlos?");
+    return await confirm({
+      title: "Descartar cambios",
+      message: "Tienes cambios sin guardar. ¿Deseas descartarlos?",
+      confirmText: "Descartar",
+      cancelText: "Seguir editando",
+      tone: "danger",
+    });
   }
 
   const clasificaciones = useMemo(() => {
@@ -143,8 +152,8 @@ export default function CategoriasPage() {
     setFormStatus({ type: "idle", message: "" });
   }, [selectedCategoria]);
 
-  function startCreate() {
-    if (!confirmDiscardIfDirty()) return;
+  async function startCreate({ confirm: shouldConfirm = true } = {}) {
+    if (shouldConfirm && !(await confirmDiscardIfDirty())) return;
     setSelectedId(null);
     const fresh = emptyForm();
     setForm(fresh);
@@ -154,8 +163,10 @@ export default function CategoriasPage() {
   }
 
   function selectCategoria(cat) {
-    if (!confirmDiscardIfDirty()) return;
-    setSelectedId(cat?.IdCategoria ?? null);
+    (async () => {
+      if (!(await confirmDiscardIfDirty())) return;
+      setSelectedId(cat?.IdCategoria ?? null);
+    })();
   }
 
   async function onSubmit(e) {
@@ -185,7 +196,7 @@ export default function CategoriasPage() {
       }
       await loadAll();
       setFormStatus({ type: "success", message: isEditing ? "Categoría actualizada." : "Categoría creada." });
-      if (!isEditing) startCreate();
+      if (!isEditing) await startCreate({ confirm: false });
     } catch (e2) {
       setFormStatus({ type: "idle", message: "" });
       setFormError(e2?.message || "No se pudo guardar la categoría.");
@@ -194,7 +205,13 @@ export default function CategoriasPage() {
 
   async function onDelete() {
     if (!isEditing) return;
-    const ok = window.confirm("¿Eliminar esta categoría? Esta acción no se puede deshacer.");
+    const ok = await confirm({
+      title: "Eliminar categoría",
+      message: "¿Eliminar esta categoría? Esta acción no se puede deshacer.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
     if (!ok) return;
     setFormError(null);
     setFormStatus({ type: "idle", message: "" });
@@ -202,7 +219,7 @@ export default function CategoriasPage() {
       setFormStatus({ type: "loading", message: "Eliminando…" });
       await categoriaService.eliminarCategoria(form.IdCategoria);
       await loadAll();
-      startCreate();
+      await startCreate({ confirm: false });
       setFormStatus({ type: "success", message: "Categoría eliminada." });
     } catch (e) {
       setFormStatus({ type: "idle", message: "" });
@@ -212,6 +229,7 @@ export default function CategoriasPage() {
 
   return (
     <div className="catPage">
+      {modal}
       <div className="catTop">
         <div>
           <h1 className="catTitle">Categorías</h1>
@@ -222,7 +240,7 @@ export default function CategoriasPage() {
           <button type="button" className="ghost" onClick={loadAll} disabled={isLoading}>
             Recargar
           </button>
-          <button type="button" className="primary" onClick={startCreate}>
+          <button type="button" className="primary" onClick={() => void startCreate()}>
             Nueva
           </button>
         </div>
@@ -357,12 +375,12 @@ export default function CategoriasPage() {
 
               <div className="actions">
                 {isEditing && (
-                  <button type="button" className="ghost" onClick={startCreate}>
+                  <button type="button" className="ghost" onClick={() => void startCreate()}>
                     Cancelar
                   </button>
                 )}
                 {isEditing && (
-                  <button type="button" className="danger" onClick={onDelete}>
+                  <button type="button" className="danger" onClick={() => void onDelete()}>
                     Eliminar
                   </button>
                 )}

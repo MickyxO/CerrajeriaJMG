@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { combosService } from "../../services/combos.service";
 import { itemsService } from "../../services/items.service";
+import { useConfirmModal } from "../../hooks/useConfirmModal";
 
 import "./CombosPage.css";
 
@@ -49,6 +50,8 @@ function formatMoney(n) {
 }
 
 export default function CombosPage() {
+  const { confirm, modal } = useConfirmModal();
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -73,9 +76,15 @@ export default function CombosPage() {
     return JSON.stringify(current) !== JSON.stringify(baseline);
   }, [form]);
 
-  function confirmDiscardIfDirty() {
+  async function confirmDiscardIfDirty() {
     if (!isDirty) return true;
-    return window.confirm("Tienes cambios sin guardar. ¿Deseas descartarlos?");
+    return await confirm({
+      title: "Descartar cambios",
+      message: "Tienes cambios sin guardar. ¿Deseas descartarlos?",
+      confirmText: "Descartar",
+      cancelText: "Seguir editando",
+      tone: "danger",
+    });
   }
 
   async function loadCombos({ keepSelected } = {}) {
@@ -133,8 +142,8 @@ export default function CombosPage() {
     setItemResults([]);
   }, [selectedCombo]);
 
-  function startCreate() {
-    if (!confirmDiscardIfDirty()) return;
+  async function startCreate({ confirm: shouldConfirm = true } = {}) {
+    if (shouldConfirm && !(await confirmDiscardIfDirty())) return;
     setSelectedId(null);
     const fresh = emptyForm();
     setForm(fresh);
@@ -146,8 +155,10 @@ export default function CombosPage() {
   }
 
   function selectCombo(combo) {
-    if (!confirmDiscardIfDirty()) return;
-    setSelectedId(combo?.IdCombo ?? null);
+    (async () => {
+      if (!(await confirmDiscardIfDirty())) return;
+      setSelectedId(combo?.IdCombo ?? null);
+    })();
   }
 
   useEffect(() => {
@@ -276,7 +287,13 @@ export default function CombosPage() {
 
   async function onDelete() {
     if (!isEditing) return;
-    const ok = window.confirm("¿Eliminar este combo? Esta acción no se puede deshacer.");
+    const ok = await confirm({
+      title: "Eliminar combo",
+      message: "¿Eliminar este combo? Esta acción no se puede deshacer.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
     if (!ok) return;
 
     setFormError(null);
@@ -285,7 +302,7 @@ export default function CombosPage() {
       setFormStatus({ type: "loading", message: "Eliminando…" });
       await combosService.eliminarCombo(form.IdCombo);
       await loadCombos();
-      startCreate();
+      await startCreate({ confirm: false });
       setFormStatus({ type: "success", message: "Combo eliminado." });
     } catch (e) {
       setFormStatus({ type: "idle", message: "" });
@@ -295,6 +312,7 @@ export default function CombosPage() {
 
   return (
     <div className="comboPage">
+      {modal}
       <div className="comboTop">
         <div>
           <h1 className="comboTitle">Combos</h1>
@@ -305,7 +323,7 @@ export default function CombosPage() {
           <button type="button" className="ghost" onClick={() => loadCombos()} disabled={isLoading}>
             Recargar
           </button>
-          <button type="button" className="primary" onClick={startCreate}>
+          <button type="button" className="primary" onClick={() => void startCreate()}>
             Nuevo
           </button>
         </div>
@@ -478,12 +496,12 @@ export default function CombosPage() {
 
               <div className="actions">
                 {isEditing && (
-                  <button type="button" className="ghost" onClick={startCreate}>
+                  <button type="button" className="ghost" onClick={() => void startCreate()}>
                     Cancelar
                   </button>
                 )}
                 {isEditing && (
-                  <button type="button" className="danger" onClick={onDelete}>
+                  <button type="button" className="danger" onClick={() => void onDelete()}>
                     Eliminar
                   </button>
                 )}

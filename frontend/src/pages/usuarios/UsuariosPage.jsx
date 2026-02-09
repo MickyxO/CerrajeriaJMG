@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usuariosService } from "../../services/usuarios.service";
 import { useAuth } from "../../hooks/useAuth";
+import { useConfirmModal } from "../../hooks/useConfirmModal";
 
 import "./UsuariosPage.css";
 
@@ -43,6 +44,7 @@ function roleLabel(rol) {
 
 export default function UsuariosPage() {
   const { user: currentUser } = useAuth();
+  const { confirm, modal } = useConfirmModal();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -88,9 +90,15 @@ export default function UsuariosPage() {
     return JSON.stringify(current) !== JSON.stringify(baseline);
   }, [form]);
 
-  function confirmDiscardIfDirty() {
+  async function confirmDiscardIfDirty() {
     if (!isDirty) return true;
-    return window.confirm("Tienes cambios sin guardar. ¿Deseas descartarlos?");
+    return await confirm({
+      title: "Descartar cambios",
+      message: "Tienes cambios sin guardar. ¿Deseas descartarlos?",
+      confirmText: "Descartar",
+      cancelText: "Seguir editando",
+      tone: "danger",
+    });
   }
 
   async function loadAll() {
@@ -117,8 +125,8 @@ export default function UsuariosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incluyeInactivos]);
 
-  function startNew() {
-    if (!confirmDiscardIfDirty()) return;
+  async function startNew({ confirm: shouldConfirm = true } = {}) {
+    if (shouldConfirm && !(await confirmDiscardIfDirty())) return;
     setSelectedId(null);
     const next = emptyForm();
     setForm(next);
@@ -128,20 +136,22 @@ export default function UsuariosPage() {
   }
 
   function selectUsuario(u) {
-    if (!confirmDiscardIfDirty()) return;
-    setSelectedId(u.IdUsuario);
-    const next = {
-      IdUsuario: u.IdUsuario,
-      NombreCompleto: u.NombreCompleto ?? "",
-      Username: u.Username ?? "",
-      Rol: (u.Rol ?? "empleado").toString(),
-      Activo: Boolean(u.Activo),
-      PinAcceso: "",
-    };
-    setForm(next);
-    initialFormRef.current = pickComparable(next);
-    setFormError(null);
-    setFormStatus({ type: "idle", message: "" });
+    (async () => {
+      if (!(await confirmDiscardIfDirty())) return;
+      setSelectedId(u.IdUsuario);
+      const next = {
+        IdUsuario: u.IdUsuario,
+        NombreCompleto: u.NombreCompleto ?? "",
+        Username: u.Username ?? "",
+        Rol: (u.Rol ?? "empleado").toString(),
+        Activo: Boolean(u.Activo),
+        PinAcceso: "",
+      };
+      setForm(next);
+      initialFormRef.current = pickComparable(next);
+      setFormError(null);
+      setFormStatus({ type: "idle", message: "" });
+    })();
   }
 
   function validate() {
@@ -204,7 +214,7 @@ export default function UsuariosPage() {
 
       // Mantener selección si está editando
       if (!isEditing) {
-        startNew();
+        await startNew({ confirm: false });
       } else {
         const next = { ...form, PinAcceso: "" };
         setForm(next);
@@ -229,7 +239,13 @@ export default function UsuariosPage() {
       setFormError("No puedes desactivar tu propio usuario mientras estás logueado.");
       return;
     }
-    const ok = window.confirm("¿Desactivar este usuario? (No podrá iniciar sesión)");
+    const ok = await confirm({
+      title: "Desactivar usuario",
+      message: "¿Desactivar este usuario? (No podrá iniciar sesión)",
+      confirmText: "Desactivar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
     if (!ok) return;
 
     setIsSaving(true);
@@ -238,7 +254,7 @@ export default function UsuariosPage() {
       await usuariosService.eliminarUsuario(form.IdUsuario);
       setFormStatus({ type: "ok", message: "Usuario desactivado." });
       await loadAll();
-      startNew();
+      await startNew({ confirm: false });
     } catch (e) {
       setFormError(e?.message || "Error desactivando usuario");
     } finally {
@@ -255,6 +271,7 @@ export default function UsuariosPage() {
 
   return (
     <div className="usrPage">
+      {modal}
       <div className="usrTop">
         <div>
           <h1 className="usrTitle">Usuarios</h1>
@@ -273,7 +290,7 @@ export default function UsuariosPage() {
           <button type="button" className="usrBtn" onClick={loadAll} disabled={isLoading}>
             Recargar
           </button>
-          <button type="button" className="usrBtnPrimary" onClick={startNew}>
+          <button type="button" className="usrBtnPrimary" onClick={() => void startNew()}>
             Nuevo
           </button>
         </div>
@@ -420,7 +437,7 @@ export default function UsuariosPage() {
               <button
                 type="button"
                 className="usrBtnPrimary"
-                onClick={save}
+                onClick={() => void save()}
                 disabled={isSaving || !canEditSelectedUser}
                 title={!canEditSelectedUser ? "Solo puedes editar tu propio usuario" : ""}
               >
@@ -430,14 +447,14 @@ export default function UsuariosPage() {
                 <button
                   type="button"
                   className="usrBtnDanger"
-                  onClick={deactivateSelected}
+                  onClick={() => void deactivateSelected()}
                   disabled={isSaving || !canEditSelectedUser}
                   title={!canEditSelectedUser ? "Solo puedes editar tu propio usuario" : ""}
                 >
                   Desactivar
                 </button>
               ) : null}
-              <button type="button" className="usrBtn" onClick={startNew} disabled={isSaving}>
+              <button type="button" className="usrBtn" onClick={() => void startNew()} disabled={isSaving}>
                 Limpiar
               </button>
             </div>

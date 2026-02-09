@@ -3,6 +3,7 @@ import { itemsService } from "../../services/items.service";
 import { categoriaService } from "../../services/categoria.service";
 import { API_URL } from "../../services/api";
 import { IMAGE_VARIANTS, resolveImageUrl } from "../../utils/image";
+import { useConfirmModal } from "../../hooks/useConfirmModal";
 
 import "./ItemsPage.css";
 
@@ -77,6 +78,8 @@ function pickComparableForm(form) {
 }
 
 export default function ItemsPage() {
+  const { confirm, modal } = useConfirmModal();
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -117,9 +120,15 @@ export default function ItemsPage() {
     return JSON.stringify(current) !== JSON.stringify(baseline);
   }, [form]);
 
-  function confirmDiscardIfDirty() {
+  async function confirmDiscardIfDirty() {
     if (!isDirty) return true;
-    return window.confirm("Tienes cambios sin guardar. ¿Deseas descartarlos?");
+    return await confirm({
+      title: "Descartar cambios",
+      message: "Tienes cambios sin guardar. ¿Deseas descartarlos?",
+      confirmText: "Descartar",
+      cancelText: "Seguir editando",
+      tone: "danger",
+    });
   }
 
   function clearFilters() {
@@ -306,12 +315,13 @@ export default function ItemsPage() {
     initialFormRef.current = pickComparableForm(nextForm);
   }, [selectedItem]);
 
-  function startCreate() {
-    if (!confirmDiscardIfDirty()) return;
+  async function startCreate({ confirm: shouldConfirm = true } = {}) {
+    if (shouldConfirm && !(await confirmDiscardIfDirty())) return;
     setSelectedId(null);
     setSelectedSnapshot(null);
-    setForm(emptyForm());
-    initialFormRef.current = pickComparableForm(emptyForm());
+    const fresh = emptyForm();
+    setForm(fresh);
+    initialFormRef.current = pickComparableForm(fresh);
     setFormError(null);
     setFormStatus({ type: "idle", message: "" });
     setUploadStatus({ type: "idle", message: "" });
@@ -388,14 +398,24 @@ export default function ItemsPage() {
 
   async function handleDisable() {
     if (!form?.IdItem) return;
-    const ok = window.confirm("¿Desactivar este item? (borrado lógico)");
+    const ok = await confirm({
+      title: "Desactivar item",
+      message: "¿Desactivar este item? (borrado lógico)",
+      confirmText: "Desactivar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       setFormStatus({ type: "loading", message: "Desactivando…" });
       await itemsService.eliminarItem(form.IdItem);
       setFormStatus({ type: "success", message: "Item desactivado." });
       setSelectedId(null);
-      setForm(emptyForm());
+      {
+        const fresh = emptyForm();
+        setForm(fresh);
+        initialFormRef.current = pickComparableForm(fresh);
+      }
       await loadInitial();
     } catch (e) {
       setFormStatus({ type: "error", message: e?.message || "No se pudo desactivar." });
@@ -404,7 +424,13 @@ export default function ItemsPage() {
 
   async function handleReactivate() {
     if (!form?.IdItem) return;
-    const ok = window.confirm("¿Reactivar este item?");
+    const ok = await confirm({
+      title: "Reactivar item",
+      message: "¿Reactivar este item?",
+      confirmText: "Reactivar",
+      cancelText: "Cancelar",
+      tone: "neutral",
+    });
     if (!ok) return;
     try {
       setFormStatus({ type: "loading", message: "Reactivando…" });
@@ -418,7 +444,13 @@ export default function ItemsPage() {
 
   async function handleDuplicate() {
     if (!form?.IdItem) return;
-    const ok = window.confirm("¿Duplicar este item? (crea uno nuevo)");
+    const ok = await confirm({
+      title: "Duplicar item",
+      message: "¿Duplicar este item? (crea uno nuevo)",
+      confirmText: "Duplicar",
+      cancelText: "Cancelar",
+      tone: "neutral",
+    });
     if (!ok) return;
 
     const payload = {
@@ -486,7 +518,13 @@ export default function ItemsPage() {
       return;
     }
 
-    const ok = window.confirm("¿Eliminar la imagen actual de este item?");
+    const ok = await confirm({
+      title: "Eliminar imagen",
+      message: "¿Eliminar la imagen actual de este item?",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
     if (!ok) return;
 
     try {
@@ -585,6 +623,7 @@ export default function ItemsPage() {
 
   return (
     <div className="itemsPage">
+      {modal}
       <div className="itemsTop">
         <div>
           <h1 className="itemsTitle">Items</h1>
@@ -597,7 +636,7 @@ export default function ItemsPage() {
           <button type="button" className="ghost" onClick={loadInitial}>
             Refrescar
           </button>
-          <button type="button" className="primary" onClick={startCreate}>
+          <button type="button" className="primary" onClick={() => void startCreate()}>
             + Nuevo item
           </button>
         </div>
@@ -618,8 +657,10 @@ export default function ItemsPage() {
                 type="button"
                 className={estadoFiltro === "ACTIVOS" ? "segButton segActive" : "segButton"}
                 onClick={() => {
-                  if (!confirmDiscardIfDirty()) return;
-                  setEstadoFiltro("ACTIVOS");
+                  (async () => {
+                    if (!(await confirmDiscardIfDirty())) return;
+                    setEstadoFiltro("ACTIVOS");
+                  })();
                 }}
               >
                 Activos
@@ -628,8 +669,10 @@ export default function ItemsPage() {
                 type="button"
                 className={estadoFiltro === "TODOS" ? "segButton segActive" : "segButton"}
                 onClick={() => {
-                  if (!confirmDiscardIfDirty()) return;
-                  setEstadoFiltro("TODOS");
+                  (async () => {
+                    if (!(await confirmDiscardIfDirty())) return;
+                    setEstadoFiltro("TODOS");
+                  })();
                 }}
               >
                 Todos
@@ -638,8 +681,10 @@ export default function ItemsPage() {
                 type="button"
                 className={estadoFiltro === "INACTIVOS" ? "segButton segActive" : "segButton"}
                 onClick={() => {
-                  if (!confirmDiscardIfDirty()) return;
-                  setEstadoFiltro("INACTIVOS");
+                  (async () => {
+                    if (!(await confirmDiscardIfDirty())) return;
+                    setEstadoFiltro("INACTIVOS");
+                  })();
                 }}
               >
                 Inactivos
@@ -736,9 +781,11 @@ export default function ItemsPage() {
                       type="button"
                       className={active ? "row rowActive" : "row"}
                       onClick={() => {
-                        if (!confirmDiscardIfDirty()) return;
-                        setSelectedSnapshot(it);
-                        setSelectedId(it.IdItem);
+                        (async () => {
+                          if (!(await confirmDiscardIfDirty())) return;
+                          setSelectedSnapshot(it);
+                          setSelectedId(it.IdItem);
+                        })();
                       }}
                       title="Editar"
                     >
