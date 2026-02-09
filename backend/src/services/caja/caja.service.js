@@ -1,6 +1,8 @@
 const pool = require("../../config/db");
 const { Caja, MovimientoCaja } = require("../../models/caja/caja.model.js");
 
+const BUSINESS_TZ = process.env.DB_TIMEZONE || process.env.APP_TIMEZONE || 'America/Mexico_City';
+
 class CajaService {
 
     // Helper para mapear Movimientos
@@ -44,11 +46,11 @@ class CajaService {
             const query = `
                 SELECT * FROM caja
                 WHERE estado = 'ABIERTA'
-                  AND fecha_apertura = CURRENT_DATE
+                                    AND fecha_apertura = timezone($1, now())::date
                 ORDER BY hora_apertura DESC
                 LIMIT 1
             `;
-            const { rows } = await pool.query(query);
+                        const { rows } = await pool.query(query, [BUSINESS_TZ]);
 
             if (rows.length === 0) return null;
 
@@ -119,11 +121,11 @@ class CajaService {
             if (abierta) throw new Error("Ya existe una caja abierta. Debe cerrarla antes de abrir otra.");
 
             const query = `
-                INSERT INTO caja (monto_inicial, monto_actual, id_usuario_apertura, estado)
-                VALUES ($1, $1, $2, 'ABIERTA')
+                INSERT INTO caja (fecha_apertura, hora_apertura, monto_inicial, monto_actual, id_usuario_apertura, estado)
+                VALUES (timezone($3, now())::date, timezone('UTC', now()), $1, $1, $2, 'ABIERTA')
                 RETURNING id_caja
             `;
-            const { rows } = await pool.query(query, [montoInicial, idUsuario]);
+            const { rows } = await pool.query(query, [montoInicial, idUsuario, BUSINESS_TZ]);
             return rows[0].id_caja;
 
         } catch (err) {
@@ -141,7 +143,7 @@ class CajaService {
             const query = `
                 UPDATE caja 
                 SET estado = 'CERRADA', 
-                    hora_cierre = CURRENT_TIMESTAMP, 
+                    hora_cierre = timezone('UTC', now()), 
                     monto_final = $1,
                     id_usuario_cierre = $2
                 WHERE id_caja = $3
@@ -168,8 +170,8 @@ class CajaService {
         try {
             await client.query('BEGIN');
 
-            const queryCaja = "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE";
-            const resCaja = await client.query(queryCaja);
+            const queryCaja = "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = timezone($1, now())::date LIMIT 1 FOR UPDATE";
+            const resCaja = await client.query(queryCaja, [BUSINESS_TZ]);
             
             if (resCaja.rows.length === 0) throw new Error("No hay caja abierta. Abra la caja antes de registrar gastos.");
             
@@ -223,7 +225,8 @@ class CajaService {
             // Bloqueamos la caja abierta (si existe) para no desbalancear en concurrente.
             // También sirve como regla: no editar movimientos si no hay caja abierta.
             const resCaja = await client.query(
-                "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE"
+                "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = timezone($1, now())::date LIMIT 1 FOR UPDATE",
+                [BUSINESS_TZ]
             );
             if (resCaja.rows.length === 0) {
                 throw new Error("No hay caja abierta hoy. No se permite editar gastos con caja cerrada.");
@@ -306,7 +309,8 @@ class CajaService {
 
             // Solo anulamos gastos del día con caja ABIERTA (no tocar cierres históricos)
             const resCaja = await client.query(
-                "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE"
+                "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = timezone($1, now())::date LIMIT 1 FOR UPDATE",
+                [BUSINESS_TZ]
             );
             if (resCaja.rows.length === 0) {
                 throw new Error("No hay caja abierta hoy. No se permite anular gastos con caja cerrada.");
@@ -457,12 +461,12 @@ async getMovimientosDelDia(fecha = null) {
                         : `
                                 SELECT monto_inicial
                                 FROM caja
-                                WHERE fecha_apertura = CURRENT_DATE
+                                WHERE fecha_apertura = timezone($1, now())::date
                                 ORDER BY hora_apertura DESC
                                 LIMIT 1
                             `;
 
-                const resCajaHoy = fecha ? await pool.query(cajaHoyQuery, [fecha]) : await pool.query(cajaHoyQuery);
+                const resCajaHoy = fecha ? await pool.query(cajaHoyQuery, [fecha]) : await pool.query(cajaHoyQuery, [BUSINESS_TZ]);
         const monto_inicial = resCajaHoy.rows.length > 0 ? Number(resCajaHoy.rows[0].monto_inicial) : 0;
 
         // 1. VENTAS POR METODO (Para gráficas o desglose)

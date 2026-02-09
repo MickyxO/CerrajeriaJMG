@@ -1,6 +1,8 @@
 const pool = require("../../config/db");
 const { Venta, DetalleVenta } = require("../../models/venta/venta.model"); 
 
+const BUSINESS_TZ = process.env.DB_TIMEZONE || process.env.APP_TIMEZONE || 'America/Mexico_City';
+
 class VentaService {
 
     _isAnuladaVentaRow(row) {
@@ -61,7 +63,8 @@ class VentaService {
             let idCajaActual = null;
             if (datosVenta.metodoPago === 'Efectivo') {
                 const resCaja = await client.query(
-                    "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1"
+                    "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = timezone($1, now())::date LIMIT 1",
+                    [BUSINESS_TZ]
                 );
                 
                 if (resCaja.rows.length === 0) {
@@ -449,7 +452,10 @@ class VentaService {
             }
 
             // Regla práctica: solo anular ventas del día.
-            const resDia = await client.query("SELECT DATE($1::timestamp) = CURRENT_DATE as es_hoy", [venta.fecha_venta]);
+            const resDia = await client.query(
+                "SELECT DATE(timezone($2, $1::timestamp AT TIME ZONE 'UTC')) = timezone($2, now())::date as es_hoy",
+                [venta.fecha_venta, BUSINESS_TZ]
+            );
             if (!resDia.rows[0]?.es_hoy) {
                 throw new Error("Solo se pueden anular ventas del día.");
             }
@@ -461,7 +467,8 @@ class VentaService {
             let idCajaActual = null;
             if (metodoPago === 'Efectivo') {
                 const resCaja = await client.query(
-                    "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = CURRENT_DATE LIMIT 1 FOR UPDATE"
+                    "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = timezone($1, now())::date LIMIT 1 FOR UPDATE",
+                    [BUSINESS_TZ]
                 );
                 if (resCaja.rows.length === 0) {
                     throw new Error("No hay caja abierta hoy. No se puede anular una venta en efectivo.");
