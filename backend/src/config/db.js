@@ -17,6 +17,18 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+// ==========================================
+// Timezone de sesión (PostgreSQL)
+// ==========================================
+// Si el servidor/Neon está en UTC, funciones como CURRENT_DATE pueden cambiar de día
+// en horas de la tarde/noche según tu zona horaria local.
+// Configura DB_TIMEZONE (IANA) en el .env, por ejemplo: America/Mexico_City.
+const sessionTimeZone =
+  process.env.DB_TIMEZONE ||
+  process.env.APP_TIMEZONE ||
+  process.env.TZ ||
+  null;
+
 const useWebSocket = String(process.env.NEON_USE_WEBSOCKET || '').toLowerCase() === 'true';
 const databaseUrl = new URL(process.env.DATABASE_URL);
 
@@ -44,18 +56,6 @@ if (useWebSocket) {
 }
 
 let pool;
-
-// ==========================================
-// Timezone de sesión (PostgreSQL)
-// ==========================================
-// Si el servidor/Neon está en UTC, funciones como CURRENT_DATE pueden cambiar de día
-// en horas de la tarde/noche según tu zona horaria local.
-// Configura DB_TIMEZONE (IANA) en el .env, por ejemplo: America/Santo_Domingo, America/Bogota.
-const sessionTimeZone =
-  process.env.DB_TIMEZONE ||
-  process.env.APP_TIMEZONE ||
-  process.env.TZ ||
-  null;
 
 if (useWebSocket) {
   const { Pool, neonConfig } = require('@neondatabase/serverless');
