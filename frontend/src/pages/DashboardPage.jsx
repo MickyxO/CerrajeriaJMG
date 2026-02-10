@@ -205,7 +205,7 @@ export default function DashboardPage() {
                     <div className="kpiValue">{fmtMoney(cajaData?.MontoInicial)}</div>
                   </div>
                   <div className="kpi">
-                    <div className="kpiLabel">Monto actual</div>
+                    <div className="kpiLabel">Efectivo en caja</div>
                     <div className="kpiValue">{fmtMoney(cajaData?.MontoActual)}</div>
                   </div>
                 </div>

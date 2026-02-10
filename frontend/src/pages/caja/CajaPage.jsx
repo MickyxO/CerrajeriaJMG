@@ -552,7 +552,7 @@ export default function CajaPage() {
                   <div className="kpiValue">{fmtMoney(cajaData?.MontoInicial)}</div>
                 </div>
                 <div className="kpi">
-                  <div className="kpiLabel">Monto actual</div>
+                  <div className="kpiLabel">Efectivo en caja</div>
                   <div className="kpiValue">{fmtMoney(cajaData?.MontoActual)}</div>
                 </div>
                 <div className="meta">
@@ -637,7 +637,11 @@ export default function CajaPage() {
                 <div className="kpiValue">{fmtMoney(gastosTotal)}</div>
               </div>
               <div className="kpi">
-                <div className="kpiLabel">Balance (según caja)</div>
+                <div className="kpiLabel">Efectivo en caja</div>
+                <div className="kpiValue">{fmtMoney(cajaData?.MontoActual)}</div>
+              </div>
+              <div className="kpi">
+                <div className="kpiLabel">Balance total</div>
                 <div className="kpiValue">{fmtMoney(resumen?.ganancia_dia)}</div>
               </div>
             </div>

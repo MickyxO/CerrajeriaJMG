@@ -245,6 +245,12 @@ class CajaService {
                 throw new Error("Solo se pueden editar gastos del día (caja actual).");
             }
 
+            const concepto = (mov.concepto ?? '').toString();
+            const yaAnulado = concepto.includes('[ANULADO]') || Number(mov.monto ?? 0) === 0;
+            if (yaAnulado) {
+                throw new Error("No se puede editar un gasto anulado.");
+            }
+
             const oldMonto = Number(mov.monto);
             const oldMetodo = (mov.metodo_pago ?? '').toString();
 
