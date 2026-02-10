@@ -718,8 +718,12 @@ export default function CajaPage() {
               <div className="movList">
                 {movimientosFiltrados.map((m) => {
                   const isEntrada = m?.tipo === "ENTRADA";
+                  const notasTxt = (m?.notas ?? m?.Notas ?? "").toString().trim();
+                  const hasNotas = isEntrada && Boolean(notasTxt);
                   const isAnulado =
-                    (m?.concepto && String(m.concepto).includes("[ANULAD")) || Number(m?.monto ?? 0) === 0;
+                    (m?.concepto && String(m.concepto).includes("[ANULAD")) ||
+                    (notasTxt && String(notasTxt).includes("[ANULAD")) ||
+                    Number(m?.monto ?? 0) === 0;
                   return (
                     <div key={`${m?.tipo}-${m?.id}-${m?.fechaHora}`} className="movRow">
                       <span className={isEntrada ? "chip chipIn" : "chip chipOut"}>
@@ -739,6 +743,11 @@ export default function CajaPage() {
                               <button type="button" className="movLink" onClick={() => navigate(`/ventas/${m?.id}`)}>
                                 Ver
                               </button>
+                              {hasNotas ? (
+                                <button type="button" className="movLink" onClick={() => navigate(`/ventas/${m?.id}`)}>
+                                  Ver notas
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
                                 className="movDanger"
