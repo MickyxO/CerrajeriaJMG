@@ -298,8 +298,6 @@ export default function DashboardPage() {
               <div>
                 {ultimosMovimientos.map((m) => {
                   const isEntrada = m?.tipo === "ENTRADA";
-                  const notasTxt = (m?.notas ?? m?.Notas ?? "").toString().trim();
-                  const hasNotas = isEntrada && Boolean(notasTxt);
                   return (
                     <div key={`${m?.tipo}-${m?.id}-${m?.fechaHora}`} className="movementRow">
                       <span className={isEntrada ? "chip chipIn" : "chip chipOut"}>
@@ -308,14 +306,7 @@ export default function DashboardPage() {
                       <div className="movementMain">
                         <div className="movementTitle">{m?.concepto || (isEntrada ? "Venta" : "Salida")}</div>
                         <div className="movementSub">
-                          <span>
-                            {fmtDateTime(m?.fechaHora)} · {m?.metodoPago || "-"} · {m?.usuario || "-"}
-                          </span>
-                          {hasNotas ? (
-                            <button type="button" className="movementMiniLink" onClick={() => navigate(`/ventas/${m?.id}`)}>
-                              Ver notas
-                            </button>
-                          ) : null}
+                          {fmtDateTime(m?.fechaHora)} · {m?.metodoPago || "-"} · {m?.usuario || "-"}
                         </div>
                       </div>
                       <div className="movementAmount">{fmtMoney(m?.monto)}</div>

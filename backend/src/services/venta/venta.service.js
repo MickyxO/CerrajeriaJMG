@@ -77,7 +77,6 @@ class VentaService {
             // PASO A.1: NOTAS 
             // ---------------------------------------------------------
             const notasOriginal = (datosVenta.notas ?? "").toString().trim();
-            const autoNotas = !notasOriginal;
             const partesNotas = [];
 
             // Agregamos nota automática si pide factura
@@ -130,7 +129,7 @@ class VentaService {
                     
                     const { nombre: nombreItemSnapshot, es_servicio: esServicio } = resItem.rows[0];
 
-                    if (autoNotas) partesNotas.push(`${elemento.cantidad}x ${nombreItemSnapshot}`);
+                    partesNotas.push(`${elemento.cantidad}x ${nombreItemSnapshot}`);
                     
                     // Insertar Detalle
                     await client.query(
@@ -160,7 +159,7 @@ class VentaService {
                     if (resCombo.rows.length === 0) throw new Error(`Combo ID ${elemento.id} no encontrado.`);
                     
                     const nombreComboSnapshot = resCombo.rows[0].nombre_combo;
-                    if (autoNotas) partesNotas.push(`${elemento.cantidad}x ${nombreComboSnapshot}`);
+                    partesNotas.push(`${elemento.cantidad}x ${nombreComboSnapshot}`);
                     
                     // Obtener receta
                     const resReceta = await client.query(
@@ -237,12 +236,13 @@ class VentaService {
             }
 
             // Actualizar notas generadas
-            if (autoNotas && partesNotas.length > 0) {
-                const notasGeneradas = partesNotas.join(", ");
-                await client.query(
-                    "UPDATE ventas SET notas = $1 WHERE id_venta = $2",
-                    [notasGeneradas, idVenta]
-                );
+            const notasGeneradas = partesNotas.length > 0 ? partesNotas.join(", ") : "";
+            const notasFinal = notasGeneradas
+                ? (notasOriginal ? `${notasGeneradas} | ${notasOriginal}` : notasGeneradas)
+                : (notasOriginal || "");
+
+            if (notasFinal) {
+                await client.query("UPDATE ventas SET notas = $1 WHERE id_venta = $2", [notasFinal, idVenta]);
             }
 
             await client.query('COMMIT');

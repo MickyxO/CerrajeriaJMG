@@ -393,8 +393,7 @@ async getMovimientosDelDia(fecha = null) {
                             v.id_venta as id_referencia,
                             v.total as monto,
                             v.metodo_pago,
-                            v.nombre_cliente as concepto,
-                            v.notas as notas,
+                            v.notas as concepto, 
                             v.fecha_venta as fecha_hora,
                             'ENTRADA' as tipo_movimiento,
                             u.nombre_completo,
@@ -423,7 +422,6 @@ async getMovimientosDelDia(fecha = null) {
                             m.monto,
                             m.metodo_pago,
                             m.concepto,
-                            NULL::text as notas,
                             m.fecha_hora,
                             m.tipo_movimiento,
                             u.nombre_completo,
@@ -445,7 +443,6 @@ async getMovimientosDelDia(fecha = null) {
                 monto: parseFloat(row.monto),  // Aseguramos que sea número
                 metodoPago: row.metodo_pago,
                 concepto: row.concepto,
-                notas: row.notas,
                 fechaHora: row.fecha_hora,
                 tipo: row.tipo_movimiento,     // 'ENTRADA' o 'SALIDA'
                 usuario: row.nombre_completo,
