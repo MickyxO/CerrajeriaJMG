@@ -89,8 +89,8 @@ class VentaService {
             // PASO B: INSERTAR CABECERA DE VENTA (Con Subtotal e IVA)
             // ---------------------------------------------------------
             const insertVentaQuery = `
-                INSERT INTO ventas (id_usuario, nombre_cliente, subtotal, monto_iva, total, metodo_pago, notas)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO ventas (fecha_venta, id_usuario, nombre_cliente, subtotal, monto_iva, total, metodo_pago, notas)
+                VALUES (timezone('UTC', now()), $1, $2, $3, $4, $5, $6, $7)
                 RETURNING id_venta, fecha_venta
             `;
             const resVenta = await client.query(insertVentaQuery, [
@@ -262,11 +262,13 @@ class VentaService {
     // =========================================================================
     async getVentas(fechaInicio, fechaFin) {
         try {
-            let filtro = "WHERE DATE(v.fecha_venta) = CURRENT_DATE";
-            const params = [];
+            // Nota: fecha_venta se guarda como TIMESTAMP (sin TZ) en UTC.
+            // Para filtros por día (hoy/rango), comparamos usando la zona horaria del negocio.
+            let filtro = "WHERE DATE(timezone($1, v.fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date";
+            const params = [BUSINESS_TZ];
 
             if (fechaInicio && fechaFin) {
-                filtro = "WHERE DATE(v.fecha_venta) BETWEEN $1 AND $2";
+                filtro = "WHERE DATE(timezone($1, v.fecha_venta AT TIME ZONE 'UTC')) BETWEEN $2::date AND $3::date";
                 params.push(fechaInicio, fechaFin);
             }
 
@@ -372,12 +374,12 @@ class VentaService {
                 JOIN usuarios u ON v.id_usuario = u.id_usuario
                 LEFT JOIN detalle_ventas dv ON v.id_venta = dv.id_venta
                 LEFT JOIN items i ON dv.id_item = i.id_item
-                WHERE DATE(v.fecha_venta) = CURRENT_DATE
+                WHERE DATE(timezone($1, v.fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date
                 GROUP BY v.id_venta, u.nombre_completo
                 ORDER BY v.fecha_venta DESC
             `;
 
-            const res = await pool.query(query);
+            const res = await pool.query(query, [BUSINESS_TZ]);
             return res.rows;
             
         } catch (err) {

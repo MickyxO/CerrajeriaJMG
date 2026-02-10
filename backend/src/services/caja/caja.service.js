@@ -371,8 +371,14 @@ async getMovimientosDelDia(fecha = null) {
             // Usamos UNION ALL para combinar Ventas (Entradas) y Movimientos (Salidas)
             // Normalizamos los nombres de las columnas (ej: total ahora se llama monto)
             // para que coincidan en el resultado final.
-            const filtroFechaVentas = fecha ? "DATE(v.fecha_venta) = $1::date" : "DATE(v.fecha_venta) = CURRENT_DATE";
-            const filtroFechaMovs = fecha ? "DATE(m.fecha_hora) = $1::date" : "DATE(m.fecha_hora) = CURRENT_DATE";
+            // Nota: timestamps se guardan como TIMESTAMP (sin TZ) en UTC.
+            // Para filtrar por día, convertimos a la TZ del negocio.
+            const filtroFechaVentas = fecha
+                ? "DATE(timezone($2, v.fecha_venta AT TIME ZONE 'UTC')) = $1::date"
+                : "DATE(timezone($1, v.fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date";
+            const filtroFechaMovs = fecha
+                ? "DATE(timezone($2, m.fecha_hora AT TIME ZONE 'UTC')) = $1::date"
+                : "DATE(timezone($1, m.fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date";
 
             const query = `
                 SELECT * FROM (
@@ -422,7 +428,7 @@ async getMovimientosDelDia(fecha = null) {
                 ORDER BY t.fecha_hora ASC
             `;
 
-            const params = fecha ? [fecha] : [];
+            const params = fecha ? [fecha, BUSINESS_TZ] : [BUSINESS_TZ];
             const { rows } = await pool.query(query, params);
             
             // Retornamos un objeto estandarizado para que el Frontend no batalle
@@ -474,13 +480,13 @@ async getMovimientosDelDia(fecha = null) {
                         ? `
                                 SELECT metodo_pago, SUM(total) as total_ventas
                                 FROM ventas
-                                WHERE DATE(fecha_venta) = $1::date
+                                WHERE DATE(timezone($2, fecha_venta AT TIME ZONE 'UTC')) = $1::date
                                 GROUP BY metodo_pago
                             `
                         : `
                                 SELECT metodo_pago, SUM(total) as total_ventas
                                 FROM ventas
-                                WHERE DATE(fecha_venta) = CURRENT_DATE
+                                WHERE DATE(timezone($1, fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date
                                 GROUP BY metodo_pago
                             `;
         
@@ -489,13 +495,13 @@ async getMovimientosDelDia(fecha = null) {
                         ? `
                                 SELECT metodo_pago, SUM(monto) as total_gastos
                                 FROM movimientos_caja
-                                WHERE DATE(fecha_hora) = $1::date
+                                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
                                 GROUP BY metodo_pago
                             `
                         : `
                                 SELECT metodo_pago, SUM(monto) as total_gastos
                                 FROM movimientos_caja
-                                WHERE DATE(fecha_hora) = CURRENT_DATE
+                                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
                                 GROUP BY metodo_pago
                             `;
 
@@ -504,28 +510,28 @@ async getMovimientosDelDia(fecha = null) {
                         ? `
                                 SELECT COALESCE(SUM(total), 0) as total_ventas
                                 FROM ventas
-                                WHERE DATE(fecha_venta) = $1::date
+                                WHERE DATE(timezone($2, fecha_venta AT TIME ZONE 'UTC')) = $1::date
                             `
                         : `
                                 SELECT COALESCE(SUM(total), 0) as total_ventas
                                 FROM ventas
-                                WHERE DATE(fecha_venta) = CURRENT_DATE
+                                WHERE DATE(timezone($1, fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date
                             `;
 
                 const gastosTotalQuery = fecha
                         ? `
                                 SELECT COALESCE(SUM(monto), 0) as total_gastos
                                 FROM movimientos_caja
-                                WHERE DATE(fecha_hora) = $1::date
+                                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
                             `
                         : `
                                 SELECT COALESCE(SUM(monto), 0) as total_gastos
                                 FROM movimientos_caja
-                                WHERE DATE(fecha_hora) = CURRENT_DATE
+                                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
                             `;
 
         // Ejecutamos consultas en paralelo
-        const params = fecha ? [fecha] : [];
+        const params = fecha ? [fecha, BUSINESS_TZ] : [BUSINESS_TZ];
         const [resVentas, resGastos, resVentasTotal, resGastosTotal] = await Promise.all([
             pool.query(ventasQuery, params),
             pool.query(gastosQuery, params),

@@ -1,5 +1,7 @@
 const pool = require("../../config/db");
 
+const BUSINESS_TZ = process.env.DB_TIMEZONE || process.env.APP_TIMEZONE || 'America/Mexico_City';
+
 function parseRange(rangeRaw) {
   const range = (rangeRaw ?? "7d").toString().toLowerCase();
   if (range === "7d" || range === "week" || range === "semana") {
@@ -35,7 +37,7 @@ class ReportesService {
       JOIN ventas v ON v.id_venta = dv.id_venta
       LEFT JOIN items i ON i.id_item = dv.id_item
       WHERE dv.id_item IS NOT NULL
-        AND v.fecha_venta >= $1::timestamp
+        AND v.fecha_venta >= ($1::timestamptz AT TIME ZONE 'UTC')
         AND (v.notas IS NULL OR v.notas NOT LIKE '%[ANULADA]%')
         AND COALESCE(v.total, 0) <> 0
       GROUP BY dv.id_item, "Nombre"
@@ -74,7 +76,7 @@ class ReportesService {
         COALESCE(SUM(
           CASE
             WHEN v.id_venta IS NOT NULL
-             AND v.fecha_venta >= $1::timestamp
+             AND v.fecha_venta >= ($1::timestamptz AT TIME ZONE 'UTC')
              AND (v.notas IS NULL OR v.notas NOT LIKE '%[ANULADA]%')
              AND COALESCE(v.total, 0) <> 0
             THEN dv.cantidad
@@ -84,7 +86,7 @@ class ReportesService {
         COALESCE(SUM(
           CASE
             WHEN v.id_venta IS NOT NULL
-             AND v.fecha_venta >= $1::timestamp
+             AND v.fecha_venta >= ($1::timestamptz AT TIME ZONE 'UTC')
              AND (v.notas IS NULL OR v.notas NOT LIKE '%[ANULADA]%')
              AND COALESCE(v.total, 0) <> 0
             THEN dv.subtotal
@@ -137,29 +139,29 @@ class ReportesService {
       FROM detalle_ventas dv
       JOIN ventas v ON v.id_venta = dv.id_venta
       WHERE dv.id_item = $1
-        AND v.fecha_venta >= $2::timestamp
+        AND v.fecha_venta >= ($2::timestamptz AT TIME ZONE 'UTC')
         AND (v.notas IS NULL OR v.notas NOT LIKE '%[ANULADA]%')
         AND COALESCE(v.total, 0) <> 0
     `;
 
     const byDayQuery = `
       SELECT
-        DATE(v.fecha_venta) AS "Fecha",
+        DATE(timezone($3, v.fecha_venta AT TIME ZONE 'UTC')) AS "Fecha",
         COALESCE(SUM(dv.cantidad), 0) AS "Unidades",
         COALESCE(SUM(dv.subtotal), 0) AS "Ingresos"
       FROM detalle_ventas dv
       JOIN ventas v ON v.id_venta = dv.id_venta
       WHERE dv.id_item = $1
-        AND v.fecha_venta >= $2::timestamp
+        AND v.fecha_venta >= ($2::timestamptz AT TIME ZONE 'UTC')
         AND (v.notas IS NULL OR v.notas NOT LIKE '%[ANULADA]%')
         AND COALESCE(v.total, 0) <> 0
-      GROUP BY DATE(v.fecha_venta)
+      GROUP BY DATE(timezone($3, v.fecha_venta AT TIME ZONE 'UTC'))
       ORDER BY "Fecha" ASC
     `;
 
     const [resumenRes, byDayRes] = await Promise.all([
       pool.query(resumenQuery, [id, desde]),
-      pool.query(byDayQuery, [id, desde]),
+      pool.query(byDayQuery, [id, desde, BUSINESS_TZ]),
     ]);
 
     const resumen = resumenRes.rows[0] || { Unidades: 0, Ingresos: 0, Tickets: 0 };
