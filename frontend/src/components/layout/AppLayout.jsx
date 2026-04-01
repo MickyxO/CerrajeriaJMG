@@ -2,11 +2,10 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 
-import "./AppLayout.css";
-
-function BrandMarkLogo() {
+function BrandMarkLogo({ className = "" }) {
   return (
     <img
+      className={className}
       src="/jmg-logo.png"
       alt="Logo Cerrajería JMG"
       loading="eager"
@@ -196,83 +195,115 @@ export default function AppLayout() {
 
   const userLabel = getUserLabel(user);
 
-  return (
-    <div className="appShell">
-      {drawerOpen && <div className="scrim" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
+  const navClassName = ({ isActive }) => {
+    const base =
+      "group flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200";
+    return isActive
+      ? `${base} border-white/40 bg-white text-[color:var(--jmg-navy)] shadow-soft`
+      : `${base} border-transparent bg-white/12 text-blue-50 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/20`;
+  };
 
-      <aside className={drawerOpen ? "drawer drawerOpen" : "drawer"} aria-label="Menú">
-        <div className="brand" style={{ marginBottom: 12 }}>
-          <div className="brandMark" aria-hidden="true">
-            <BrandMarkLogo />
-          </div>
-          <div className="brandText">
-            <strong>Cerrajería JMG</strong>
-            <span>Automotriz y Residencial</span>
+  return (
+    <div className="min-h-dvh bg-transparent text-[color:var(--jmg-text)]">
+      {drawerOpen ? (
+        <button
+          type="button"
+          aria-label="Cerrar menú"
+          onClick={() => setDrawerOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/52 backdrop-blur-[2px] lg:hidden"
+        />
+      ) : null}
+
+      <aside
+        className={
+          drawerOpen
+            ? "fixed inset-y-0 left-0 z-50 w-[280px] border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 shadow-soft backdrop-blur-xl transition-transform duration-300 lg:hidden"
+            : "fixed inset-y-0 left-0 z-50 w-[280px] -translate-x-full border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 shadow-soft backdrop-blur-xl transition-transform duration-300 lg:hidden"
+        }
+        aria-label="Menú"
+      >
+        <div className="mb-7 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/10 p-3">
+          <BrandMarkLogo
+            className="h-12 w-12 rounded-2xl border border-white/40 bg-white/95 object-contain p-1.5 shadow-[0_10px_24px_rgba(1,18,54,0.35)]"
+          />
+          <div className="leading-tight">
+            <strong className="block font-display text-base text-white">Cerrajería JMG</strong>
+            <span className="text-xs font-medium text-blue-100/90">Automotriz y residencial</span>
           </div>
         </div>
-        <nav className="nav">
+
+        <nav className="grid gap-1.5">
           {navItems.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) => (isActive ? "navLink navLinkActive" : "navLink")}
+              className={navClassName}
               onClick={() => setDrawerOpen(false)}
             >
-              <Icon className="navIcon" aria-hidden="true" />
-              <span className="navLabel">{label}</span>
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
       </aside>
 
-      <div className="layoutGrid">
-        <aside className="sidebar" aria-label="Menú">
-          <div className="brand">
-            <div className="brandMark" aria-hidden="true">
-              <BrandMarkLogo />
-            </div>
-            <div className="brandText">
-              <strong>Cerrajería JMG</strong>
-              <span>Automotriz y Residencial</span>
+      <div className="mx-auto grid min-h-dvh max-w-[1800px] lg:grid-cols-[280px_1fr]">
+        <aside className="sticky top-0 hidden h-dvh border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 backdrop-blur-xl lg:block" aria-label="Menú">
+          <div className="mb-7 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/12 p-3 shadow-soft">
+            <BrandMarkLogo
+              className="h-12 w-12 rounded-2xl border border-white/40 bg-white/95 object-contain p-1.5 shadow-[0_10px_24px_rgba(1,18,54,0.35)]"
+            />
+            <div className="leading-tight">
+              <strong className="block font-display text-base text-white">Cerrajería JMG</strong>
+              <span className="text-xs font-medium text-blue-100/90">Automotriz y residencial</span>
             </div>
           </div>
-          <nav className="nav">
+
+          <nav className="grid gap-1.5">
             {navItems.map(({ to, label, Icon }) => (
-              <NavLink key={to} to={to} className={({ isActive }) => (isActive ? "navLink navLinkActive" : "navLink")}>
-                <Icon className="navIcon" aria-hidden="true" />
-                <span className="navLabel">{label}</span>
+              <NavLink key={to} to={to} className={navClassName}>
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                <span>{label}</span>
               </NavLink>
             ))}
           </nav>
         </aside>
 
-        <div className="content">
-          <header className="topbar">
-            <div className="topbarLeft">
-              <button
-                type="button"
-                className="iconButton menuButton"
-                onClick={() => setDrawerOpen((v) => !v)}
-                aria-label="Abrir menú"
-                title="Menú"
-              >
-                <IconMenu style={{ width: 20, height: 20 }} aria-hidden="true" />
-              </button>
-              <div className="pageTitle">{pageTitle}</div>
-            </div>
+        <div className="flex min-h-dvh min-w-0 flex-col">
+          <header className="sticky top-0 z-30 border-b border-blue-100/55 bg-[linear-gradient(160deg,rgba(7,27,74,0.88)_0%,rgba(31,88,214,0.76)_100%)] px-3 py-3 backdrop-blur-xl sm:px-4 lg:px-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                <button
+                  type="button"
+                  className="grid h-10 w-10 place-items-center rounded-xl border border-white/40 bg-white/92 text-[color:var(--jmg-navy)] shadow-sm hover:brightness-110 lg:hidden"
+                  onClick={() => setDrawerOpen((v) => !v)}
+                  aria-label="Abrir menú"
+                  title="Menú"
+                >
+                  <IconMenu style={{ width: 18, height: 18 }} aria-hidden="true" />
+                </button>
+                <div className="truncate font-display text-lg font-semibold text-white">{pageTitle}</div>
+              </div>
 
-            <div className="userBox">
-              <span>
-                <strong style={{ color: "var(--jmg-navy)" }}>Usuario:</strong> {userLabel}
-              </span>
-              <button type="button" className="logoutButton" onClick={logout}>
-                Cerrar sesión
-              </button>
+              <div className="flex items-center gap-2 rounded-2xl border border-white/35 bg-blue-950/35 px-3 py-1.5 text-xs text-blue-50 shadow-sm sm:text-sm">
+                <span className="hidden sm:inline font-medium text-blue-50">
+                  <strong className="font-semibold text-white">Usuario:</strong> {userLabel}
+                </span>
+                <button
+                  type="button"
+                  className="rounded-xl border border-[color:var(--jmg-navy)]/30 bg-white px-3 py-1.5 font-semibold text-[color:var(--jmg-navy)] hover:bg-blue-50"
+                  onClick={logout}
+                >
+                  Cerrar sesión
+                </button>
+              </div>
             </div>
           </header>
 
-          <main className="main">
-            <Outlet />
+          <main className="flex-1 p-3 sm:p-4 lg:p-6">
+            <div key={location.pathname} className="motion-safe:animate-page-enter">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

@@ -8,6 +8,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  border: 1px solid rgba(7, 27, 74, 0.24);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.22) 0%, rgba(88, 150, 245, 0.34) 100%), rgba(255, 255, 255, 0.78);
 }
 
 .comboTitle {
@@ -59,7 +63,7 @@
   padding: 10px 12px;
   border: 1px solid var(--jmg-border);
   border-radius: 14px;
-  background: #fff;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.92) 0%, rgba(207, 227, 255, 0.66) 100%);
 }
 
 .comboItemTitle {

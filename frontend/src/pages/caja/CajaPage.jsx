@@ -60,6 +60,11 @@ export default function CajaPage() {
   const [abrirError, setAbrirError] = useState(null);
   const [isOpening, setIsOpening] = useState(false);
 
+  const [montoInicialEdit, setMontoInicialEdit] = useState("");
+  const [isUpdatingMontoInicial, setIsUpdatingMontoInicial] = useState(false);
+  const [montoInicialEditError, setMontoInicialEditError] = useState(null);
+  const [montoInicialEditInfo, setMontoInicialEditInfo] = useState(null);
+
   const [showCerrarCard, setShowCerrarCard] = useState(false);
   const [montoFinalFisico, setMontoFinalFisico] = useState("");
   const [cerrarError, setCerrarError] = useState(null);
@@ -166,6 +171,43 @@ export default function CajaPage() {
     }
   }
 
+  async function handleActualizarMontoInicial() {
+    setMontoInicialEditError(null);
+    setMontoInicialEditInfo(null);
+
+    if (!userId) {
+      setMontoInicialEditError("No se encontró el usuario (IdUsuario). Vuelve a iniciar sesión.");
+      return;
+    }
+
+    if (estado !== "ABIERTA" || !isToday) {
+      setMontoInicialEditError("Solo puedes actualizar el monto inicial cuando la caja de hoy está abierta.");
+      return;
+    }
+
+    const n = Number(montoInicialEdit);
+    if (!Number.isFinite(n) || n < 0) {
+      setMontoInicialEditError("Monto inicial inválido.");
+      return;
+    }
+
+    setIsUpdatingMontoInicial(true);
+    try {
+      const res = await cajaService.actualizarMontoInicial({ montoInicial: n, idUsuario: userId });
+      const diff = Number(res?.data?.diferencia_aplicada ?? 0);
+      if (Number.isFinite(diff) && diff !== 0) {
+        setMontoInicialEditInfo(`Monto inicial actualizado. Ajuste aplicado a caja: ${fmtMoney(diff)}.`);
+      } else {
+        setMontoInicialEditInfo("Monto inicial actualizado.");
+      }
+      await refresh();
+    } catch (e) {
+      setMontoInicialEditError(e?.message || "No se pudo actualizar el monto inicial.");
+    } finally {
+      setIsUpdatingMontoInicial(false);
+    }
+  }
+
   function openCerrarCard() {
     setCerrarError(null);
     setShowCerrarCard(true);
@@ -219,6 +261,16 @@ export default function CajaPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, estado]);
+
+  useEffect(() => {
+    if (estado === "ABIERTA" && cajaData?.MontoInicial !== undefined && cajaData?.MontoInicial !== null) {
+      setMontoInicialEdit(String(cajaData.MontoInicial));
+    } else {
+      setMontoInicialEdit("");
+    }
+    setMontoInicialEditError(null);
+    setMontoInicialEditInfo(null);
+  }, [estado, cajaData?.IdCaja, cajaData?.MontoInicial]);
 
   const ventasTotal = useMemo(() => sumByKey(resumen?.ventas_desglose, "total_ventas"), [resumen]);
   const gastosTotal = useMemo(() => sumByKey(resumen?.gastos_desglose, "total_gastos"), [resumen]);
@@ -563,6 +615,33 @@ export default function CajaPage() {
                     <strong>ID Caja:</strong> {cajaData?.IdCaja ?? "-"}
                   </div>
                 </div>
+
+                {isToday ? (
+                  <div className="openBox">
+                    <label className="field">
+                      <span>Modificar monto inicial</span>
+                      <input
+                        className="textInput"
+                        inputMode="decimal"
+                        value={montoInicialEdit}
+                        onChange={(e) => setMontoInicialEdit(e.target.value)}
+                        placeholder="0.00"
+                        disabled={isUpdatingMontoInicial}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={handleActualizarMontoInicial}
+                      disabled={isUpdatingMontoInicial}
+                    >
+                      {isUpdatingMontoInicial ? "Guardando…" : "Guardar monto inicial"}
+                    </button>
+                    <div className="hint">Este cambio también ajusta el efectivo en caja con la diferencia.</div>
+                    {montoInicialEditError ? <div className="status statusError">{montoInicialEditError}</div> : null}
+                    {montoInicialEditInfo ? <div className="status">{montoInicialEditInfo}</div> : null}
+                  </div>
+                ) : null}
 
                 {estado === "ABIERTA" ? (
                   <div className="closeActions">

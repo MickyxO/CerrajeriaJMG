@@ -13,7 +13,7 @@
   width: min(520px, 100%);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.10);
-  background: linear-gradient(180deg, rgba(11, 31, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(43, 72, 86, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
   padding: 16px;
   color: #fff;
@@ -61,7 +61,7 @@
 }
 
 .cmBtn:focus {
-  outline: 2px solid rgba(244, 194, 0, 0.45);
+  outline: 2px solid rgba(216, 181, 143, 0.45);
   outline-offset: 2px;
 }
 
@@ -70,8 +70,8 @@
 }
 
 .cmBtnPrimary {
-  background: rgba(244, 194, 0, 0.18);
-  border-color: rgba(244, 194, 0, 0.45);
+  background: rgba(216, 181, 143, 0.18);
+  border-color: rgba(216, 181, 143, 0.45);
 }
 
 .cmToneDanger .cmBtnPrimary {

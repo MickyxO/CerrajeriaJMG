@@ -15,6 +15,7 @@ const cajaRoutes = require("./routes/caja/caja.routes");
 const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
 const inventarioRoutes = require("./routes/inventario/inventario.routes");
 const reportesRoutes = require("./routes/reportes/reportes.routes");
+const CajaService = require("./services/caja/caja.service");
 
 const app = express();
 
@@ -128,4 +129,26 @@ if (!isProd || enableSwagger) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+
+  let autoCloseRunning = false;
+  const runAutoCloseCheck = async (trigger) => {
+    if (autoCloseRunning) return;
+    autoCloseRunning = true;
+    try {
+      const result = await CajaService.autoCloseOpenCajaIfNeeded();
+      if (result?.closed) {
+        console.log(
+          `[CajaAutoClose:${trigger}] Caja #${result?.cierre?.id_caja} cerrada automáticamente (${result?.motivo}).`
+        );
+      }
+    } catch (err) {
+      console.error(`[CajaAutoClose:${trigger}] Error:`, err.message);
+    } finally {
+      autoCloseRunning = false;
+    }
+  };
+
+  runAutoCloseCheck("startup");
+  const everyMs = Math.max(30_000, Number(process.env.CAJA_AUTOCLOSE_CHECK_MS) || 60_000);
+  setInterval(() => runAutoCloseCheck("interval"), everyMs);
 });

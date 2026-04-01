@@ -8,8 +8,6 @@ import { API_URL } from "../../services/api";
 import { IMAGE_VARIANTS, resolveImageUrl } from "../../utils/image";
 import { useAuth } from "../../hooks/useAuth";
 
-import "./InventarioPage.css";
-
 function normalizeCategoria(row) {
   return {
     IdCategoria: row?.IdCategoria ?? row?.id_categoria ?? null,
@@ -74,7 +72,7 @@ export default function InventarioPage() {
   const [menuQuery, setMenuQuery] = useState("");
 
   const [q, setQ] = useState("");
-  const [searchMode, setSearchMode] = useState("NOMBRE"); // NOMBRE | MARCA
+  const [searchMode, setSearchMode] = useState("NOMBRE"); // NOMBRE | MARCA | ID
   const [soloAlertas, setSoloAlertas] = useState(false);
   const [incluyeInactivos, setIncluyeInactivos] = useState(false);
 
@@ -134,6 +132,12 @@ export default function InventarioPage() {
           const marca = (it?.CompatibilidadMarca ?? "").toString().toLowerCase();
           return marca.includes(query);
         }
+        if (searchMode === "ID") {
+          const qId = query.replace(/\D/g, "");
+          if (!qId) return false;
+          return String(it?.IdItem ?? "").includes(qId);
+        }
+
         const name = (it?.Nombre ?? "").toString().toLowerCase();
         const desc = (it?.Descripcion ?? "").toString().toLowerCase();
         return name.includes(query) || desc.includes(query);
@@ -200,30 +204,29 @@ export default function InventarioPage() {
   }, []);
 
   useEffect(() => {
-    // Reset selections when switching menu modes
     setSelectedCategoriaId("TODAS");
     setSelectedClasificacion("TODAS");
     setMenuQuery("");
   }, [menuMode]);
 
   const categoriasFiltradas = useMemo(() => {
-    const q = menuQuery.trim().toLowerCase();
+    const query = menuQuery.trim().toLowerCase();
     const list = Array.isArray(categorias) ? categorias : [];
-    if (!q) return list;
+    if (!query) return list;
     return list.filter((c) => {
       const name = (c?.NombreCategoria ?? "").toString().toLowerCase();
       const cl = (c?.Clasificacion ?? "").toString().toLowerCase();
-      return name.includes(q) || cl.includes(q);
+      return name.includes(query) || cl.includes(query);
     });
   }, [categorias, menuQuery]);
 
   const clasificacionesFiltradas = useMemo(() => {
-    const q = menuQuery.trim().toLowerCase();
-    if (!q) return clasificaciones;
+    const query = menuQuery.trim().toLowerCase();
+    if (!query) return clasificaciones;
     return (Array.isArray(clasificaciones) ? clasificaciones : []).filter((cl) =>
       String(cl || "")
         .toLowerCase()
-        .includes(q)
+        .includes(query)
     );
   }, [clasificaciones, menuQuery]);
 
@@ -275,22 +278,27 @@ export default function InventarioPage() {
   }
 
   return (
-    <div className="invPage">
-      <div className="invTop">
+    <div className="invPage grid gap-4">
+      <div className="jmg-toolbar flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="invTitle">Inventario</h1>
-          <div className="invSubtitle">Alertas por stock mínimo, ajustes y movimientos</div>
+          <h1 className="font-display text-2xl font-semibold text-slate-800">Inventario</h1>
+          <div className="text-sm text-slate-500">Alertas por stock mínimo, ajustes y movimientos</div>
         </div>
 
-        <div className="invTopActions">
-          <button type="button" className="invBtn" onClick={loadAll} disabled={isLoading}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+            onClick={loadAll}
+            disabled={isLoading}
+          >
             Recargar
           </button>
-          <label className="invToggle">
+          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600">
             <input type="checkbox" checked={soloAlertas} onChange={(e) => setSoloAlertas(e.target.checked)} />
             <span>Solo alertas</span>
           </label>
-          <label className="invToggle">
+          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600">
             <input
               type="checkbox"
               checked={incluyeInactivos}
@@ -301,138 +309,161 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      <div className="invGrid">
-        <div className="panel">
-          <div className="panelHead">
-            <strong>Filtros</strong>
-            <span className="pill">{counts.alertas} alertas</span>
+      <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
+        <section className="jmg-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-semibold text-slate-800">Filtros</h2>
+            <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
+              {counts.alertas} alertas
+            </span>
           </div>
-          <div className="panelBody">
-            <div className="invMode">
-              <button
-                type="button"
-                className={menuMode === "CATEGORIA" ? "invModeBtn invModeActive" : "invModeBtn"}
-                onClick={() => setMenuMode("CATEGORIA")}
-              >
-                Categorías
-              </button>
-              <button
-                type="button"
-                className={menuMode === "CLASIFICACION" ? "invModeBtn invModeActive" : "invModeBtn"}
-                onClick={() => setMenuMode("CLASIFICACION")}
-              >
-                Clasificación
-              </button>
-            </div>
 
-            <div className="invSearchRow">
-              <label className="invField invFieldFull">
-                <span>Buscar item</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nombre, descripción o marca..." />
-              </label>
-            </div>
+          <div className="mb-3 inline-flex overflow-hidden rounded-xl border border-slate-300 bg-white">
+            <button
+              type="button"
+              className={
+                menuMode === "CATEGORIA"
+                  ? "border-r border-slate-300 bg-[color:var(--jmg-navy)] px-3 py-2 text-xs font-semibold text-blue-50"
+                  : "border-r border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              }
+              onClick={() => setMenuMode("CATEGORIA")}
+            >
+              Categorías
+            </button>
+            <button
+              type="button"
+              className={
+                menuMode === "CLASIFICACION"
+                  ? "bg-[color:var(--jmg-navy)] px-3 py-2 text-xs font-semibold text-blue-50"
+                  : "bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              }
+              onClick={() => setMenuMode("CLASIFICACION")}
+            >
+              Clasificación
+            </button>
+          </div>
 
-            <div className="invSearchMode" aria-label="Modo de búsqueda">
-              <button
-                type="button"
-                className={searchMode === "NOMBRE" ? "invModeBtn invModeActive" : "invModeBtn"}
-                onClick={() => setSearchMode("NOMBRE")}
-                title="Buscar por nombre o descripción"
-              >
-                Nombre/Desc.
-              </button>
-              <button
-                type="button"
-                className={searchMode === "MARCA" ? "invModeBtn invModeActive" : "invModeBtn"}
-                onClick={() => setSearchMode("MARCA")}
-                title="Buscar por marca"
-              >
-                Marca
-              </button>
-            </div>
+          <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+            <input
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={searchMode === "ID" ? "Buscar por ID" : "Buscar item"}
+              inputMode={searchMode === "ID" ? "numeric" : "text"}
+            />
 
-            <div className="invMenu">
-              <label className="invField invFieldFull">
-                <span>{menuMode === "CATEGORIA" ? "Categoría" : "Clasificación"}</span>
-                <input
-                  value={menuQuery}
-                  onChange={(e) => setMenuQuery(e.target.value)}
-                  placeholder={menuMode === "CATEGORIA" ? "Buscar categoría…" : "Buscar clasificación…"}
-                />
-              </label>
-
-              <div className="invMenuList" role="listbox" aria-label={menuMode === "CATEGORIA" ? "Categorías" : "Clasificaciones"}>
+            <div className="inline-flex overflow-hidden rounded-lg border border-slate-300 bg-white">
+              {[
+                { key: "NOMBRE", label: "Nombre" },
+                { key: "MARCA", label: "Marca" },
+                { key: "ID", label: "ID" },
+              ].map((modeOpt) => (
                 <button
+                  key={modeOpt.key}
                   type="button"
                   className={
-                    (menuMode === "CATEGORIA" && selectedCategoriaId === "TODAS") ||
-                    (menuMode === "CLASIFICACION" && selectedClasificacion === "TODAS")
-                      ? "invMenuItem invMenuItemActive"
-                      : "invMenuItem"
+                    searchMode === modeOpt.key
+                      ? "border-r border-slate-300 bg-[color:var(--jmg-navy)] px-3 py-1.5 text-xs font-semibold text-blue-50 last:border-r-0"
+                      : "border-r border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 last:border-r-0"
                   }
-                  onClick={() => {
-                    if (menuMode === "CATEGORIA") setSelectedCategoriaId("TODAS");
-                    else setSelectedClasificacion("TODAS");
-                  }}
+                  onClick={() => setSearchMode(modeOpt.key)}
                 >
-                  <span className="invMenuMain">Todas</span>
+                  {modeOpt.label}
                 </button>
+              ))}
+            </div>
+          </div>
 
-                {menuMode === "CATEGORIA"
-                  ? categoriasFiltradas
-                      .slice()
-                      .sort((a, b) => (a?.NombreCategoria ?? "").localeCompare(b?.NombreCategoria ?? ""))
-                      .map((c) => {
-                        const active = String(selectedCategoriaId) === String(c.IdCategoria);
-                        return (
-                          <button
-                            key={c.IdCategoria}
-                            type="button"
-                            className={active ? "invMenuItem invMenuItemActive" : "invMenuItem"}
-                            onClick={() => setSelectedCategoriaId(c.IdCategoria)}
-                          >
-                            <span className="invMenuMain">{c.NombreCategoria}</span>
-                            {c?.Clasificacion ? <span className="invMenuSub">{c.Clasificacion}</span> : null}
-                          </button>
-                        );
-                      })
-                  : clasificacionesFiltradas.map((cl) => {
-                      const active = selectedClasificacion === cl;
+          <div className="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+            <input
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              value={menuQuery}
+              onChange={(e) => setMenuQuery(e.target.value)}
+              placeholder={menuMode === "CATEGORIA" ? "Buscar categoría" : "Buscar clasificación"}
+            />
+
+            <div className="max-h-[320px] space-y-1 overflow-auto pr-1">
+              <button
+                type="button"
+                className={
+                  (menuMode === "CATEGORIA" && selectedCategoriaId === "TODAS") ||
+                  (menuMode === "CLASIFICACION" && selectedClasificacion === "TODAS")
+                    ? "w-full rounded-xl border border-[color:var(--jmg-navy)]/40 bg-[color:var(--jmg-navy)] px-3 py-2 text-left text-sm font-semibold text-blue-50"
+                    : "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                }
+                onClick={() => {
+                  if (menuMode === "CATEGORIA") setSelectedCategoriaId("TODAS");
+                  else setSelectedClasificacion("TODAS");
+                }}
+              >
+                Todas
+              </button>
+
+              {menuMode === "CATEGORIA"
+                ? categoriasFiltradas
+                    .slice()
+                    .sort((a, b) => (a?.NombreCategoria ?? "").localeCompare(b?.NombreCategoria ?? ""))
+                    .map((c) => {
+                      const active = String(selectedCategoriaId) === String(c.IdCategoria);
                       return (
                         <button
-                          key={cl}
+                          key={c.IdCategoria}
                           type="button"
-                          className={active ? "invMenuItem invMenuItemActive" : "invMenuItem"}
-                          onClick={() => setSelectedClasificacion(cl)}
+                          className={
+                            active
+                              ? "w-full rounded-xl border border-[color:var(--jmg-navy)]/40 bg-[color:var(--jmg-navy)] px-3 py-2 text-left text-sm font-semibold text-blue-50"
+                              : "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                          }
+                          onClick={() => setSelectedCategoriaId(c.IdCategoria)}
                         >
-                          <span className="invMenuMain">{cl}</span>
+                          <div>{c.NombreCategoria}</div>
+                          {c?.Clasificacion ? (
+                            <div className={active ? "text-xs text-slate-200" : "text-xs text-slate-500"}>{c.Clasificacion}</div>
+                          ) : null}
                         </button>
                       );
-                    })}
-              </div>
+                    })
+                : clasificacionesFiltradas.map((cl) => {
+                    const active = selectedClasificacion === cl;
+                    return (
+                      <button
+                        key={cl}
+                        type="button"
+                        className={
+                          active
+                            ? "w-full rounded-xl border border-[color:var(--jmg-navy)]/40 bg-[color:var(--jmg-navy)] px-3 py-2 text-left text-sm font-semibold text-blue-50"
+                            : "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                        }
+                        onClick={() => setSelectedClasificacion(cl)}
+                      >
+                        {cl}
+                      </button>
+                    );
+                  })}
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            <div>
+              <strong>{counts.total}</strong> items filtrados
+            </div>
+            <div>
+              <strong>{counts.servicios}</strong> servicios
+            </div>
+          </div>
+
+          {isLoading ? <div className="mt-2 text-sm text-slate-500">Cargando...</div> : null}
+          {error ? <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+        </section>
+
+        <div className="grid gap-4">
+          <section className="jmg-card p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-display text-lg font-semibold text-slate-800">Items</h2>
+              <span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">{items.length}</span>
             </div>
 
-            <div className="invMeta">
-              <div>
-                <strong>{counts.total}</strong> items (filtro)
-              </div>
-              <div>
-                <strong>{counts.servicios}</strong> servicios
-              </div>
-            </div>
-
-            {isLoading ? <div className="invLoading">Cargando...</div> : null}
-            {error ? <div className="invError">{error}</div> : null}
-          </div>
-        </div>
-
-        <div className="panel panelFull">
-          <div className="panelHead">
-            <strong>Items</strong>
-            <span className="pill">{items.length}</span>
-          </div>
-          <div className="panelBody">
-            <div className="invList">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {items.map((it) => {
                 const stock = toNumber(it.StockActual, 0);
                 const min = toNumber(it.StockMinimo, 0);
@@ -440,194 +471,192 @@ export default function InventarioPage() {
                 const selected = String(it.IdItem) === String(selectedItemId);
                 const imgSrc = resolveImagenUrl(it.ImagenUrl, IMAGE_VARIANTS.THUMB);
                 const showImg = Boolean(imgSrc) && !imgErrors[String(it.IdItem)];
+
                 return (
                   <button
                     key={it.IdItem}
                     type="button"
                     className={
                       selected
-                        ? low
-                          ? "invRow invRowActive invRowLow"
-                          : "invRow invRowActive"
+                        ? "group overflow-hidden rounded-2xl border border-[color:var(--jmg-navy)]/45 bg-[linear-gradient(145deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.95)_100%)] text-left shadow-md"
                         : low
-                          ? "invRow invRowLow"
-                          : "invRow"
+                          ? "group overflow-hidden rounded-2xl border border-rose-300 bg-white text-left shadow-sm hover:-translate-y-0.5"
+                          : "group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm hover:-translate-y-0.5"
                     }
                     onClick={() => openItem(it)}
                   >
-                    <div className="invImgWrap">
+                    <div className={selected ? "flex h-32 items-center justify-center border-b border-slate-500/40 bg-slate-600/40" : "flex h-32 items-center justify-center border-b border-slate-200 bg-slate-50"}>
                       {showImg ? (
                         <img
-                          className="invImg"
+                          className="h-full w-full object-cover"
                           src={imgSrc}
                           alt={it.Nombre}
                           loading="lazy"
                           decoding="async"
-                          onError={() =>
-                            setImgErrors((s) => ({ ...s, [String(it.IdItem)]: true }))
-                          }
+                          onError={() => setImgErrors((s) => ({ ...s, [String(it.IdItem)]: true }))}
                         />
                       ) : (
-                        <div className="invImg invImgPlaceholder">Sin imagen</div>
+                        <div className={selected ? "text-sm font-semibold text-slate-200" : "text-sm font-semibold text-slate-500"}>Sin imagen</div>
                       )}
                     </div>
-                    <div className="invRowMain">
-                      <div className="invRowName">{it.Nombre}</div>
-                      <div className="invRowMeta">
-                        {it.NombreCategoria ? `${it.NombreCategoria}` : ""}
-                        {it.Clasificacion ? ` · ${it.Clasificacion}` : ""}
-                        {!it.Activo ? " · Inactivo" : ""}
+
+                    <div className="grid gap-1 p-3">
+                      <div className={selected ? "line-clamp-2 min-h-[2.6rem] text-sm font-semibold text-slate-50" : "line-clamp-2 min-h-[2.6rem] text-sm font-semibold text-slate-800"}>{it.Nombre}</div>
+                      <div className={selected ? "text-xs text-slate-200" : "text-xs text-slate-500"}>
+                        #{it.IdItem} · {it.NombreCategoria || "Sin categoría"}
                       </div>
-                    </div>
-                    <div className="invRowRight">
-                      {it.EsServicio ? (
-                        <span className="invBadge invBadgeSvc">Servicio</span>
-                      ) : low ? (
-                        <span className="invBadge invBadgeLow">Bajo</span>
-                      ) : (
-                        <span className="invBadge invBadgeOk">OK</span>
-                      )}
-                      {!it.EsServicio ? (
-                        <div className="invStock">
-                          <strong>{stock}</strong>
-                          <span>min {min}</span>
-                        </div>
-                      ) : null}
+
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        {it.EsServicio ? (
+                          <span className={selected ? "rounded-full border border-sky-300/60 bg-sky-400/20 px-2 py-0.5 text-[11px] font-semibold text-sky-100" : "rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700"}>Servicio</span>
+                        ) : low ? (
+                          <span className={selected ? "rounded-full border border-rose-300/60 bg-rose-400/20 px-2 py-0.5 text-[11px] font-semibold text-rose-100" : "rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700"}>Stock bajo</span>
+                        ) : (
+                          <span className={selected ? "rounded-full border border-emerald-300/60 bg-emerald-400/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-100" : "rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"}>Stock OK</span>
+                        )}
+
+                        {!it.EsServicio ? (
+                          <span className={selected ? "text-xs font-semibold text-slate-100" : "text-xs font-semibold text-slate-600"}>Stock {stock} · Min {min}</span>
+                        ) : null}
+                      </div>
                     </div>
                   </button>
                 );
               })}
-              {!isLoading && items.length === 0 ? <div className="invEmpty">Sin items.</div> : null}
             </div>
-          </div>
-        </div>
 
-        <div className="panel panelFull">
-          <div className="panelHead">
-            <strong>Ajuste y movimientos</strong>
-            <span className="pill">{selectedItem ? `#${selectedItem.IdItem}` : "Selecciona"}</span>
-          </div>
-          <div className="panelBody">
+            {!isLoading && items.length === 0 ? (
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">Sin items para estos filtros.</div>
+            ) : null}
+          </section>
+
+          <section className="jmg-card p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-display text-lg font-semibold text-slate-800">Ajuste y movimientos</h2>
+              <span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                {selectedItem ? `#${selectedItem.IdItem}` : "Selecciona item"}
+              </span>
+            </div>
+
             {!selectedItem ? (
-              <div className="invHint">Selecciona un item para ver/ajustar stock y ver movimientos.</div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                Selecciona un item para ver/ajustar stock y revisar movimientos.
+              </div>
             ) : (
-              <div className="invDetail">
-                <div className="invDetailTop">
-                  <div className="invDetailLeft">
-                    <button
-                      type="button"
-                      className="invPreview"
-                      onClick={() => {
-                        const src = resolveImagenUrl(selectedItem.ImagenUrl, IMAGE_VARIANTS.ZOOM);
-                        if (src) setZoomSrc(src);
-                      }}
-                      disabled={!selectedItem.ImagenUrl || imgErrors[String(selectedItem.IdItem)]}
-                      title={selectedItem.ImagenUrl ? "Click para ampliar" : "Sin imagen"}
-                    >
-                      {selectedItem.ImagenUrl && !imgErrors[String(selectedItem.IdItem)] ? (
-                        <img
-                          src={resolveImagenUrl(selectedItem.ImagenUrl, IMAGE_VARIANTS.PREVIEW)}
-                          alt={selectedItem.Nombre}
-                          loading="lazy"
-                          decoding="async"
-                          onError={() =>
-                            setImgErrors((s) => ({ ...s, [String(selectedItem.IdItem)]: true }))
-                          }
-                        />
-                      ) : (
-                        <div className="invPreviewEmpty">Sin imagen</div>
-                      )}
-                    </button>
+              <div className="grid gap-4">
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[190px_1fr]">
+                  <button
+                    type="button"
+                    className="grid h-[190px] w-full place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white"
+                    onClick={() => {
+                      const src = resolveImagenUrl(selectedItem.ImagenUrl, IMAGE_VARIANTS.ZOOM);
+                      if (src) setZoomSrc(src);
+                    }}
+                    disabled={!selectedItem.ImagenUrl || imgErrors[String(selectedItem.IdItem)]}
+                    title={selectedItem.ImagenUrl ? "Click para ampliar" : "Sin imagen"}
+                  >
+                    {selectedItem.ImagenUrl && !imgErrors[String(selectedItem.IdItem)] ? (
+                      <img
+                        src={resolveImagenUrl(selectedItem.ImagenUrl, IMAGE_VARIANTS.PREVIEW)}
+                        alt={selectedItem.Nombre}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-contain"
+                        onError={() => setImgErrors((s) => ({ ...s, [String(selectedItem.IdItem)]: true }))}
+                      />
+                    ) : (
+                      <div className="text-sm font-semibold text-slate-500">Sin imagen</div>
+                    )}
+                  </button>
 
+                  <div className="grid gap-3">
                     <div>
-                      <div className="invDetailNameRow">
-                        <div className="invDetailName">{selectedItem.Nombre}</div>
-                        <span className="invBadge invBadgeSvc" title="ID del item">
-                          #{selectedItem.IdItem}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-display text-lg font-semibold text-slate-800">{selectedItem.Nombre}</h3>
+                        <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">#{selectedItem.IdItem}</span>
                       </div>
-                      <div className="invDetailMeta">
+                      <div className="text-sm text-slate-500">
                         {selectedItem.NombreCategoria}
                         {selectedItem.Clasificacion ? ` · ${selectedItem.Clasificacion}` : ""}
                         {selectedItem.CompatibilidadMarca ? ` · ${selectedItem.CompatibilidadMarca}` : ""}
                       </div>
-
-                      <div style={{ marginTop: 8 }}>
-                        <button
-                          type="button"
-                          className="invBtn"
-                          onClick={() => navigate(`/reportes?itemId=${encodeURIComponent(String(selectedItem.IdItem))}&range=7d`)}
-                          title="Ver reporte de ventas para este producto"
-                        >
-                          Ver reportes
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                        onClick={() => navigate(`/reportes?itemId=${encodeURIComponent(String(selectedItem.IdItem))}&range=7d`)}
+                        title="Ver reporte de ventas para este producto"
+                      >
+                        Ver reportes
+                      </button>
                     </div>
+
+                    {!selectedItem.EsServicio ? (
+                      <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Nuevo stock
+                            <input
+                              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                              value={stockEdits[String(selectedItem.IdItem)] ?? String(selectedItem.StockActual ?? 0)}
+                              onChange={(e) => setStockEdits((s) => ({ ...s, [String(selectedItem.IdItem)]: e.target.value }))}
+                              inputMode="numeric"
+                            />
+                          </label>
+
+                          <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Comentario
+                            <input
+                              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                              value={comentarioAjuste}
+                              onChange={(e) => setComentarioAjuste(e.target.value)}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                            onClick={() => quickDelta(selectedItem.IdItem, -1)}
+                            disabled={isSavingStock}
+                          >
+                            -1
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                            onClick={() => quickDelta(selectedItem.IdItem, +1)}
+                            disabled={isSavingStock}
+                          >
+                            +1
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-xl border border-[color:var(--jmg-navy)]/40 bg-[linear-gradient(145deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.95)_100%)] px-3 py-2 text-sm font-semibold text-slate-50 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-65"
+                            onClick={() =>
+                              saveStockAbsolute(
+                                selectedItem.IdItem,
+                                toNumber(stockEdits[String(selectedItem.IdItem)], selectedItem.StockActual)
+                              )
+                            }
+                            disabled={isSavingStock}
+                          >
+                            {isSavingStock ? "Guardando..." : "Guardar"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">Es servicio: no maneja stock.</div>
+                    )}
                   </div>
-
-                  {!selectedItem.EsServicio ? (
-                    <div className="invAdjust">
-                      <label className="invField">
-                        <span>Nuevo stock</span>
-                        <input
-                          value={stockEdits[String(selectedItem.IdItem)] ?? String(selectedItem.StockActual ?? 0)}
-                          onChange={(e) =>
-                            setStockEdits((s) => ({ ...s, [String(selectedItem.IdItem)]: e.target.value }))
-                          }
-                          inputMode="numeric"
-                        />
-                      </label>
-
-                      <label className="invField invFieldWide">
-                        <span>Comentario (opcional)</span>
-                        <input value={comentarioAjuste} onChange={(e) => setComentarioAjuste(e.target.value)} />
-                      </label>
-
-                      <div className="invAdjustActions">
-                        <button
-                          type="button"
-                          className="invBtn"
-                          onClick={() => quickDelta(selectedItem.IdItem, -1)}
-                          disabled={isSavingStock}
-                          title="-1"
-                        >
-                          -1
-                        </button>
-                        <button
-                          type="button"
-                          className="invBtn"
-                          onClick={() => quickDelta(selectedItem.IdItem, +1)}
-                          disabled={isSavingStock}
-                          title="+1"
-                        >
-                          +1
-                        </button>
-                        <button
-                          type="button"
-                          className="invBtnPrimary"
-                          onClick={() =>
-                            saveStockAbsolute(
-                              selectedItem.IdItem,
-                              toNumber(stockEdits[String(selectedItem.IdItem)], selectedItem.StockActual)
-                            )
-                          }
-                          disabled={isSavingStock}
-                        >
-                          {isSavingStock ? "Guardando..." : "Guardar"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="invHint">Es servicio: no maneja stock.</div>
-                  )}
                 </div>
 
-                <div className="invMovs">
-                  <div className="invMovsHead">
-                    <strong>Movimientos</strong>
+                <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <strong className="text-sm text-slate-700">Movimientos</strong>
                     <button
                       type="button"
-                      className="invBtn"
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                       onClick={() => loadMovimientosForItem(selectedItem.IdItem)}
                       disabled={movsLoading}
                     >
@@ -635,33 +664,34 @@ export default function InventarioPage() {
                     </button>
                   </div>
 
-                  {movsLoading ? <div className="invLoading">Cargando movimientos...</div> : null}
-                  {movsError ? <div className="invError">{movsError}</div> : null}
+                  {movsLoading ? <div className="text-sm text-slate-500">Cargando movimientos...</div> : null}
+                  {movsError ? <div className="mb-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{movsError}</div> : null}
 
-                  <div className="invTableWrap">
-                    <table className="invTable">
+                  <div className="overflow-auto rounded-xl border border-slate-200">
+                    <table className="min-w-[760px] w-full border-collapse text-sm">
                       <thead>
-                        <tr>
-                          <th>Fecha</th>
-                          <th>Tipo</th>
-                          <th className="invRight">Cant.</th>
-                          <th>Usuario</th>
-                          <th>Comentario</th>
+                        <tr className="bg-slate-50">
+                          <th className="px-2 py-2 text-left font-semibold text-slate-600">Fecha</th>
+                          <th className="px-2 py-2 text-left font-semibold text-slate-600">Tipo</th>
+                          <th className="px-2 py-2 text-right font-semibold text-slate-600">Cant.</th>
+                          <th className="px-2 py-2 text-left font-semibold text-slate-600">Usuario</th>
+                          <th className="px-2 py-2 text-left font-semibold text-slate-600">Comentario</th>
                         </tr>
                       </thead>
                       <tbody>
                         {!movsLoading && movimientos.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="invEmpty">Sin movimientos.</td>
+                            <td colSpan={5} className="px-2 py-6 text-center text-sm text-slate-500">Sin movimientos.</td>
                           </tr>
                         ) : null}
+
                         {movimientos.map((m) => (
-                          <tr key={m.id_movimiento}>
-                            <td>{formatDateTime(m.fecha)}</td>
-                            <td>{m.tipo_movimiento}</td>
-                            <td className="invRight">{m.cantidad}</td>
-                            <td>{m.usuario || "-"}</td>
-                            <td>{m.comentario || ""}</td>
+                          <tr key={m.id_movimiento} className="border-t border-slate-100">
+                            <td className="px-2 py-2 text-slate-600">{formatDateTime(m.fecha)}</td>
+                            <td className="px-2 py-2 text-slate-700">{m.tipo_movimiento}</td>
+                            <td className="px-2 py-2 text-right font-semibold text-slate-700">{m.cantidad}</td>
+                            <td className="px-2 py-2 text-slate-600">{m.usuario || "-"}</td>
+                            <td className="px-2 py-2 text-slate-600">{m.comentario || ""}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -670,23 +700,23 @@ export default function InventarioPage() {
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
 
       {zoomSrc ? (
-        <div className="invModal" role="dialog" aria-modal="true" onClick={() => setZoomSrc(null)}>
-          <div className="invModalInner" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" onClick={() => setZoomSrc(null)}>
+          <div className="relative grid h-[78vh] w-[min(980px,96vw)] overflow-hidden rounded-2xl border border-white/20 bg-white" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              className="invModalClose"
+              className="absolute right-3 top-3 h-10 w-10 rounded-xl border border-slate-300 bg-white text-lg font-semibold text-slate-700 hover:bg-slate-100"
               onClick={() => setZoomSrc(null)}
               aria-label="Cerrar"
               title="Cerrar"
             >
-              ✕
+              x
             </button>
-            <img className="invModalImg" src={zoomSrc} alt="Imagen del item" decoding="async" />
+            <img className="h-full w-full object-contain" src={zoomSrc} alt="Imagen del item" decoding="async" />
           </div>
         </div>
       ) : null}

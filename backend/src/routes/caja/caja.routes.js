@@ -112,6 +112,35 @@ router.post("/postcerrarcaja", CajaController.cerrarCaja);
 
 /**
  * @swagger
+ * /putmontoinicialcaja:
+ *   put:
+ *     tags:
+ *       - Caja
+ *     summary: Actualizar monto inicial de la caja abierta de hoy
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               montoInicial:
+ *                 type: number
+ *               idUsuario:
+ *                 type: integer
+ *             example:
+ *               montoInicial: 650.00
+ *               idUsuario: 1
+ *     responses:
+ *       200:
+ *         description: Monto inicial actualizado
+ *       400:
+ *         description: Error de validación
+ */
+router.put("/putmontoinicialcaja", CajaController.actualizarMontoInicialCaja);
+
+/**
+ * @swagger
  * /postgasto:
  *   post:
  *     tags:

@@ -8,6 +8,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  border: 1px solid rgba(7, 27, 74, 0.24);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.22) 0%, rgba(88, 150, 245, 0.34) 100%), rgba(255, 255, 255, 0.78);
 }
 
 .usrTitle {
@@ -36,7 +40,7 @@
 }
 
 .panel {
-  background: #fff;
+  background: var(--jmg-card-gradient), rgba(255, 255, 255, 0.92);
   border: 1px solid var(--jmg-border);
   border-radius: 16px;
   overflow: hidden;
@@ -49,7 +53,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
+  background: var(--jmg-card-gradient-strong);
   color: #fff;
 }
 
@@ -88,13 +92,13 @@
 }
 
 .usrBtn:hover {
-  background: rgba(3, 25, 64, 0.04);
+  background: rgba(88, 150, 245, 0.2);
 }
 
 .usrBtnPrimary {
-  border: 1px solid rgba(244, 194, 0, 0.65);
-  background: rgba(244, 194, 0, 0.22);
-  color: var(--jmg-navy);
+  border: 1px solid rgba(7, 27, 74, 0.34);
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.98) 0%, rgba(31, 88, 214, 0.95) 100%);
+  color: #eff6ff;
   height: 32px;
   padding: 0 12px;
   border-radius: 999px;
@@ -135,7 +139,7 @@
 }
 
 .usrToggle input {
-  accent-color: var(--jmg-yellow);
+  accent-color: var(--jmg-navy-2);
 }
 
 .usrToggleInline {
@@ -203,12 +207,12 @@
 }
 
 .usrRow:hover {
-  background: rgba(3, 25, 64, 0.03);
+  background: rgba(88, 150, 245, 0.16);
 }
 
 .usrRowActive {
-  border-color: rgba(244, 194, 0, 0.65);
-  box-shadow: 0 0 0 3px rgba(244, 194, 0, 0.18);
+  border-color: rgba(31, 88, 214, 0.55);
+  box-shadow: 0 0 0 3px rgba(88, 150, 245, 0.22);
 }
 
 .usrRowName {
@@ -284,8 +288,8 @@
   margin-top: 10px;
   border-radius: 14px;
   padding: 10px 12px;
-  border: 1px solid rgba(244, 194, 0, 0.65);
-  background: rgba(244, 194, 0, 0.18);
+  border: 1px solid rgba(31, 88, 214, 0.5);
+  background: rgba(88, 150, 245, 0.2);
   color: var(--jmg-navy);
   font-weight: 950;
 }

@@ -3,8 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { cajaService } from "../services/caja.service";
 import { useAuth } from "../hooks/useAuth";
 
-import "./DashboardPage.css";
-
 const money = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
@@ -41,6 +39,9 @@ export default function DashboardPage() {
 
   const [estado, setEstado] = useState(null);
   const [cajaData, setCajaData] = useState(null);
+  const [estadoMessage, setEstadoMessage] = useState(null);
+  const [estadoAlertType, setEstadoAlertType] = useState(null);
+  const [autoCloseNotice, setAutoCloseNotice] = useState(null);
   const [resumen, setResumen] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
 
@@ -67,6 +68,9 @@ export default function DashboardPage() {
 
         setEstado(estadoRes?.estado || null);
         setCajaData(estadoRes?.data || null);
+        setEstadoMessage(estadoRes?.message || null);
+        setEstadoAlertType(estadoRes?.alertType || null);
+        setAutoCloseNotice(estadoRes?.autoCloseNotice || null);
         setResumen(resumenRes?.data || null);
         setMovimientos(Array.isArray(movsRes?.data) ? movsRes.data : []);
       } catch (e) {
@@ -102,6 +106,9 @@ export default function DashboardPage() {
     ]);
     setEstado(estadoRes?.estado || null);
     setCajaData(estadoRes?.data || null);
+    setEstadoMessage(estadoRes?.message || null);
+    setEstadoAlertType(estadoRes?.alertType || null);
+    setAutoCloseNotice(estadoRes?.autoCloseNotice || null);
     setResumen(resumenRes?.data || null);
     setMovimientos(Array.isArray(movsRes?.data) ? movsRes.data : []);
   }
@@ -137,47 +144,68 @@ export default function DashboardPage() {
     return list.slice(-8).reverse();
   }, [movimientos]);
 
+  const sectionClass = "jmg-card overflow-hidden";
+  const sectionHeadClass =
+    "jmg-card-head flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3";
+  const sectionBodyClass = "space-y-3 px-4 py-4";
+
   return (
-    <div className="dash">
+    <div className="grid gap-4">
       {flash ? (
-        <div className="notice" role="status">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700" role="status">
           {flash}
         </div>
       ) : null}
-      {error && <div className="error">{error}</div>}
-      {isLoading && !error && <div className="notice">Cargando dashboard…</div>}
+      {estadoAlertType === "OPEN_OTHER_DAY" && estadoMessage ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800" role="status">
+          {estadoMessage}
+        </div>
+      ) : null}
+      {autoCloseNotice?.message ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800" role="status">
+          {autoCloseNotice.message}
+          {autoCloseNotice?.horaCierre ? ` Ultimo cierre automatico: ${fmtDateTime(autoCloseNotice.horaCierre)}.` : ""}
+        </div>
+      ) : null}
+      {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</div> : null}
+      {isLoading && !error ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">Cargando dashboard...</div>
+      ) : null}
 
-      <div className="dashGrid">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Estado de caja */}
-        <section className="card col4">
-          <div className="cardHead">
-            <strong>Estado de caja</strong>
-            <span className="badge">
-              <span className="dot" aria-hidden="true" />
+        <section className={`${sectionClass} xl:col-span-4`}>
+          <div className={sectionHeadClass}>
+            <strong className="font-display text-lg font-semibold text-slate-800">Estado de caja</strong>
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
               {estado || "-"}
             </span>
           </div>
 
-          <div className="cardBody">
+          <div className={sectionBodyClass}>
             {estado === "CERRADA" ? (
               <>
-                <div className="meta">
-                  <div className="metaLine">
+                <div className="text-sm text-slate-500">
+                  <div>
                     <strong>Caja cerrada</strong> — abre caja para iniciar el día.
                   </div>
                 </div>
 
-                <div className="actions" style={{ marginTop: 12 }}>
-                  <button type="button" className="secondaryButton" onClick={() => navigate("/caja")}
+                <div className="grid gap-2 pt-2">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    onClick={() => navigate("/caja")}
                   >
                     Ir a Caja
                   </button>
 
-                  <div className="openBox">
-                    <label className="inputLabel">
+                  <div className="grid gap-2">
+                    <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                       Monto inicial
                       <input
-                        className="input"
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-200/70"
                         inputMode="decimal"
                         value={montoInicial}
                         onChange={(e) => setMontoInicial(e.target.value)}
@@ -186,7 +214,7 @@ export default function DashboardPage() {
                     </label>
                     <button
                       type="button"
-                      className="primaryButton"
+                      className="rounded-xl border border-[color:var(--jmg-navy)]/40 bg-[linear-gradient(145deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.95)_100%)] px-3 py-2 text-sm font-semibold text-slate-50 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-65"
                       onClick={handleAbrirCaja}
                       disabled={isOpening}
                     >
@@ -194,33 +222,43 @@ export default function DashboardPage() {
                     </button>
                   </div>
 
-                  {abrirError ? <div className="smallError">{abrirError}</div> : null}
+                  {abrirError ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{abrirError}</div>
+                  ) : null}
                 </div>
               </>
             ) : (
               <>
-                <div className="kpiRow">
-                  <div className="kpi">
-                    <div className="kpiLabel">Monto inicial</div>
-                    <div className="kpiValue">{fmtMoney(cajaData?.MontoInicial)}</div>
+                {estadoAlertType === "OPEN_OTHER_DAY" && estadoMessage ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                    {estadoMessage}
                   </div>
-                  <div className="kpi">
-                    <div className="kpiLabel">Efectivo en caja</div>
-                    <div className="kpiValue">{fmtMoney(cajaData?.MontoActual)}</div>
+                ) : null}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Monto inicial</div>
+                    <div className="mt-1 text-base font-semibold text-slate-800">{fmtMoney(cajaData?.MontoInicial)}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Efectivo en caja</div>
+                    <div className="mt-1 text-base font-semibold text-slate-800">{fmtMoney(cajaData?.MontoActual)}</div>
                   </div>
                 </div>
 
-                <div className="meta">
-                  <div className="metaLine">
+                <div className="grid gap-1 text-sm text-slate-500">
+                  <div>
                     <strong>Apertura:</strong> {fmtDateTime(cajaData?.HoraApertura ?? cajaData?.FechaApertura)}
                   </div>
-                  <div className="metaLine">
+                  <div>
                     <strong>ID Caja:</strong> {cajaData?.IdCaja ?? "-"}
                   </div>
                 </div>
 
-                <div className="actions" style={{ marginTop: 12 }}>
-                  <button type="button" className="secondaryButton" onClick={() => navigate("/caja")}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    onClick={() => navigate("/caja")}
                   >
                     Ir a Caja
                   </button>
@@ -231,37 +269,37 @@ export default function DashboardPage() {
         </section>
 
         {/* Resumen del día */}
-        <section className="card col8">
-          <div className="cardHead">
-            <strong>Resumen del día</strong>
-            <span className="badge">
-              <span className="dot" aria-hidden="true" />
+        <section className={`${sectionClass} xl:col-span-8`}>
+          <div className={sectionHeadClass}>
+            <strong className="font-display text-lg font-semibold text-slate-800">Resumen del día</strong>
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden="true" />
               Hoy
             </span>
           </div>
 
-          <div className="cardBody">
-            <div className="kpiRow">
-              <div className="kpi">
-                <div className="kpiLabel">Monto inicial</div>
-                <div className="kpiValue">{fmtMoney(resumen?.monto_inicial)}</div>
+          <div className={sectionBodyClass}>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Monto inicial</div>
+                <div className="mt-1 text-base font-semibold text-slate-800">{fmtMoney(resumen?.monto_inicial)}</div>
               </div>
-              <div className="kpi">
-                <div className="kpiLabel">Ventas</div>
-                <div className="kpiValue">{fmtMoney(ventasTotal)}</div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Ventas</div>
+                <div className="mt-1 text-base font-semibold text-slate-800">{fmtMoney(ventasTotal)}</div>
               </div>
-              <div className="kpi">
-                <div className="kpiLabel">Gastos</div>
-                <div className="kpiValue">{fmtMoney(gastosTotal)}</div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Gastos</div>
+                <div className="mt-1 text-base font-semibold text-slate-800">{fmtMoney(gastosTotal)}</div>
               </div>
-              <div className="kpi">
-                <div className="kpiLabel">Balance (según caja)</div>
-                <div className="kpiValue">{fmtMoney(resumen?.ganancia_dia)}</div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Balance (según caja)</div>
+                <div className="mt-1 text-base font-semibold text-slate-800">{fmtMoney(resumen?.ganancia_dia)}</div>
               </div>
             </div>
 
-            <div className="meta" style={{ marginTop: 12 }}>
-              <div className="metaLine">
+            <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500">
+              <div>
                 <strong>Tip:</strong> si algo no cuadra, revisa movimientos de efectivo.
               </div>
             </div>
@@ -269,47 +307,61 @@ export default function DashboardPage() {
         </section>
 
         {/* Últimos movimientos */}
-        <section className="card col12">
-          <div className="cardHead">
-            <strong>Últimos movimientos</strong>
-            <div className="movHeadRight">
-              <div className="headActions" aria-label="Acciones rápidas">
-                <button type="button" className="headButton" onClick={() => navigate("/caja")}>
+        <section className={`${sectionClass} xl:col-span-12`}>
+          <div className={sectionHeadClass}>
+            <strong className="font-display text-lg font-semibold text-slate-800">Últimos movimientos</strong>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center gap-2" aria-label="Acciones rápidas">
+                <button
+                  type="button"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  onClick={() => navigate("/caja")}
+                >
                   Ver Caja
                 </button>
-                <button type="button" className="headButton" onClick={() => navigate("/pos")}
+                <button
+                  type="button"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  onClick={() => navigate("/pos")}
                 >
                   Ir a POS
                 </button>
               </div>
-              <span className="badge" title="Movimientos mostrados">
-                <span className="dot" aria-hidden="true" />
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-600" title="Movimientos mostrados">
+                <span className="h-2 w-2 rounded-full bg-slate-500" aria-hidden="true" />
                 {ultimosMovimientos.length}
               </span>
             </div>
           </div>
 
-          <div className="cardBody">
+          <div className={sectionBodyClass}>
             {ultimosMovimientos.length === 0 ? (
-              <div className="meta">
-                <div className="metaLine">No hay movimientos registrados hoy.</div>
-              </div>
+              <div className="text-sm text-slate-500">No hay movimientos registrados hoy.</div>
             ) : (
-              <div>
+              <div className="grid gap-2">
                 {ultimosMovimientos.map((m) => {
                   const isEntrada = m?.tipo === "ENTRADA";
                   return (
-                    <div key={`${m?.tipo}-${m?.id}-${m?.fechaHora}`} className="movementRow">
-                      <span className={isEntrada ? "chip chipIn" : "chip chipOut"}>
+                    <div
+                      key={`${m?.tipo}-${m?.id}-${m?.fechaHora}`}
+                      className="grid gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 md:grid-cols-[auto_1fr_auto] md:items-start"
+                    >
+                      <span
+                        className={
+                          isEntrada
+                            ? "inline-flex h-7 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700"
+                            : "inline-flex h-7 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700"
+                        }
+                      >
                         {isEntrada ? "ENTRADA" : "SALIDA"}
                       </span>
-                      <div className="movementMain">
-                        <div className="movementTitle">{m?.concepto || (isEntrada ? "Venta" : "Salida")}</div>
-                        <div className="movementSub">
+                      <div className="grid gap-0.5">
+                        <div className="text-sm font-semibold text-slate-800">{m?.concepto || (isEntrada ? "Venta" : "Salida")}</div>
+                        <div className="text-xs text-slate-500">
                           {fmtDateTime(m?.fechaHora)} · {m?.metodoPago || "-"} · {m?.usuario || "-"}
                         </div>
                       </div>
-                      <div className="movementAmount">{fmtMoney(m?.monto)}</div>
+                      <div className="text-sm font-semibold text-slate-800 md:justify-self-end">{fmtMoney(m?.monto)}</div>
                     </div>
                   );
                 })}

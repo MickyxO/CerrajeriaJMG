@@ -626,8 +626,8 @@ export default function ItemsPage() {
       {modal}
       <div className="itemsTop">
         <div>
-          <h1 className="itemsTitle">Items</h1>
-          <div className="itemsSubtitle">Catálogo, filtros y subida de imágenes.</div>
+          <h1 className="itemsTitle">Menu de items</h1>
+          <div className="itemsSubtitle">Catalogo por tarjetas, filtros y subida de imagenes.</div>
         </div>
         <div className="itemsTopActions">
           <button type="button" className="ghost" onClick={clearFilters}>

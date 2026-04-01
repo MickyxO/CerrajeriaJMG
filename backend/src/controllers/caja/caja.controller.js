@@ -1,5 +1,13 @@
 const CajaService = require("../../services/caja/caja.service");
 
+function toIsoDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    const raw = String(value);
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : null;
+}
+
 class CajaController {
 
     // GET: Obtener el estado actual de la caja (si está abierta o cerrada)
@@ -24,19 +32,47 @@ class CajaController {
                 });
             }
 
-            const caja = await CajaService.getCajaDelDia();
-            if (!caja) {
+            // Si hay una caja vieja abierta, se cierra automáticamente antes de informar estado.
+            await CajaService.autoCloseOpenCajaIfNeeded();
+
+            const [cajaAbierta, bizNow, ultimoCierreAuto] = await Promise.all([
+                CajaService.getCajaAbierta(),
+                CajaService.getBusinessNowInfo(),
+                CajaService.getUltimoCierreAutomaticoReciente(),
+            ]);
+
+            const autoCloseNotice = ultimoCierreAuto
+                ? {
+                    ...ultimoCierreAuto,
+                    message: "Se detectó un cierre automático de caja (23:59 CDMX o por caja de día previo sin cierre manual)."
+                }
+                : null;
+
+            if (!cajaAbierta) {
                 return res.status(200).json({ 
                     success: true, 
                     estado: 'CERRADA', 
-                    data: null, 
+                    data: null,
+                    autoCloseNotice,
                     message: "No hay caja abierta actualmente." 
                 });
             }
+
+            const fechaApertura = toIsoDate(cajaAbierta?.FechaApertura);
+            const fechaLocal = bizNow?.fechaLocal;
+            const esOtroDia = Boolean(fechaApertura && fechaLocal && fechaApertura !== fechaLocal);
+
+            const warningMessage = esOtroDia
+                ? `Ya existe una caja abierta del ${fechaApertura}. Debes cerrarla antes de abrir una nueva.`
+                : "Caja abierta actualmente.";
+
             return res.status(200).json({ 
                 success: true, 
                 estado: 'ABIERTA', 
-                data: caja 
+                data: cajaAbierta,
+                autoCloseNotice,
+                alertType: esOtroDia ? 'OPEN_OTHER_DAY' : 'OPEN',
+                message: warningMessage
             });
         } catch (err) {
             return res.status(500).json({ success: false, error: err.message });
@@ -100,6 +136,27 @@ class CajaController {
 
         } catch (err) {
             return res.status(500).json({ success: false, error: err.message });
+        }
+    }
+
+    // PUT: Actualizar monto inicial de la caja abierta de hoy
+    async actualizarMontoInicialCaja(req, res) {
+        try {
+            const { montoInicial, idUsuario } = req.body || {};
+
+            if (montoInicial === undefined) {
+                return res.status(400).json({ success: false, message: "El monto inicial es requerido." });
+            }
+
+            const data = await CajaService.actualizarMontoInicialCaja(montoInicial, idUsuario);
+
+            return res.status(200).json({
+                success: true,
+                message: "Monto inicial actualizado correctamente.",
+                data,
+            });
+        } catch (err) {
+            return res.status(400).json({ success: false, error: err.message });
         }
     }
 

@@ -100,12 +100,12 @@
 }
 
 .navLink:hover {
-  background: rgba(11, 31, 59, 0.05);
+  background: rgba(43, 72, 86, 0.05);
 }
 
 .navLinkActive {
-  background: rgba(244, 194, 0, 0.25);
-  border-color: rgba(244, 194, 0, 0.55);
+  background: rgba(216, 181, 143, 0.25);
+  border-color: rgba(216, 181, 143, 0.55);
 }
 
 .navIcon {
@@ -163,7 +163,7 @@
 }
 
 .iconButton:hover {
-  background: rgba(11, 31, 59, 0.04);
+  background: rgba(43, 72, 86, 0.04);
 }
 
 .pageTitle {
@@ -191,8 +191,8 @@
 }
 
 .logoutButton:hover {
-  background: rgba(244, 194, 0, 0.18);
-  border-color: rgba(244, 194, 0, 0.7);
+  background: rgba(216, 181, 143, 0.18);
+  border-color: rgba(216, 181, 143, 0.7);
 }
 
 .main {

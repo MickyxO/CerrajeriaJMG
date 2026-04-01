@@ -8,6 +8,10 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+  border: 1px solid rgba(7, 27, 74, 0.24);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.22) 0%, rgba(88, 150, 245, 0.34) 100%), rgba(255, 255, 255, 0.78);
 }
 
 .repTitle {
@@ -44,8 +48,9 @@
 }
 
 .repChipActive {
-  background: #fff2c6;
-  border-color: #f2d37b;
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.96) 0%, rgba(31, 88, 214, 0.92) 100%);
+  border-color: rgba(7, 27, 74, 0.38);
+  color: #eef6ff;
 }
 
 .repGrid {
@@ -68,9 +73,9 @@
 }
 
 .repCard {
-  background: white;
+  background: var(--jmg-card-gradient), rgba(255, 255, 255, 0.92);
   border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(7, 27, 74, 0.22);
   overflow: hidden;
 }
 
@@ -79,7 +84,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--jmg-navy);
+  background: var(--jmg-card-gradient-strong);
   color: white;
 }
 
@@ -96,12 +101,16 @@
 }
 
 .repBtn {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(7, 27, 74, 0.24);
   background: white;
   color: var(--jmg-navy);
   padding: 8px 12px;
   border-radius: 10px;
   cursor: pointer;
+}
+
+.repBtn:hover {
+  background: rgba(88, 150, 245, 0.18);
 }
 
 .repHint {
@@ -139,7 +148,7 @@
 
 .repTable th {
   text-align: left;
-  background: #f7f9fc;
+  background: rgba(88, 150, 245, 0.14);
   color: var(--jmg-navy);
 }
 
@@ -154,15 +163,19 @@
 }
 
 .repRowActive {
-  background: #fff6d9;
+  background: rgba(88, 150, 245, 0.18);
 }
 
 .repLink {
   border: none;
   background: transparent;
-  color: #1c5bd6;
+  color: var(--jmg-navy-2);
   cursor: pointer;
   padding: 6px 8px;
+}
+
+.repLink:hover {
+  color: var(--jmg-navy);
 }
 
 .repItemTitle {
