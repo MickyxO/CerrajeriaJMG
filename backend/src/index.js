@@ -35,8 +35,18 @@ app.use(express.json());
 // Excepciones: /health, /login, /api-docs (si aplica), /uploads (solo cuando se sirve localmente)
 // y /postusuario si habilitas bootstrap con ALLOW_PUBLIC_USER_CREATE=true.
 const allowPublicUserCreate = String(process.env.ALLOW_PUBLIC_USER_CREATE || "").toLowerCase() === "true";
+const isProd = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+const disableAuth = !isProd && String(process.env.DISABLE_AUTH || "").toLowerCase() === "true";
+
+if (disableAuth) {
+  console.warn("⚠️ JWT deshabilitado por DISABLE_AUTH=true (solo desarrollo)");
+}
+
 app.use((req, res, next) => {
-  const pathOnly = req.path || "";
+  const pathOnlyRaw = req.path || "";
+  const pathOnly = pathOnlyRaw !== "/" ? pathOnlyRaw.replace(/\/+$/, "") : "/";
+
+  if (disableAuth) return next();
 
   if (pathOnly === "/health") return next();
   if (pathOnly === "/login" && req.method === "POST") return next();
@@ -78,7 +88,6 @@ app.use("/", reportesRoutes);
 // - Para habilitar: ENABLE_SWAGGER=true
 // - Para proteger con usuario/clave: SWAGGER_USER / SWAGGER_PASS
 const enableSwagger = String(process.env.ENABLE_SWAGGER || "").toLowerCase() === "true";
-const isProd = String(process.env.NODE_ENV || "").toLowerCase() === "production";
 const swaggerUser = (process.env.SWAGGER_USER || "").trim();
 const swaggerPass = process.env.SWAGGER_PASS || "";
 

@@ -40,6 +40,20 @@ export const itemsService = {
     });
   },
 
+  /** Backend: GET /pos/catalogo */
+  getPosCatalogo({ q, idCategoria, incluyeItems, incluyeServicios, soloConStock, limit } = {}) {
+    return apiRequest("/pos/catalogo", {
+      params: {
+        q,
+        idCategoria,
+        incluyeItems: incluyeItems === undefined ? undefined : (incluyeItems ? 1 : 0),
+        incluyeServicios: incluyeServicios === undefined ? undefined : (incluyeServicios ? 1 : 0),
+        soloConStock: soloConStock ? 1 : undefined,
+        limit,
+      },
+    });
+  },
+
   /** Backend: POST /postitem */
   crearItem(payload) {
     return apiRequest("/postitem", { method: "POST", body: payload });

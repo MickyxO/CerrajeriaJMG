@@ -31,6 +31,10 @@ const sessionTimeZone =
 
 const useWebSocket = String(process.env.NEON_USE_WEBSOCKET || '').toLowerCase() === 'true';
 const databaseUrl = new URL(process.env.DATABASE_URL);
+const dbHost = (databaseUrl.hostname || '').toLowerCase();
+const isLocalDbHost = dbHost === 'localhost' || dbHost === '127.0.0.1' || dbHost === '::1';
+const dbSslEnv = String(process.env.DB_SSL || '').toLowerCase();
+const useSsl = dbSslEnv ? dbSslEnv === 'true' : !isLocalDbHost;
 
 // Evita parámetros que a veces dan problemas con clientes Node.
 databaseUrl.searchParams.delete('channel_binding');
@@ -48,8 +52,11 @@ if (sessionTimeZone) {
 // Extraemos el hostname para logs/SSL
 const url = databaseUrl;
 
-console.log(`⏳ Intentando conectar a Neon (Host: ${url.hostname})...`);
-console.log(`   (Si es la primera vez, puede tardar hasta 20-30 seg en despertar)`);
+console.log(`⏳ Intentando conectar a PostgreSQL (Host: ${url.hostname})...`);
+if (!isLocalDbHost) {
+  console.log(`   (Si es Neon y es la primera vez, puede tardar hasta 20-30 seg en despertar)`);
+}
+console.log(`🔐 SSL PostgreSQL: ${useSsl ? 'habilitado' : 'deshabilitado'}`);
 
 if (useWebSocket) {
   console.log('🔌 Modo Neon WebSocket habilitado (NEON_USE_WEBSOCKET=true)');
@@ -67,17 +74,24 @@ if (useWebSocket) {
   });
 } else {
   const { Pool } = require('pg');
-  pool = new Pool({
+  const poolConfig = {
     connectionString: databaseUrl.toString(),
-    ssl: {
-      rejectUnauthorized: false,
-      // SNI (Server Name Indication)
-      servername: url.hostname,
-    },
     // 40 segundos para dar tiempo de sobra a que despierte.
     connectionTimeoutMillis: 40000,
     idleTimeoutMillis: 40000,
     keepAlive: true,
+  };
+
+  if (useSsl) {
+    poolConfig.ssl = {
+      rejectUnauthorized: false,
+      // SNI (Server Name Indication)
+      servername: url.hostname,
+    };
+  }
+
+  pool = new Pool({
+    ...poolConfig,
   });
 }
 
@@ -97,7 +111,7 @@ if (sessionTimeZone && typeof pool?.on === 'function') {
 
 pool.connect()
     .then(client => {
-        console.log('✅ ¡ÉXITO! Conexión establecida con Neon PostgreSQL');
+    console.log('✅ ¡ÉXITO! Conexión establecida con PostgreSQL');
         client.release();
     })
     .catch(err => {

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemsService } from "../../services/items.service";
 import { combosService } from "../../services/combos.service";
-import { categoriaService } from "../../services/categoria.service";
 import { ventasService } from "../../services/ventas.service";
 import { cajaService } from "../../services/caja.service";
 import { API_URL } from "../../services/api";
@@ -22,22 +21,26 @@ function formatMoney(n) {
   return num.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 }
 
-function toSafeString(v) {
-  return (v ?? "").toString();
-}
-
 function resolveImagenUrl(value, variant) {
   return resolveImageUrl(value, { apiBaseUrl: API_URL, variant });
 }
 
-function parseNumericIdQuery(value) {
-  const q = (value ?? "").toString().trim();
-  if (!q) return null;
-  const cleaned = q.startsWith("#") ? q.slice(1).trim() : q;
-  if (!/^\d+$/.test(cleaned)) return null;
-  const id = Number(cleaned);
-  if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) return null;
-  return id;
+function iconTextFromName(value) {
+  const words = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) return "--";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
+}
+
+function bySort(a, b, sortBy) {
+  if (sortBy === "precio_asc") return Number(a?.PrecioVenta || 0) - Number(b?.PrecioVenta || 0);
+  if (sortBy === "precio_desc") return Number(b?.PrecioVenta || 0) - Number(a?.PrecioVenta || 0);
+  if (sortBy === "stock_desc") return Number(b?.StockActual || 0) - Number(a?.StockActual || 0);
+  return String(a?.Nombre || "").localeCompare(String(b?.Nombre || ""), "es");
 }
 
 export default function PosPage() {
@@ -45,19 +48,21 @@ export default function PosPage() {
   const { user } = useAuth();
   const { lines, totals, addItem, addCombo, inc, dec, remove, clear, setQty } = useCart();
 
-  const [mode, setMode] = useState("venta"); // 'venta' | 'gasto'
+  const [mode, setMode] = useState("venta");
 
   const [q, setQ] = useState("");
-  const [showItems, setShowItems] = useState(true);
-  const [showServicios, setShowServicios] = useState(false);
-  const [showCombos, setShowCombos] = useState(true);
-  const [itemsResults, setItemsResults] = useState([]);
-  const [combosAll, setCombosAll] = useState([]);
-  const [comboIdResult, setComboIdResult] = useState(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedCategoriaId, setSelectedCategoriaId] = useState("");
+  const [incluyeItems, setIncluyeItems] = useState(true);
+  const [incluyeServicios, setIncluyeServicios] = useState(true);
+  const [soloConStock, setSoloConStock] = useState(true);
+  const [sortBy, setSortBy] = useState("nombre");
+  const [showCombos, setShowCombos] = useState(false);
 
-  const [categorias, setCategorias] = useState([]);
-  const [categoriaId, setCategoriaId] = useState("");
+  const [catalogo, setCatalogo] = useState({ categorias: [], articulos: [] });
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
+
+  const [combosAll, setCombosAll] = useState([]);
 
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [nombreCliente, setNombreCliente] = useState("");
@@ -76,126 +81,73 @@ export default function PosPage() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      combosService.getCombos().catch(() => []),
-      categoriaService.getCategorias().catch(() => []),
-    ]).then(([combosData, categoriasData]) => {
-      if (!mounted) return;
-      setCombosAll(Array.isArray(combosData) ? combosData : []);
-      setCategorias(Array.isArray(categoriasData) ? categoriasData : []);
-    });
+    combosService
+      .getCombos()
+      .then((res) => {
+        if (!mounted) return;
+        setCombosAll(Array.isArray(res) ? res : []);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setCombosAll([]);
+      });
+
     return () => {
       mounted = false;
     };
   }, []);
 
   useEffect(() => {
-    const query = q.trim();
-    setVentaStatus({ type: "idle", message: "" });
-
-    const numericId = parseNumericIdQuery(query);
-    if (!query) {
-      setComboIdResult(null);
-    }
-
-    if (!showItems && !showServicios) {
-      setItemsResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    // Permitimos búsqueda por ID aunque no tenga 2 caracteres.
-    if (!categoriaId && query.length < 2 && !numericId) {
-      setItemsResults([]);
-      setComboIdResult(null);
-      setIsSearching(false);
-      return;
-    }
-
+    let cancelled = false;
     const handle = setTimeout(async () => {
-      setIsSearching(true);
+      setCatalogLoading(true);
+      setCatalogError("");
       try {
-        // 1) Búsqueda directa por ID (item y/o combo)
-        if (numericId) {
-          const promises = [];
+        const res = await itemsService.getPosCatalogo({
+          q,
+          idCategoria: selectedCategoriaId || undefined,
+          incluyeItems,
+          incluyeServicios,
+          soloConStock,
+          limit: 320,
+        });
 
-          if (showItems || showServicios) {
-            promises.push(
-              itemsService
-                .getItemPorId(numericId)
-                .then((it) => ({ ok: true, it }))
-                .catch(() => ({ ok: false, it: null }))
-            );
-          } else {
-            promises.push(Promise.resolve({ ok: false, it: null }));
-          }
-
-          if (showCombos) {
-            promises.push(
-              combosService
-                .getCombo(numericId)
-                .then((c) => ({ ok: true, c }))
-                .catch(() => ({ ok: false, c: null }))
-            );
-          } else {
-            promises.push(Promise.resolve({ ok: false, c: null }));
-          }
-
-          const [itemRes, comboRes] = await Promise.all(promises);
-
-          setItemsResults(itemRes?.ok && itemRes.it ? [itemRes.it] : []);
-          setComboIdResult(comboRes?.ok && comboRes.c ? comboRes.c : null);
-          return;
-        }
-
-        setComboIdResult(null);
-
-        if (categoriaId) {
-          const res = await itemsService.getItemsPorCategoria(categoriaId);
-          let list = Array.isArray(res) ? res : [];
-          if (query.length >= 2) {
-            const ql = query.toLowerCase();
-            list = list.filter((it) => (it?.Nombre || "").toLowerCase().includes(ql));
-          }
-          setItemsResults(list);
-        } else {
-          const res = await itemsService.buscarItems(query);
-          setItemsResults(Array.isArray(res) ? res : []);
-        }
-      } catch {
-        setItemsResults([]);
-        setComboIdResult(null);
+        if (cancelled) return;
+        setCatalogo({
+          categorias: Array.isArray(res?.categorias) ? res.categorias : [],
+          articulos: Array.isArray(res?.articulos) ? res.articulos : [],
+        });
+      } catch (e) {
+        if (cancelled) return;
+        setCatalogo({ categorias: [], articulos: [] });
+        setCatalogError(e?.message || "No se pudo cargar el catalogo POS.");
       } finally {
-        setIsSearching(false);
+        if (!cancelled) setCatalogLoading(false);
       }
-    }, 250);
+    }, 220);
 
-    return () => clearTimeout(handle);
-  }, [q, showItems, showServicios, showCombos, categoriaId]);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [q, selectedCategoriaId, incluyeItems, incluyeServicios, soloConStock]);
 
-  const itemsOnlyResults = useMemo(() => {
-    const list = Array.isArray(itemsResults) ? itemsResults : [];
-    return list.filter((it) => !Boolean(it?.EsServicio));
-  }, [itemsResults]);
+  const categorias = useMemo(() => {
+    return Array.isArray(catalogo.categorias) ? catalogo.categorias : [];
+  }, [catalogo.categorias]);
 
-  const serviciosResults = useMemo(() => {
-    const list = Array.isArray(itemsResults) ? itemsResults : [];
-    return list.filter((it) => Boolean(it?.EsServicio));
-  }, [itemsResults]);
+  const articulosOrdenados = useMemo(() => {
+    const base = Array.isArray(catalogo.articulos) ? [...catalogo.articulos] : [];
+    base.sort((a, b) => bySort(a, b, sortBy));
+    return base;
+  }, [catalogo.articulos, sortBy]);
 
-  const combosFiltered = useMemo(() => {
-    if (!showCombos) return [];
-    const query = q.trim();
-
-    const numericId = parseNumericIdQuery(query);
-    if (numericId) {
-      return comboIdResult ? [comboIdResult] : [];
-    }
-
-    const ql = query.toLowerCase();
-    if (ql.length < 2) return [];
-    return combosAll.filter((c) => toSafeString(c?.NombreCombo).toLowerCase().includes(ql));
-  }, [q, combosAll, showCombos, comboIdResult]);
+  const combosFiltrados = useMemo(() => {
+    const all = Array.isArray(combosAll) ? combosAll : [];
+    const qClean = String(q || "").trim().toLowerCase();
+    if (!qClean) return all.slice(0, 80);
+    return all.filter((combo) => String(combo?.NombreCombo || "").toLowerCase().includes(qClean)).slice(0, 80);
+  }, [combosAll, q]);
 
   const carritoPayload = useMemo(
     () =>
@@ -223,18 +175,18 @@ export default function PosPage() {
       return;
     }
     if (lines.length === 0) {
-      setVentaStatus({ type: "error", message: "Carrito vacío." });
+      setVentaStatus({ type: "error", message: "Carrito vacio." });
       return;
     }
 
     const total = effectiveTotal;
     if (!Number.isFinite(total) || total <= 0) {
-      setVentaStatus({ type: "error", message: "Total inválido." });
+      setVentaStatus({ type: "error", message: "Total invalido." });
       return;
     }
 
     try {
-      setVentaStatus({ type: "loading", message: "Procesando venta…" });
+      setVentaStatus({ type: "loading", message: "Procesando venta..." });
       const idVenta = await ventasService.crearVenta({
         datosVenta: {
           idUsuario: user.IdUsuario,
@@ -275,12 +227,12 @@ export default function PosPage() {
 
     const monto = Number(gastoMonto);
     if (!Number.isFinite(monto) || monto <= 0) {
-      setGastoStatus({ type: "error", message: "Monto inválido." });
+      setGastoStatus({ type: "error", message: "Monto invalido." });
       return;
     }
 
     try {
-      setGastoStatus({ type: "loading", message: "Registrando gasto…" });
+      setGastoStatus({ type: "loading", message: "Registrando gasto..." });
       const res = await cajaService.registrarGasto({
         Monto: round2(monto),
         Concepto: gastoConcepto?.trim() || "Gasto",
@@ -319,8 +271,7 @@ export default function PosPage() {
         </div>
 
         <div className="posHeaderRight">
-          <button type="button" className="ghost" onClick={() => navigate("/caja")}
-          >
+          <button type="button" className="ghost" onClick={() => navigate("/caja")}>
             Ver Caja
           </button>
           <div className="posTotalPill">
@@ -333,166 +284,138 @@ export default function PosPage() {
       {mode === "venta" ? (
         <div className="posGrid">
           <section className="posPanel">
-            <div className="panelTitle">Buscar</div>
+            <div className="panelTitle">Menu POS</div>
 
             <div className="searchRow">
               <input
                 className="textInput"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar (mín 2 letras o ID)…"
+                placeholder="Buscar por nombre, marca, chip, frecuencia o ID..."
               />
+
               <div className="toggleRow">
                 <label className="check">
-                  <input type="checkbox" checked={showItems} onChange={(e) => setShowItems(e.target.checked)} />
+                  <input type="checkbox" checked={incluyeItems} onChange={(e) => setIncluyeItems(e.target.checked)} />
                   <span>Items</span>
                 </label>
                 <label className="check">
                   <input
                     type="checkbox"
-                    checked={showServicios}
-                    onChange={(e) => setShowServicios(e.target.checked)}
+                    checked={incluyeServicios}
+                    onChange={(e) => setIncluyeServicios(e.target.checked)}
                   />
                   <span>Servicios</span>
                 </label>
                 <label className="check">
+                  <input type="checkbox" checked={soloConStock} onChange={(e) => setSoloConStock(e.target.checked)} />
+                  <span>Solo con stock</span>
+                </label>
+                <label className="check">
                   <input type="checkbox" checked={showCombos} onChange={(e) => setShowCombos(e.target.checked)} />
-                  <span>Combos</span>
+                  <span>Mostrar combos</span>
                 </label>
               </div>
 
-              {(showItems || showServicios) && categorias.length > 0 && (
-                <div className="posCatRow" aria-label="Categorías">
+              <div className="sortRow">
+                <span>Orden:</span>
+                <select className="textInput" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="nombre">Nombre</option>
+                  <option value="precio_asc">Precio: menor a mayor</option>
+                  <option value="precio_desc">Precio: mayor a menor</option>
+                  <option value="stock_desc">Stock disponible</option>
+                </select>
+              </div>
+
+              <div className="catsGrid" aria-label="Categorias">
+                <button
+                  type="button"
+                  className={selectedCategoriaId === "" ? "catTile catTileActive" : "catTile"}
+                  onClick={() => setSelectedCategoriaId("")}
+                >
+                  <div className="catIcon">TO</div>
+                  <div className="catName">Todas</div>
+                </button>
+
+                {categorias.map((cat) => (
                   <button
                     type="button"
-                    className={categoriaId === "" ? "posCatChip posCatChipActive" : "posCatChip"}
-                    onClick={() => setCategoriaId("")}
-                    title="Mostrar todas las categorías"
+                    key={`cat-${cat.IdCategoria}`}
+                    className={selectedCategoriaId === String(cat.IdCategoria) ? "catTile catTileActive" : "catTile"}
+                    onClick={() => setSelectedCategoriaId(String(cat.IdCategoria))}
+                    title={cat.Clasificacion || ""}
                   >
-                    Todas
+                    <div className="catIcon">{iconTextFromName(cat.NombreCategoria)}</div>
+                    <div className="catName">{cat.NombreCategoria}</div>
+                    <div className="catCount">{cat.TotalItems}</div>
                   </button>
-                  {categorias.map((c) => (
+                ))}
+              </div>
+            </div>
+
+            {catalogLoading && <div className="hint">Cargando catalogo...</div>}
+            {catalogError ? <div className="status statusError">{catalogError}</div> : null}
+
+            <div className="itemsGrid">
+              {articulosOrdenados.map((item) => {
+                const src = resolveImagenUrl(item?.ImagenUrl, IMAGE_VARIANTS.THUMB);
+                const lowStock = !item?.EsServicio && Number(item?.StockActual || 0) <= Number(item?.StockMinimo || 0);
+                return (
+                  <button
+                    type="button"
+                    key={`item-${item.IdItem}`}
+                    className={item?.EsServicio ? "menuTile menuTileService" : "menuTile"}
+                    onClick={() => addItem(item, 1)}
+                    title="Agregar al carrito"
+                  >
+                    <div className="menuThumb" aria-hidden="true">
+                      {src ? <img src={src} alt="" loading="lazy" decoding="async" /> : <span>{iconTextFromName(item?.Nombre)}</span>}
+                    </div>
+                    <div className="menuBody">
+                      <div className="menuName">{item.Nombre}</div>
+                      <div className="menuMeta">{item.NombreCategoria}</div>
+                      <div className="menuFoot">
+                        <strong>{formatMoney(item.PrecioVenta)}</strong>
+                        {item.EsServicio ? (
+                          <span className="stockOk">Servicio</span>
+                        ) : (
+                          <span className={lowStock ? "stockWarn" : "stockOk"}>Stock: {item.StockActual}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {!catalogLoading && articulosOrdenados.length === 0 && <div className="hint">No hay articulos con esos filtros.</div>}
+
+            {showCombos && (
+              <>
+                <div className="resultsHeader">Combos</div>
+                <div className="comboGrid">
+                  {combosFiltrados.map((combo) => (
                     <button
                       type="button"
-                      key={`cat-${c?.IdCategoria}`}
-                      className={categoriaId === String(c?.IdCategoria) ? "posCatChip posCatChipActive" : "posCatChip"}
-                      onClick={() => setCategoriaId(String(c?.IdCategoria))}
-                      title={c?.Clasificacion || ""}
+                      key={`combo-${combo.IdCombo}`}
+                      className="comboTile"
+                      onClick={() => addCombo(combo, 1)}
                     >
-                      {c?.NombreCategoria}
+                      <div className="comboName">{combo.NombreCombo}</div>
+                      <div className="comboMeta">{(combo.Items || []).length} items</div>
+                      <div className="comboPrice">{formatMoney(combo.PrecioSugerido)}</div>
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {isSearching && <div className="hint">Buscando…</div>}
-
-            <div className="results">
-              {showItems && itemsOnlyResults.length > 0 && (
-                <>
-                  <div className="resultsHeader">Items</div>
-                  {itemsOnlyResults.slice(0, 25).map((it) => {
-                    const src = resolveImagenUrl(it?.ImagenUrl, IMAGE_VARIANTS.THUMB);
-                    return (
-                    <button
-                      type="button"
-                      key={`item-${it.IdItem}`}
-                      className="resultRow"
-                      onClick={() => addItem(it, 1)}
-                      title="Agregar al carrito"
-                    >
-                      <div className="resultLeft">
-                        <div className="resultThumb" aria-hidden="true">
-                          {src ? (
-                            <img src={src} alt="" loading="lazy" decoding="async" />
-                          ) : (
-                            <span>—</span>
-                          )}
-                        </div>
-                        <div className="resultMain">
-                          <div className="resultName">{it.Nombre}</div>
-                          <div className="resultMeta">{it.NombreCategoria || ""}</div>
-                        </div>
-                      </div>
-                      <div className="resultPrice">{formatMoney(it.PrecioVenta)}</div>
-                    </button>
-                    );
-                  })}
-                </>
-              )}
-
-              {showServicios && serviciosResults.length > 0 && (
-                <>
-                  <div className="resultsHeader">Servicios</div>
-                  {serviciosResults.slice(0, 25).map((it) => {
-                    const src = resolveImagenUrl(it?.ImagenUrl, IMAGE_VARIANTS.THUMB);
-                    return (
-                      <button
-                        type="button"
-                        key={`serv-${it.IdItem}`}
-                        className="resultRow"
-                        onClick={() => addItem(it, 1)}
-                        title="Agregar al carrito"
-                      >
-                        <div className="resultLeft">
-                          <div className="resultThumb" aria-hidden="true">
-                            {src ? (
-                              <img src={src} alt="" loading="lazy" decoding="async" />
-                            ) : (
-                              <span>—</span>
-                            )}
-                          </div>
-                          <div className="resultMain">
-                            <div className="resultName">{it.Nombre}</div>
-                            <div className="resultMeta">{it.NombreCategoria || ""}</div>
-                          </div>
-                        </div>
-                        <div className="resultPrice">{formatMoney(it.PrecioVenta)}</div>
-                      </button>
-                    );
-                  })}
-                </>
-              )}
-
-              {showCombos && combosFiltered.length > 0 && (
-                <>
-                  <div className="resultsHeader">Combos</div>
-                  {combosFiltered.slice(0, 25).map((c) => (
-                    <button
-                      type="button"
-                      key={`combo-${c.IdCombo}`}
-                      className="resultRow"
-                      onClick={() => addCombo(c, 1)}
-                      title="Agregar al carrito"
-                    >
-                      <div className="resultMain">
-                        <div className="resultName">{c.NombreCombo}</div>
-                        <div className="resultMeta">{(c.Items || []).length} items</div>
-                      </div>
-                      <div className="resultPrice">{formatMoney(c.PrecioSugerido)}</div>
-                    </button>
-                  ))}
-                </>
-              )}
-
-              {q.trim().length >= 2 &&
-                (!showCombos || combosFiltered.length === 0) &&
-                (!showItems || itemsOnlyResults.length === 0) &&
-                (!showServicios || serviciosResults.length === 0) && (
-                <div className="hint">Sin resultados.</div>
-              )}
-              {q.trim().length < 2 && !parseNumericIdQuery(q) && (
-                <div className="hint">Tip: escribe al menos 2 letras (o un ID).</div>
-              )}
-            </div>
+              </>
+            )}
           </section>
 
           <section className="posPanel">
             <div className="panelTitle">Carrito</div>
 
             {lines.length === 0 ? (
-              <div className="hint">Agrega productos para cobrar.</div>
+              <div className="hint">Presiona articulos para agregarlos al carrito.</div>
             ) : (
               <div className="cart">
                 {lines.map((l) => (
@@ -509,7 +432,7 @@ export default function PosPage() {
                                 decoding="async"
                               />
                             ) : (
-                              <span>—</span>
+                              <span>--</span>
                             )}
                           </div>
                         ) : null}
@@ -526,7 +449,7 @@ export default function PosPage() {
 
                     <div className="qty">
                       <button type="button" className="qtyBtn" onClick={() => dec(l.key)} aria-label="Disminuir">
-                        −
+                        -
                       </button>
                       <input
                         className="qtyInput"
@@ -579,7 +502,7 @@ export default function PosPage() {
               </div>
 
               <label className="field">
-                <span>Método de pago</span>
+                <span>Metodo de pago</span>
                 <select className="textInput" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
                   <option value="Efectivo">Efectivo</option>
                   <option value="Tarjeta">Tarjeta</option>
@@ -617,7 +540,7 @@ export default function PosPage() {
                     if (next && !manualTotal) setManualTotal(String(computedTotal));
                   }}
                 />
-                <span>Total manual (para descuentos/ajustes)</span>
+                <span>Total manual (descuentos/ajustes)</span>
               </label>
 
               {useManualTotal && (
@@ -637,12 +560,6 @@ export default function PosPage() {
                       Igualar al calculado
                     </button>
                   </div>
-                  {Number.isFinite(effectiveTotal) && Number.isFinite(computedTotal) && (
-                    <div className="hint">
-                      Diferencia vs calculado: {formatMoney(round2(effectiveTotal - computedTotal))}
-                    </div>
-                  )}
-                  {!Number.isFinite(effectiveTotal) && <div className="hint">Escribe un número válido.</div>}
                 </div>
               )}
             </div>
@@ -672,9 +589,7 @@ export default function PosPage() {
               </button>
             </div>
 
-            <div className="hint">
-              Si eliges <strong>Efectivo</strong>, debe haber caja abierta.
-            </div>
+            <div className="hint">Si eliges Efectivo, debe haber caja abierta.</div>
           </section>
         </div>
       ) : (
@@ -683,7 +598,7 @@ export default function PosPage() {
             <div className="panelTitle">Registrar gasto</div>
             <form onSubmit={onRegistrarGasto} className="formGrid">
               <label className="field">
-                <span>Método</span>
+                <span>Metodo</span>
                 <select
                   className="textInput"
                   value={gastoMetodoPago}
@@ -713,7 +628,7 @@ export default function PosPage() {
                   className="textInput"
                   value={gastoConcepto}
                   onChange={(e) => setGastoConcepto(e.target.value)}
-                  placeholder="Ej. Insumos / Gasolina / Refacción…"
+                  placeholder="Ej. Insumos / Gasolina / Refaccion..."
                 />
               </label>
 
@@ -735,10 +650,6 @@ export default function PosPage() {
                 <button type="submit" className="primary" disabled={gastoStatus.type === "loading"}>
                   Registrar gasto
                 </button>
-              </div>
-
-              <div className="hint fieldFull">
-                Nota: solo descuenta de caja si el método es <strong>Efectivo</strong>.
               </div>
             </form>
           </section>
