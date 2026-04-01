@@ -15,6 +15,7 @@ const cajaRoutes = require("./routes/caja/caja.routes");
 const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
 const inventarioRoutes = require("./routes/inventario/inventario.routes");
 const reportesRoutes = require("./routes/reportes/reportes.routes");
+const CajaService = require("./services/caja/caja.service");
 
 const app = express();
 
@@ -35,8 +36,18 @@ app.use(express.json());
 // Excepciones: /health, /login, /api-docs (si aplica), /uploads (solo cuando se sirve localmente)
 // y /postusuario si habilitas bootstrap con ALLOW_PUBLIC_USER_CREATE=true.
 const allowPublicUserCreate = String(process.env.ALLOW_PUBLIC_USER_CREATE || "").toLowerCase() === "true";
+const isProd = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+const disableAuth = !isProd && String(process.env.DISABLE_AUTH || "").toLowerCase() === "true";
+
+if (disableAuth) {
+  console.warn("⚠️ JWT deshabilitado por DISABLE_AUTH=true (solo desarrollo)");
+}
+
 app.use((req, res, next) => {
-  const pathOnly = req.path || "";
+  const pathOnlyRaw = req.path || "";
+  const pathOnly = pathOnlyRaw !== "/" ? pathOnlyRaw.replace(/\/+$/, "") : "/";
+
+  if (disableAuth) return next();
 
   if (pathOnly === "/health") return next();
   if (pathOnly === "/login" && req.method === "POST") return next();
@@ -78,7 +89,6 @@ app.use("/", reportesRoutes);
 // - Para habilitar: ENABLE_SWAGGER=true
 // - Para proteger con usuario/clave: SWAGGER_USER / SWAGGER_PASS
 const enableSwagger = String(process.env.ENABLE_SWAGGER || "").toLowerCase() === "true";
-const isProd = String(process.env.NODE_ENV || "").toLowerCase() === "production";
 const swaggerUser = (process.env.SWAGGER_USER || "").trim();
 const swaggerPass = process.env.SWAGGER_PASS || "";
 
@@ -119,4 +129,26 @@ if (!isProd || enableSwagger) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+
+  let autoCloseRunning = false;
+  const runAutoCloseCheck = async (trigger) => {
+    if (autoCloseRunning) return;
+    autoCloseRunning = true;
+    try {
+      const result = await CajaService.autoCloseOpenCajaIfNeeded();
+      if (result?.closed) {
+        console.log(
+          `[CajaAutoClose:${trigger}] Caja #${result?.cierre?.id_caja} cerrada automáticamente (${result?.motivo}).`
+        );
+      }
+    } catch (err) {
+      console.error(`[CajaAutoClose:${trigger}] Error:`, err.message);
+    } finally {
+      autoCloseRunning = false;
+    }
+  };
+
+  runAutoCloseCheck("startup");
+  const everyMs = Math.max(30_000, Number(process.env.CAJA_AUTOCLOSE_CHECK_MS) || 60_000);
+  setInterval(() => runAutoCloseCheck("interval"), everyMs);
 });

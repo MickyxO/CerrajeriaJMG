@@ -1,33 +1,228 @@
-/* Global styles */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   color-scheme: light;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  line-height: 1.4;
+  line-height: 1.45;
+  --jmg-navy: #071b4a;
+  --jmg-navy-2: #1f58d6;
+  --jmg-yellow: #d8b58f;
+  --jmg-white: #ffffff;
+  --jmg-bg: #e8eef8;
+  --jmg-text: #112445;
+  --jmg-muted: #48658d;
+  --jmg-border: rgba(7, 27, 74, 0.26);
+  --jmg-shadow: 0 20px 48px rgba(8, 28, 77, 0.22);
+  --jmg-card-gradient: linear-gradient(145deg, rgba(7, 27, 74, 0.24) 0%, rgba(68, 133, 245, 0.4) 100%);
+  --jmg-card-gradient-strong: linear-gradient(145deg, rgba(7, 27, 74, 0.98) 0%, rgba(31, 88, 214, 0.95) 100%);
 }
 
-body {
-  margin: 0;
-  background: #f6f7fb;
-  color: #0f172a;
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", "Segoe UI", Tahoma, sans-serif;
+    color: var(--jmg-text);
+    background:
+      radial-gradient(980px 620px at 4% -14%, rgba(21, 83, 195, 0.26) 0%, transparent 62%),
+      radial-gradient(1040px 600px at 95% 0%, rgba(34, 119, 245, 0.22) 0%, transparent 66%),
+      linear-gradient(180deg, #f2f6ff 0%, var(--jmg-bg) 64%, #dce8fa 100%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  input,
+  button,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply transition-all duration-200 ease-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background: rgba(62, 100, 116, 0.25);
+    color: #13242d;
+  }
 }
 
-input, button {
-  font: inherit;
-}
+@layer components {
+  .dash,
+  .itemsPage,
+  .comboPage,
+  .catPage,
+  .cajaPage,
+  .invPage,
+  .ventasPage,
+  .ventaDetallePage,
+  .repPage,
+  .usrPage,
+  .posPage {
+    @apply relative overflow-hidden rounded-[30px] border p-4 shadow-soft backdrop-blur-md md:p-6;
+    border-color: rgba(7, 27, 74, 0.24);
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.84) 0%, rgba(216, 230, 255, 0.9) 100%);
+  }
 
-label {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 12px;
-}
+  .dash,
+  .itemsPage,
+  .comboPage,
+  .catPage,
+  .cajaPage,
+  .invPage,
+  .ventasPage,
+  .ventaDetallePage,
+  .repPage,
+  .usrPage,
+  .posPage {
+    animation: page-enter 320ms ease-out;
+  }
 
-button {
-  padding: 8px 10px;
-  cursor: pointer;
-}
+  .dash::before,
+  .itemsPage::before,
+  .comboPage::before,
+  .catPage::before,
+  .cajaPage::before,
+  .invPage::before,
+  .ventasPage::before,
+  .ventaDetallePage::before,
+  .repPage::before,
+  .usrPage::before,
+  .posPage::before {
+    content: "";
+    position: absolute;
+    top: -160px;
+    left: -90px;
+    width: 320px;
+    height: 320px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 40% 40%, rgba(22, 78, 196, 0.24), rgba(22, 78, 196, 0));
+    pointer-events: none;
+  }
 
-/* Mejor soporte táctil (PWA/móvil) */
-button, a {
-  -webkit-tap-highlight-color: transparent;
+  .panel {
+    @apply border shadow-soft backdrop-blur-sm;
+    border-color: rgba(7, 27, 74, 0.24);
+    background: var(--jmg-card-gradient), rgba(255, 255, 255, 0.92);
+  }
+
+  .panelHead {
+    background: var(--jmg-card-gradient-strong);
+  }
+
+  .jmg-card {
+    @apply rounded-3xl border shadow-soft backdrop-blur-sm;
+    border-color: rgba(7, 27, 74, 0.24);
+    background: var(--jmg-card-gradient), rgba(255, 255, 255, 0.92);
+  }
+
+  .jmg-card-head {
+    background: linear-gradient(145deg, rgba(7, 27, 74, 0.24) 0%, rgba(90, 156, 246, 0.35) 100%);
+  }
+
+  .jmg-toolbar {
+    @apply rounded-2xl border p-3 backdrop-blur-sm;
+    border-color: rgba(7, 27, 74, 0.26);
+    background: linear-gradient(145deg, rgba(7, 27, 74, 0.26) 0%, rgba(84, 148, 239, 0.38) 100%), rgba(255, 255, 255, 0.74);
+  }
+
+  .pill {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.34);
+  }
+
+  .textInput,
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    @apply rounded-xl border bg-white/[0.9] px-3 py-2 text-slate-700 shadow-sm outline-none;
+    border-color: rgba(7, 27, 74, 0.24);
+    box-shadow: 0 2px 10px rgba(8, 28, 77, 0.08);
+  }
+
+  .textInput:focus,
+  input[type="text"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: rgba(24, 86, 212, 0.56);
+    box-shadow: 0 0 0 4px rgba(84, 148, 239, 0.28);
+  }
+
+  .primary,
+  .primaryButton,
+  .headButton,
+  .invBtnPrimary,
+  .ventasPrimary {
+    @apply rounded-xl border text-slate-50;
+    border-color: rgba(7, 27, 74, 0.35);
+    background: linear-gradient(145deg, rgba(7, 27, 74, 0.98) 0%, rgba(31, 88, 214, 0.95) 100%);
+    box-shadow: 0 12px 24px rgba(10, 45, 121, 0.28);
+  }
+
+  .primary:hover,
+  .primaryButton:hover,
+  .headButton:hover,
+  .invBtnPrimary:hover,
+  .ventasPrimary:hover {
+    filter: brightness(1.07);
+  }
+
+  .ghost,
+  .secondaryButton,
+  .invBtn,
+  .ventasChip {
+    @apply rounded-xl border bg-white/90 text-slate-700;
+    border-color: rgba(7, 27, 74, 0.26);
+  }
+
+  .ghost:hover,
+  .secondaryButton:hover,
+  .invBtn:hover,
+  .ventasChip:hover {
+    background: rgba(128, 175, 246, 0.25);
+  }
+
+  .status,
+  .notice {
+    @apply rounded-2xl border text-slate-700;
+    border-color: rgba(31, 88, 214, 0.24);
+    background: rgba(186, 216, 255, 0.34);
+  }
+
+  .statusError,
+  .error,
+  .smallError,
+  .ventasError {
+    @apply border-rose-200 bg-rose-50 text-rose-700;
+  }
+
+  .row {
+    @apply transition-all duration-200;
+  }
+
+  .row:hover {
+    transform: translateY(-1px);
+  }
 }

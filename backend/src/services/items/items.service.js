@@ -3,6 +3,12 @@ const Items = require("../../models/items/items.model");
 
 class ItemsService {
 
+    _toPositiveInt(value) {
+        const n = Number(value);
+        if (!Number.isInteger(n) || n <= 0) return null;
+        return n;
+    }
+
     // Función auxiliar para mapear de BD (snake_case) a Modelo (PascalCase)
     _mapRowToModel(row) {
         return new Items(
@@ -153,6 +159,154 @@ class ItemsService {
         }
         catch (err) {
             console.error("Error buscando items por clasificación: ", err.message);
+            throw err;
+        }
+    }
+
+    async getPosCatalogo({
+        q = "",
+        idCategoria = null,
+        incluyeItems = true,
+        incluyeServicios = true,
+        soloConStock = false,
+        limit = 180,
+    } = {}) {
+        try {
+            if (!incluyeItems && !incluyeServicios) {
+                return { categorias: [], articulos: [] };
+            }
+
+            const normalizedLimit = Math.min(Math.max(Number(limit) || 180, 20), 500);
+            const qClean = String(q || "").trim();
+            const qAsId = this._toPositiveInt(qClean);
+
+            const baseParams = [];
+            let idx = 1;
+            const baseWhere = ["i.activo = TRUE"];
+
+            if (soloConStock) {
+                baseWhere.push("(i.es_servicio = TRUE OR i.stock_actual > 0)");
+            }
+
+            if (incluyeItems && !incluyeServicios) {
+                baseWhere.push("i.es_servicio = FALSE");
+            } else if (!incluyeItems && incluyeServicios) {
+                baseWhere.push("i.es_servicio = TRUE");
+            }
+
+            if (qClean) {
+                if (qAsId) {
+                    baseWhere.push(`(
+                        i.id_item = $${idx}
+                        OR i.nombre ILIKE $${idx + 1}
+                        OR COALESCE(i.compatibilidad_marca, '') ILIKE $${idx + 1}
+                        OR COALESCE(i.tipo_chip, '') ILIKE $${idx + 1}
+                        OR COALESCE(i.frecuencia, '') ILIKE $${idx + 1}
+                    )`);
+                    baseParams.push(qAsId, `%${qClean}%`);
+                    idx += 2;
+                } else {
+                    baseWhere.push(`(
+                        i.nombre ILIKE $${idx}
+                        OR COALESCE(i.compatibilidad_marca, '') ILIKE $${idx}
+                        OR COALESCE(i.tipo_chip, '') ILIKE $${idx}
+                        OR COALESCE(i.frecuencia, '') ILIKE $${idx}
+                    )`);
+                    baseParams.push(`%${qClean}%`);
+                    idx += 1;
+                }
+            }
+
+            const baseWhereSql = baseWhere.length > 0 ? `WHERE ${baseWhere.join(" AND ")}` : "";
+
+            const categoriasQuery = `
+                SELECT
+                    c.id_categoria,
+                    c.nombre,
+                    c.clasificacion,
+                    COUNT(i.id_item) AS total_items,
+                    COUNT(i.id_item) FILTER (WHERE i.es_servicio = TRUE) AS total_servicios
+                FROM categorias c
+                LEFT JOIN items i ON i.id_categoria = c.id_categoria
+                    AND i.activo = TRUE
+                    ${soloConStock ? "AND (i.es_servicio = TRUE OR i.stock_actual > 0)" : ""}
+                    ${incluyeItems && !incluyeServicios ? "AND i.es_servicio = FALSE" : ""}
+                    ${!incluyeItems && incluyeServicios ? "AND i.es_servicio = TRUE" : ""}
+                GROUP BY c.id_categoria, c.nombre, c.clasificacion
+                HAVING COUNT(i.id_item) > 0
+                ORDER BY c.nombre ASC
+            `;
+
+            const categoriasRes = await pool.query(categoriasQuery);
+
+            const articleParams = [...baseParams];
+            let articleWhereSql = baseWhereSql;
+
+            if (idCategoria) {
+                const parsedCategoria = this._toPositiveInt(idCategoria);
+                if (parsedCategoria) {
+                    articleParams.push(parsedCategoria);
+                    articleWhereSql = articleWhereSql
+                        ? `${articleWhereSql} AND i.id_categoria = $${articleParams.length}`
+                        : `WHERE i.id_categoria = $${articleParams.length}`;
+                }
+            }
+
+            articleParams.push(normalizedLimit);
+
+            const articulosQuery = `
+                SELECT
+                    i.id_item,
+                    i.nombre,
+                    i.descripcion,
+                    i.id_categoria,
+                    i.precio_venta,
+                    i.es_servicio,
+                    i.stock_actual,
+                    i.stock_minimo,
+                    i.compatibilidad_marca,
+                    i.tipo_chip,
+                    i.frecuencia,
+                    i.imagen_url,
+                    c.nombre AS nombre_categoria,
+                    c.clasificacion AS clasificacion_categoria
+                FROM items i
+                INNER JOIN categorias c ON c.id_categoria = i.id_categoria
+                ${articleWhereSql}
+                ORDER BY i.id_categoria ASC, i.es_servicio ASC, i.nombre ASC
+                LIMIT $${articleParams.length}
+            `;
+
+            const articulosRes = await pool.query(articulosQuery, articleParams);
+
+            const categorias = categoriasRes.rows.map((row) => ({
+                IdCategoria: row.id_categoria,
+                NombreCategoria: row.nombre,
+                Clasificacion: row.clasificacion,
+                TotalItems: Number(row.total_items) || 0,
+                TotalServicios: Number(row.total_servicios) || 0,
+            }));
+
+            const articulos = articulosRes.rows.map((row) => ({
+                IdItem: row.id_item,
+                Nombre: row.nombre,
+                Descripcion: row.descripcion,
+                IdCategoria: row.id_categoria,
+                NombreCategoria: row.nombre_categoria,
+                ClasificacionCategoria: row.clasificacion_categoria,
+                PrecioVenta: row.precio_venta,
+                EsServicio: row.es_servicio,
+                StockActual: row.stock_actual,
+                StockMinimo: row.stock_minimo,
+                CompatibilidadMarca: row.compatibilidad_marca,
+                TipoChip: row.tipo_chip,
+                Frecuencia: row.frecuencia,
+                ImagenUrl: row.imagen_url,
+            }));
+
+            return { categorias, articulos };
+        } catch (err) {
+            console.error("Error obteniendo catálogo POS: ", err.message);
             throw err;
         }
     }

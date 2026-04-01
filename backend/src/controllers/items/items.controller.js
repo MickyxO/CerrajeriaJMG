@@ -51,6 +51,29 @@ async function safeUnlink(absPath) {
 }
 
 class ItemsController {
+    async getPosCatalog(req, res) {
+        try {
+            const includeItemsRaw = req.query?.incluyeItems;
+            const includeServiciosRaw = req.query?.incluyeServicios;
+
+            const incluyeItems = includeItemsRaw === undefined ? true : parseBool(includeItemsRaw);
+            const incluyeServicios = includeServiciosRaw === undefined ? true : parseBool(includeServiciosRaw);
+
+            const data = await ItemsService.getPosCatalogo({
+                q: req.query?.q || "",
+                idCategoria: req.query?.idCategoria || null,
+                incluyeItems,
+                incluyeServicios,
+                soloConStock: parseBool(req.query?.soloConStock),
+                limit: req.query?.limit,
+            });
+
+            return res.status(200).json(data);
+        } catch (err) {
+            return res.status(500).json({ error: err.message });
+        }
+    }
+
     async getAll(req, res) {
         try {
             const incluyeInactivos = parseBool(req.query?.incluyeInactivos);

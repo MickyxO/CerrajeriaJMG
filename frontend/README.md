@@ -18,7 +18,7 @@ En el frontend se agregó un helper `apiRequest` y servicios en `src/services/` 
 
 Por defecto:
 
-- `VITE_API_URL=http://localhost:4000`
+- `VITE_API_URL=http://localhost:3000`
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

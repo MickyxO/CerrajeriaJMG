@@ -3,6 +3,14 @@ const { Caja, MovimientoCaja } = require("../../models/caja/caja.model.js");
 
 const BUSINESS_TZ = process.env.DB_TIMEZONE || process.env.APP_TIMEZONE || 'America/Mexico_City';
 
+function toIsoDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    const raw = String(value);
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : null;
+}
+
 class CajaService {
 
     // Helper para mapear Movimientos
@@ -17,6 +25,108 @@ class CajaService {
             row.id_usuario,
             row.tipo_movimiento
         );
+    }
+
+    async getBusinessNowInfo() {
+        try {
+            const query = `
+                SELECT
+                    timezone($1, now()) AS now_local,
+                    timezone($1, now())::date AS fecha_local,
+                    EXTRACT(HOUR FROM timezone($1, now()))::int AS hora_local,
+                    EXTRACT(MINUTE FROM timezone($1, now()))::int AS minuto_local
+            `;
+            const { rows } = await pool.query(query, [BUSINESS_TZ]);
+            const row = rows[0] || {};
+            return {
+                nowLocal: row.now_local || null,
+                fechaLocal: toIsoDate(row.fecha_local),
+                horaLocal: Number(row.hora_local ?? 0),
+                minutoLocal: Number(row.minuto_local ?? 0),
+            };
+        } catch (err) {
+            console.error("Error obteniendo hora local de negocio: ", err.message);
+            throw err;
+        }
+    }
+
+    async cerrarCajaAutomatica(idCaja, motivo = 'SCHEDULE_2359') {
+        try {
+            const query = `
+                UPDATE caja
+                SET estado = 'CERRADA',
+                    hora_cierre = timezone('UTC', now()),
+                    monto_final = COALESCE(monto_actual, monto_inicial),
+                    id_usuario_cierre = NULL
+                WHERE id_caja = $1
+                  AND estado = 'ABIERTA'
+                RETURNING id_caja, fecha_apertura, hora_apertura, hora_cierre, monto_inicial, monto_actual, monto_final
+            `;
+            const { rows } = await pool.query(query, [idCaja]);
+            if (rows.length === 0) return null;
+            return {
+                ...rows[0],
+                motivo,
+            };
+        } catch (err) {
+            console.error("Error cerrando caja automáticamente: ", err.message);
+            throw err;
+        }
+    }
+
+    async autoCloseOpenCajaIfNeeded() {
+        const cajaAbierta = await this.getCajaAbierta();
+        if (!cajaAbierta) return { closed: false };
+
+        const biz = await this.getBusinessNowInfo();
+        const fechaApertura = toIsoDate(cajaAbierta?.FechaApertura);
+        const fechaLocal = biz?.fechaLocal;
+
+        if (!fechaApertura || !fechaLocal) return { closed: false };
+
+        const esCajaDeDiaPrevio = fechaApertura < fechaLocal;
+        const esMomentoProgramado =
+            fechaApertura === fechaLocal && biz.horaLocal === 23 && biz.minutoLocal >= 59;
+
+        if (!esCajaDeDiaPrevio && !esMomentoProgramado) {
+            return { closed: false };
+        }
+
+        const motivo = esCajaDeDiaPrevio ? 'STALE_PREVIOUS_DAY' : 'SCHEDULE_2359';
+        const cierre = await this.cerrarCajaAutomatica(cajaAbierta.IdCaja, motivo);
+        return {
+            closed: Boolean(cierre),
+            motivo,
+            cierre,
+        };
+    }
+
+    async getUltimoCierreAutomaticoReciente(hoursWindow = 48) {
+        try {
+            const query = `
+                SELECT id_caja, fecha_apertura, hora_apertura, hora_cierre, monto_final
+                FROM caja
+                WHERE estado = 'CERRADA'
+                  AND id_usuario_cierre IS NULL
+                  AND hora_cierre IS NOT NULL
+                  AND timezone($1, hora_cierre AT TIME ZONE 'UTC') >= timezone($1, now()) - make_interval(hours => $2::int)
+                ORDER BY hora_cierre DESC
+                LIMIT 1
+            `;
+            const { rows } = await pool.query(query, [BUSINESS_TZ, Number(hoursWindow) || 48]);
+            if (rows.length === 0) return null;
+            const r = rows[0];
+            return {
+                idCaja: r.id_caja,
+                fechaApertura: r.fecha_apertura,
+                horaApertura: r.hora_apertura,
+                horaCierre: r.hora_cierre,
+                montoFinal: r.monto_final,
+            };
+        } catch (err) {
+            console.error("Error consultando último cierre automático: ", err.message);
+            throw err;
+        }
     }
 
     // Caja ABIERTA (cualquier fecha). Útil para cerrar una caja vieja que quedó abierta.
@@ -117,6 +227,9 @@ class CajaService {
         if (montoInicial === undefined || montoInicial < 0) throw new Error("Monto inicial inválido.");
 
         try {
+            // Si una caja vieja quedó abierta, se intenta cerrar automáticamente.
+            await this.autoCloseOpenCajaIfNeeded();
+
             const abierta = await this.getCajaAbierta();
             if (abierta) throw new Error("Ya existe una caja abierta. Debe cerrarla antes de abrir otra.");
 
@@ -155,6 +268,71 @@ class CajaService {
         } catch (err) {
             console.error("Error cerrando caja: ", err.message);
             throw err;
+        }
+    }
+
+    async actualizarMontoInicialCaja(montoInicial, idUsuario) {
+        const nuevoMontoInicial = Number(montoInicial);
+        if (!Number.isFinite(nuevoMontoInicial) || nuevoMontoInicial < 0) {
+            throw new Error("Monto inicial inválido.");
+        }
+
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            const resCaja = await client.query(
+                `
+                    SELECT id_caja, monto_inicial, monto_actual
+                    FROM caja
+                    WHERE estado = 'ABIERTA'
+                      AND fecha_apertura = timezone($1, now())::date
+                    ORDER BY hora_apertura DESC
+                    LIMIT 1
+                    FOR UPDATE
+                `,
+                [BUSINESS_TZ]
+            );
+
+            if (resCaja.rows.length === 0) {
+                throw new Error("No hay caja abierta hoy para actualizar monto inicial.");
+            }
+
+            const caja = resCaja.rows[0];
+            const montoInicialActual = Number(caja.monto_inicial ?? 0);
+            const montoActualCaja = Number(caja.monto_actual ?? 0);
+            const diferencia = nuevoMontoInicial - montoInicialActual;
+            const nuevoMontoActual = montoActualCaja + diferencia;
+
+            if (nuevoMontoActual < 0) {
+                throw new Error("El ajuste deja el efectivo en caja por debajo de 0.");
+            }
+
+            const resUpdate = await client.query(
+                `
+                    UPDATE caja
+                    SET monto_inicial = $1,
+                        monto_actual = $2,
+                        id_usuario_apertura = COALESCE($3, id_usuario_apertura)
+                    WHERE id_caja = $4
+                    RETURNING *
+                `,
+                [nuevoMontoInicial, nuevoMontoActual, idUsuario ?? null, caja.id_caja]
+            );
+
+            await client.query('COMMIT');
+
+            return {
+                ...resUpdate.rows[0],
+                diferencia_aplicada: diferencia,
+            };
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("Error actualizando monto inicial de caja: ", err.message);
+            throw err;
+        } finally {
+            client.release();
         }
     }
 

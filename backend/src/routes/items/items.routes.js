@@ -20,6 +20,52 @@ router.get("/getitems", ItemsController.getAll);
 
 /**
  * @swagger
+ * /pos/catalogo:
+ *   get:
+ *     tags:
+ *       - Items
+ *     summary: Catálogo optimizado para POS (categorías + artículos)
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Texto para filtrar por nombre/marca/chip/frecuencia o ID
+ *       - in: query
+ *         name: idCategoria
+ *         schema:
+ *           type: integer
+ *         description: ID de la categoría seleccionada
+ *       - in: query
+ *         name: incluyeItems
+ *         schema:
+ *           type: boolean
+ *         description: Incluir artículos físicos
+ *       - in: query
+ *         name: incluyeServicios
+ *         schema:
+ *           type: boolean
+ *         description: Incluir servicios
+ *       - in: query
+ *         name: soloConStock
+ *         schema:
+ *           type: boolean
+ *         description: Solo artículos con stock disponible (servicios no se filtran)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Límite de resultados (20 a 500)
+ *     responses:
+ *       200:
+ *         description: Catálogo para POS
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get("/pos/catalogo", ItemsController.getPosCatalog);
+
+/**
+ * @swagger
  * /getitem/{id}:
  *   get:
  *     tags:

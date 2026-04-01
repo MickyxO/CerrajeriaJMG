@@ -41,7 +41,7 @@
 }
 
 .ventaBack:hover {
-  background: rgba(3, 25, 64, 0.04);
+  background: rgba(43, 72, 86, 0.04);
 }
 
 .ventaDetalleGrid {
@@ -92,8 +92,8 @@
   outline: none;
 }
 .ventaModalField input:focus {
-  border-color: rgba(244, 194, 0, 0.85);
-  box-shadow: 0 0 0 3px rgba(244, 194, 0, 0.18);
+  border-color: rgba(216, 181, 143, 0.85);
+  box-shadow: 0 0 0 3px rgba(216, 181, 143, 0.18);
 }
 .ventaModalError {
   margin-top: 10px;
@@ -133,7 +133,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
+  background: linear-gradient(135deg, rgba(43, 72, 86, 0.96) 0%, rgba(62, 100, 116, 0.96) 100%);
   color: #fff;
 }
 
@@ -224,7 +224,7 @@
   border: 1px solid var(--jmg-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(3, 25, 64, 0.02);
+  background: rgba(43, 72, 86, 0.02);
 }
 
 .ventaComboName {
@@ -270,7 +270,7 @@
   text-align: left;
   color: var(--jmg-muted);
   font-weight: 900;
-  background: rgba(3, 25, 64, 0.03);
+  background: rgba(43, 72, 86, 0.03);
 }
 
 .ventaRight {

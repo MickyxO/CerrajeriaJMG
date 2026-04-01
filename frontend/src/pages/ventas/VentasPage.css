@@ -8,6 +8,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  border: 1px solid rgba(7, 27, 74, 0.24);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.22) 0%, rgba(88, 150, 245, 0.34) 100%), rgba(255, 255, 255, 0.78);
 }
 
 .ventasTitle {
@@ -41,13 +45,13 @@
 }
 
 .ventasChip:hover {
-  background: rgba(3, 25, 64, 0.04);
+  background: rgba(88, 150, 245, 0.2);
 }
 
 .ventasPrimary {
-  border: 1px solid rgba(244, 194, 0, 0.65);
-  background: rgba(244, 194, 0, 0.22);
-  color: var(--jmg-navy);
+  border: 1px solid rgba(7, 27, 74, 0.34);
+  background: linear-gradient(145deg, rgba(7, 27, 74, 0.98) 0%, rgba(31, 88, 214, 0.95) 100%);
+  color: #eff6ff;
   height: 32px;
   padding: 0 12px;
   border-radius: 999px;
@@ -67,7 +71,7 @@
 }
 
 .panel {
-  background: #fff;
+  background: var(--jmg-card-gradient), rgba(255, 255, 255, 0.92);
   border: 1px solid var(--jmg-border);
   border-radius: 16px;
   overflow: hidden;
@@ -84,7 +88,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: linear-gradient(135deg, rgba(11, 31, 59, 0.96) 0%, rgba(15, 42, 82, 0.96) 100%);
+  background: var(--jmg-card-gradient-strong);
   color: #fff;
 }
 
@@ -133,6 +137,7 @@
   border-radius: 12px;
   padding: 10px 12px;
   font-weight: 800;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .ventasFieldFull {
@@ -183,7 +188,7 @@
   text-align: left;
   color: var(--jmg-muted);
   font-weight: 900;
-  background: rgba(3, 25, 64, 0.03);
+  background: rgba(88, 150, 245, 0.14);
 }
 
 .ventasRight {
@@ -191,7 +196,7 @@
 }
 
 .ventasRow:hover {
-  background: rgba(3, 25, 64, 0.02);
+  background: rgba(43, 72, 86, 0.02);
 }
 
 .ventasId {
@@ -210,8 +215,8 @@
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  background: rgba(244, 194, 0, 0.22);
-  border: 1px solid rgba(244, 194, 0, 0.55);
+  background: rgba(88, 150, 245, 0.2);
+  border: 1px solid rgba(31, 88, 214, 0.45);
   color: var(--jmg-navy);
   font-weight: 1000;
   font-size: 11px;
@@ -235,7 +240,7 @@
 }
 
 .ventasLink:hover {
-  background: rgba(3, 25, 64, 0.04);
+  background: rgba(88, 150, 245, 0.2);
 }
 
 .ventasEmpty {

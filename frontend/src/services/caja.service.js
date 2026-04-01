@@ -27,6 +27,14 @@ export const cajaService = {
     });
   },
 
+  /** Backend: PUT /putmontoinicialcaja */
+  actualizarMontoInicial({ montoInicial, idUsuario }) {
+    return apiRequest("/putmontoinicialcaja", {
+      method: "PUT",
+      body: { montoInicial, idUsuario },
+    });
+  },
+
   /** Backend: POST /postgasto */
   registrarGasto(payload) {
     return apiRequest("/postgasto", { method: "POST", body: payload });
