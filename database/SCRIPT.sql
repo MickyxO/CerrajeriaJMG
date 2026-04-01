@@ -13,6 +13,7 @@ CREATE TABLE usuarios (
 CREATE TABLE categorias (
     id_categoria SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
+    imagen_url TEXT,
     clasificacion TEXT NOT NULL DEFAULT 'Producto Automotriz' -- Sera producto automotriz, producto residencial y servicios
 );
 

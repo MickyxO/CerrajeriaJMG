@@ -28,6 +28,29 @@ export const categoriaService = {
     return apiRequest(`/putcategoria/${id}`, { method: "PUT", body: payload });
   },
 
+  /** Backend: PUT /putcategoriaimagen/:id */
+  subirImagen(id, file) {
+    const formData = new FormData();
+    formData.append("imagen", file);
+    return apiRequest(`/putcategoriaimagen/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+  },
+
+  /** Backend: PUT /putcategoriaimagenurl/:id */
+  subirImagenDesdeUrl(id, url) {
+    return apiRequest(`/putcategoriaimagenurl/${id}`, {
+      method: "PUT",
+      body: { url },
+    });
+  },
+
+  /** Backend: DELETE /deletecategoriaimagen/:id */
+  eliminarImagen(id) {
+    return apiRequest(`/deletecategoriaimagen/${id}`, { method: "DELETE" });
+  },
+
   /** Backend: DELETE /deletecategoria/:id */
   eliminarCategoria(id) {
     return apiRequest(`/deletecategoria/${id}`, { method: "DELETE" });

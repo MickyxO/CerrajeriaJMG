@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const CategoriaController = require("../../controllers/categoria/categoria.controller");
+const { uploadCategoryImage } = require("../../middlewares/upload");
 
 /**
  * @swagger
@@ -130,6 +131,16 @@ router.post("/postcategoria", CategoriaController.create);
  *         description: Error del servidor
  */
 router.put("/putcategoria/:id", CategoriaController.update);
+
+router.put(
+	"/putcategoriaimagen/:id",
+	uploadCategoryImage.single("imagen"),
+	CategoriaController.uploadImagen
+);
+
+router.put("/putcategoriaimagenurl/:id", CategoriaController.uploadImagenDesdeUrl);
+
+router.delete("/deletecategoriaimagen/:id", CategoriaController.deleteImagen);
 
 /**
  * @swagger

@@ -135,6 +135,51 @@ export default function PosPage() {
     [categorias, selectedCategoriaId]
   );
 
+  const categoriasFiltradas = useMemo(() => {
+    const all = Array.isArray(categorias) ? categorias : [];
+    const query = quickSearch.trim().toLowerCase();
+    if (!query) return all;
+
+    if (quickSearchMode === "ID") {
+      const qId = query.replace(/\D/g, "");
+      if (!qId) return [];
+      return all
+        .map((c) => {
+          const idText = String(c?.IdCategoria ?? "");
+          if (!idText.includes(qId)) return null;
+
+          const score = idText === qId ? 1000 : idText.startsWith(qId) ? 700 : 500;
+          return { c, score };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score || String(a.c?.NombreCategoria || "").localeCompare(String(b.c?.NombreCategoria || ""), "es"))
+        .map((x) => x.c);
+    }
+
+    return all
+      .map((c) => {
+        const nombre = String(c?.NombreCategoria ?? "").toLowerCase();
+        const clasif = String(c?.Clasificacion ?? "").toLowerCase();
+        let score = 0;
+
+        if (nombre === query) score += 1100;
+        else if (nombre.startsWith(query)) score += 850;
+        else if (nombre.includes(query)) score += 520;
+
+        if (clasif === query) score += 650;
+        else if (clasif.startsWith(query)) score += 420;
+        else if (clasif.includes(query)) score += 260;
+
+        if (score === 0) return null;
+        score -= Math.min(nombre.length, 60) * 0.8;
+
+        return { c, score };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score || String(a.c?.NombreCategoria || "").localeCompare(String(b.c?.NombreCategoria || ""), "es"))
+      .map((x) => x.c);
+  }, [categorias, quickSearch, quickSearchMode]);
+
   const articulosOrdenados = useMemo(() => {
     const base = Array.isArray(catalogo.articulos) ? [...catalogo.articulos] : [];
     const query = quickSearch.trim().toLowerCase();
@@ -412,7 +457,15 @@ export default function PosPage() {
                     className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                     value={quickSearch}
                     onChange={(e) => setQuickSearch(e.target.value)}
-                    placeholder={quickSearchMode === "ID" ? "Buscar por ID (ej. 24)" : "Mini buscador por nombre, descripción o marca"}
+                    placeholder={
+                      quickSearchMode === "ID"
+                        ? selectedCategoriaId
+                          ? "Buscar producto por ID (ej. 24)"
+                          : "Buscar categoria por ID (ej. 3)"
+                        : selectedCategoriaId
+                          ? "Buscar por nombre, descripción o marca"
+                          : "Buscar categoria por nombre o clasificación"
+                    }
                     inputMode={quickSearchMode === "ID" ? "numeric" : "text"}
                   />
                 </div>
@@ -427,9 +480,9 @@ export default function PosPage() {
 
                 {!selectedCategoriaId ? (
                   <>
-                    <div className="mb-3 text-sm text-slate-500">Selecciona una categoria para abrir sus productos.</div>
+                    <div className="mb-3 text-sm text-slate-500">Selecciona una categoria para abrir sus productos. El buscador también filtra categorías.</div>
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-                      {categorias.map((cat) => (
+                      {categoriasFiltradas.map((cat) => (
                         <button
                           type="button"
                           key={`cat-${cat.IdCategoria}`}
@@ -438,13 +491,28 @@ export default function PosPage() {
                           title={cat.Clasificacion || ""}
                         >
                           <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-600">
-                            {iconTextFromName(cat.NombreCategoria)}
+                            {cat?.ImagenUrl ? (
+                              <img
+                                src={resolveImagenUrl(cat.ImagenUrl, IMAGE_VARIANTS.THUMB)}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                className="h-full w-full rounded-xl object-cover"
+                              />
+                            ) : (
+                              iconTextFromName(cat.NombreCategoria)
+                            )}
                           </div>
-                          <div className="line-clamp-2 text-sm font-semibold text-slate-800">{cat.NombreCategoria}</div>
+                          <div className="text-sm font-semibold text-slate-800 break-words whitespace-normal">{cat.NombreCategoria}</div>
                           <div className="mt-1 text-xs text-slate-500">{cat.TotalItems} productos</div>
                         </button>
                       ))}
                     </div>
+                    {!catalogLoading && categoriasFiltradas.length === 0 ? (
+                      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                        No hay categorias que coincidan con la búsqueda.
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <>
@@ -484,7 +552,7 @@ export default function PosPage() {
                             </div>
 
                             <div className="grid gap-1 p-3">
-                              <div className="line-clamp-2 min-h-[2.6rem] text-sm font-semibold text-slate-800">{item.Nombre}</div>
+                              <div className="text-sm font-semibold text-slate-800 break-words whitespace-normal">{item.Nombre}</div>
                               <div className="text-xs text-slate-500">{item.NombreCategoria}</div>
                               <div className="mt-1 flex items-center justify-between gap-2">
                                 <strong className="text-sm text-slate-800">{formatMoney(item.PrecioVenta)}</strong>
@@ -527,7 +595,7 @@ export default function PosPage() {
                       className="group rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
                       onClick={() => addCombo(combo, 1)}
                     >
-                      <div className="line-clamp-2 min-h-[2.6rem] text-sm font-semibold text-slate-800">{combo.NombreCombo}</div>
+                      <div className="text-sm font-semibold text-slate-800 break-words whitespace-normal">{combo.NombreCombo}</div>
                       <div className="mt-1 text-xs text-slate-500">{(combo.Items || []).length} productos</div>
                       <div className="mt-2 text-sm font-semibold text-slate-800">{formatMoney(combo.PrecioSugerido)}</div>
                     </button>
