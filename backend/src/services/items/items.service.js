@@ -1,6 +1,17 @@
 const pool = require("../../config/db");
 const Items = require("../../models/items/items.model");
 
+let ensureCategoriaImageColumnPromise = null;
+
+async function ensureCategoriaImageColumn() {
+    if (!ensureCategoriaImageColumnPromise) {
+        ensureCategoriaImageColumnPromise = pool.query(
+            "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS imagen_url TEXT"
+        );
+    }
+    await ensureCategoriaImageColumnPromise;
+}
+
 class ItemsService {
 
     _toPositiveInt(value) {
@@ -172,6 +183,8 @@ class ItemsService {
         limit = 180,
     } = {}) {
         try {
+            await ensureCategoriaImageColumn();
+
             if (!incluyeItems && !incluyeServicios) {
                 return { categorias: [], articulos: [] };
             }
@@ -223,6 +236,7 @@ class ItemsService {
                 SELECT
                     c.id_categoria,
                     c.nombre,
+                    c.imagen_url,
                     c.clasificacion,
                     COUNT(i.id_item) AS total_items,
                     COUNT(i.id_item) FILTER (WHERE i.es_servicio = TRUE) AS total_servicios
@@ -232,7 +246,7 @@ class ItemsService {
                     ${soloConStock ? "AND (i.es_servicio = TRUE OR i.stock_actual > 0)" : ""}
                     ${incluyeItems && !incluyeServicios ? "AND i.es_servicio = FALSE" : ""}
                     ${!incluyeItems && incluyeServicios ? "AND i.es_servicio = TRUE" : ""}
-                GROUP BY c.id_categoria, c.nombre, c.clasificacion
+                GROUP BY c.id_categoria, c.nombre, c.imagen_url, c.clasificacion
                 HAVING COUNT(i.id_item) > 0
                 ORDER BY c.nombre ASC
             `;
@@ -282,6 +296,7 @@ class ItemsService {
             const categorias = categoriasRes.rows.map((row) => ({
                 IdCategoria: row.id_categoria,
                 NombreCategoria: row.nombre,
+                ImagenUrl: row.imagen_url,
                 Clasificacion: row.clasificacion,
                 TotalItems: Number(row.total_items) || 0,
                 TotalServicios: Number(row.total_servicios) || 0,
