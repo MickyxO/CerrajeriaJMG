@@ -154,7 +154,7 @@ router.get("/buscarventafecha", VentaController.getByFecha);
  *                   properties:
  *                     tipo:
  *                       type: string
- *                       description: ITEM o COMBO
+ *                       description: ITEM
  *                     id:
  *                       type: integer
  *                     cantidad:

@@ -18,7 +18,18 @@ const initialState = {
 function cartReducer(state, action) {
 	switch (action.type) {
 		case "ADD": {
-				const { key, tipo, id, nombre, precio, cantidad = 1, imagenUrl = null } = action.payload;
+			const {
+				key,
+				tipo,
+				id,
+				nombre,
+				precio,
+				cantidad = 1,
+				imagenUrl = null,
+				esServicio = false,
+				nota = "",
+				refaccionDeKey = null,
+			} = action.payload;
 			const nextQty = Math.max(1, Number(cantidad) || 1);
 			const nextPrice = normalizePrice(precio);
 
@@ -42,9 +53,12 @@ function cartReducer(state, action) {
 						tipo,
 						id,
 						nombre: nombre || "(sin nombre)",
-							imagenUrl,
+						imagenUrl,
 						precio: nextPrice,
 						cantidad: nextQty,
+						esServicio: Boolean(esServicio),
+						nota: String(nota || ""),
+						refaccionDeKey: refaccionDeKey || null,
 					},
 				],
 			};
@@ -56,6 +70,23 @@ function cartReducer(state, action) {
 			return {
 				...state,
 				lines: state.lines.map((l) => (l.key === key ? { ...l, cantidad: nextQty } : l)),
+			};
+		}
+
+		case "SET_PRICE": {
+			const { key, precio } = action.payload;
+			const nextPrice = Math.max(0, normalizePrice(precio));
+			return {
+				...state,
+				lines: state.lines.map((l) => (l.key === key ? { ...l, precio: nextPrice } : l)),
+			};
+		}
+
+		case "SET_NOTE": {
+			const { key, nota } = action.payload;
+			return {
+				...state,
+				lines: state.lines.map((l) => (l.key === key ? { ...l, nota: String(nota || "") } : l)),
 			};
 		}
 
@@ -94,37 +125,34 @@ function cartReducer(state, action) {
 export function CartProvider({ children }) {
 	const [state, dispatch] = useReducer(cartReducer, initialState);
 
-	const addItem = useCallback((item, cantidad = 1) => {
+	const addItem = useCallback((item, cantidad = 1, customKey = null) => {
 		dispatch({
 			type: "ADD",
 			payload: {
-				key: `ITEM:${item.IdItem}`,
+				key: customKey || `ITEM:${item.IdItem}`,
 				tipo: "ITEM",
 				id: item.IdItem,
 				nombre: item.Nombre,
 				imagenUrl: item.ImagenUrl || null,
 				precio: item.PrecioVenta,
 				cantidad,
-			},
-		});
-	}, []);
-
-	const addCombo = useCallback((combo, cantidad = 1) => {
-		dispatch({
-			type: "ADD",
-			payload: {
-				key: `COMBO:${combo.IdCombo}`,
-				tipo: "COMBO",
-				id: combo.IdCombo,
-				nombre: combo.NombreCombo,
-				precio: combo.PrecioSugerido,
-				cantidad,
+				esServicio: Boolean(item.EsServicio),
+				nota: item.nota || "",
+				refaccionDeKey: item.refaccionDeKey || null,
 			},
 		});
 	}, []);
 
 	const setQty = useCallback((key, cantidad) => {
 		dispatch({ type: "SET_QTY", payload: { key, cantidad } });
+	}, []);
+
+	const setPrice = useCallback((key, precio) => {
+		dispatch({ type: "SET_PRICE", payload: { key, precio } });
+	}, []);
+
+	const setLineNote = useCallback((key, nota) => {
+		dispatch({ type: "SET_NOTE", payload: { key, nota } });
 	}, []);
 
 	const inc = useCallback((key) => dispatch({ type: "INC", payload: { key } }), []);
@@ -143,14 +171,15 @@ export function CartProvider({ children }) {
 			lines: state.lines,
 			totals,
 			addItem,
-			addCombo,
 			setQty,
+			setPrice,
+			setLineNote,
 			inc,
 			dec,
 			remove,
 			clear,
 		}),
-		[state.lines, totals, addItem, addCombo, setQty, inc, dec, remove, clear]
+		[state.lines, totals, addItem, setQty, setPrice, setLineNote, inc, dec, remove, clear]
 	);
 
 	return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

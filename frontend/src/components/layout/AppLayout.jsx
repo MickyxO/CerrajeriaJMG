@@ -4,21 +4,19 @@ import { useAuth } from "../../hooks/useAuth";
 
 function BrandMarkLogo({ className = "" }) {
   return (
-    <img
-      className={className}
-      src="/jmg-logo.png"
-      alt="Logo Cerrajería JMG"
-      loading="eager"
-      onError={(e) => {
-        const img = e.currentTarget;
-        if (!img.dataset.fallbackApplied) {
-          img.dataset.fallbackApplied = "1";
-          img.src = "/jmg-logo.jpg";
-          return;
-        }
-        img.style.display = "none";
-      }}
-    />
+    <div
+      className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/25 to-indigo-900/40 border border-white/20 p-2 shadow-inner backdrop-blur-md shrink-0 ${className}`}
+    >
+      <img
+        src="/jmg-logo.svg"
+        alt="Logo Cerrajería JMG"
+        className="h-full w-full object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
+        loading="eager"
+        onError={(e) => {
+          e.currentTarget.src = "/jmg-logo.jpg";
+        }}
+      />
+    </div>
   );
 }
 
@@ -62,15 +60,6 @@ function IconBox(props) {
   );
 }
 
-function IconLayers(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M12 2 2 7l10 5 10-5-10-5Z" />
-      <path d="M2 12l10 5 10-5" />
-      <path d="M2 17l10 5 10-5" />
-    </svg>
-  );
-}
 
 function IconTag(props) {
   return (
@@ -141,16 +130,13 @@ function getUserLabel(user) {
 }
 
 function getPageTitle(pathname) {
-  if (pathname.startsWith("/ventas/")) return "Detalle de venta";
+  if (pathname.startsWith("/ventas/")) return "Detalle de Ticket";
   const map = {
     "/dashboard": "Dashboard",
     "/pos": "Punto de venta",
-    "/items": "Items",
-    "/combos": "Combos",
-    "/categorias": "Categorías",
-    "/ventas": "Ventas",
     "/caja": "Caja",
-    "/inventario": "Inventario",
+    "/ventas": "Historial de Tickets",
+    "/items": "Catálogo & Stock",
     "/reportes": "Reportes",
     "/usuarios": "Usuarios",
   };
@@ -165,18 +151,25 @@ export default function AppLayout() {
 
   const pageTitle = useMemo(() => getPageTitle(location.pathname), [location.pathname]);
 
-  const navItems = useMemo(
+  const navGroups = useMemo(
     () => [
-      { to: "/dashboard", label: "Dashboard", Icon: IconHome },
-      { to: "/pos", label: "POS", Icon: IconCart },
-      { to: "/caja", label: "Caja", Icon: IconCash },
-      { to: "/items", label: "Items", Icon: IconBox },
-      { to: "/combos", label: "Combos", Icon: IconLayers },
-      { to: "/categorias", label: "Categorías", Icon: IconTag },
-      { to: "/ventas", label: "Ventas", Icon: IconReceipt },
-      { to: "/inventario", label: "Inventario", Icon: IconClipboard },
-      { to: "/reportes", label: "Reportes", Icon: IconBarChart },
-      { to: "/usuarios", label: "Usuarios", Icon: IconUsers },
+      {
+        title: "Operaciones",
+        items: [
+          { to: "/dashboard", label: "Dashboard", Icon: IconHome },
+          { to: "/pos", label: "POS", Icon: IconCart },
+          { to: "/caja", label: "Caja", Icon: IconCash },
+          { to: "/ventas", label: "Historial de Tickets", Icon: IconReceipt },
+        ],
+      },
+      {
+        title: "Administración",
+        items: [
+          { to: "/items", label: "Catálogo & Stock", Icon: IconBox },
+          { to: "/reportes", label: "Reportes", Icon: IconBarChart },
+          { to: "/usuarios", label: "Usuarios", Icon: IconUsers },
+        ],
+      },
     ],
     []
   );
@@ -223,26 +216,31 @@ export default function AppLayout() {
         aria-label="Menú"
       >
         <div className="mb-7 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/10 p-3">
-          <BrandMarkLogo
-            className="h-12 w-12 rounded-2xl border border-white/40 bg-white/95 object-contain p-1.5 shadow-[0_10px_24px_rgba(1,18,54,0.35)]"
-          />
+          <BrandMarkLogo className="h-11 w-11" />
           <div className="leading-tight">
-            <strong className="block font-display text-base text-white">Cerrajería JMG</strong>
-            <span className="text-xs font-medium text-blue-100/90">Automotriz y residencial</span>
+            <strong className="block font-black text-base text-white tracking-tight">Cerrajería JMG</strong>
+            <span className="text-[11px] font-semibold text-blue-200/80">Automotriz y residencial</span>
           </div>
         </div>
 
-        <nav className="grid gap-1.5">
-          {navItems.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={navClassName}
-              onClick={() => setDrawerOpen(false)}
-            >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              <span>{label}</span>
-            </NavLink>
+        <nav className="flex flex-col gap-4">
+          {navGroups.map((group) => (
+            <div key={group.title} className="flex flex-col gap-1.5">
+              <span className="px-3 text-[10px] font-black uppercase tracking-wider text-blue-200/70">
+                {group.title}
+              </span>
+              {group.items.map(({ to, label, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={navClassName}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
       </aside>
@@ -250,27 +248,32 @@ export default function AppLayout() {
       <div className="mx-auto grid min-h-dvh max-w-[1800px] lg:grid-cols-[280px_1fr]">
         <aside className="sticky top-0 hidden h-dvh border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 backdrop-blur-xl lg:block" aria-label="Menú">
           <div className="mb-7 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/12 p-3 shadow-soft">
-            <BrandMarkLogo
-              className="h-12 w-12 rounded-2xl border border-white/40 bg-white/95 object-contain p-1.5 shadow-[0_10px_24px_rgba(1,18,54,0.35)]"
-            />
+            <BrandMarkLogo className="h-11 w-11" />
             <div className="leading-tight">
-              <strong className="block font-display text-base text-white">Cerrajería JMG</strong>
-              <span className="text-xs font-medium text-blue-100/90">Automotriz y residencial</span>
+              <strong className="block font-black text-base text-white tracking-tight">Cerrajería JMG</strong>
+              <span className="text-[11px] font-semibold text-blue-200/80">Automotriz y residencial</span>
             </div>
           </div>
 
-          <nav className="grid gap-1.5">
-            {navItems.map(({ to, label, Icon }) => (
-              <NavLink key={to} to={to} className={navClassName}>
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                <span>{label}</span>
-              </NavLink>
+          <nav className="flex flex-col gap-4">
+            {navGroups.map((group) => (
+              <div key={group.title} className="flex flex-col gap-1.5">
+                <span className="px-3 text-[10px] font-black uppercase tracking-wider text-blue-200/70">
+                  {group.title}
+                </span>
+                {group.items.map(({ to, label, Icon }) => (
+                  <NavLink key={to} to={to} className={navClassName}>
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
         </aside>
 
         <div className="flex min-h-dvh min-w-0 flex-col">
-          <header className="sticky top-0 z-30 border-b border-blue-100/55 bg-[linear-gradient(160deg,rgba(7,27,74,0.88)_0%,rgba(31,88,214,0.76)_100%)] px-3 py-3 backdrop-blur-xl sm:px-4 lg:px-6">
+          <header className="sticky top-0 z-30 border-b border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] px-3 py-3 backdrop-blur-xl sm:px-4 lg:px-6">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
                 <button

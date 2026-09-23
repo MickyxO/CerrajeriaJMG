@@ -13,7 +13,9 @@ class Items {
         TipoChip = null,
         Frecuencia = null,
         Activo = true,
-        ImagenUrl = null
+        ImagenUrl = null,
+        CodigoUbicacion = null,
+        AlertaStock = false
     ) {
         this.IdItem = IdItem;
         this.Nombre = Nombre;
@@ -29,6 +31,8 @@ class Items {
         this.Frecuencia = Frecuencia;
         this.Activo = Activo;
         this.ImagenUrl = ImagenUrl;
+        this.CodigoUbicacion = CodigoUbicacion;
+        this.AlertaStock = AlertaStock;
     }
 }
 

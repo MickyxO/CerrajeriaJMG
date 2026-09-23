@@ -138,8 +138,6 @@ router.put(
 	CategoriaController.uploadImagen
 );
 
-router.put("/putcategoriaimagenurl/:id", CategoriaController.uploadImagenDesdeUrl);
-
 router.delete("/deletecategoriaimagen/:id", CategoriaController.deleteImagen);
 
 /**

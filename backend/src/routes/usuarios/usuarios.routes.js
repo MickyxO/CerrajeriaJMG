@@ -1,19 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const UsuariosController = require("../../controllers/usuarios/usuarios.controller");
-const rateLimit = require("express-rate-limit");
-const { requireAuth } = require("../../middlewares/auth");
-
-const loginLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutos
-	max: 5, // Limite de 5 intentos
-	message: {
-		success: false,
-		message: "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.",
-	},
-	standardHeaders: true,
-	legacyHeaders: false,
-});
 
 /**
  * @swagger
@@ -83,10 +70,10 @@ router.get("/getusuario/:id", UsuariosController.getById);
  *       500:
  *         description: Error interno del servidor
  */
-router.post("/login", loginLimiter, UsuariosController.login);
+router.post("/login", UsuariosController.login);
 
-// Sesión actual (validación de token)
-router.get("/me", requireAuth, UsuariosController.me);
+// Sesión actual
+router.get("/me", UsuariosController.me);
 
 /**
  * @swagger

@@ -1,6 +1,10 @@
 import { apiRequest } from "./api";
 
 export const reportesService = {
+  getResumenGeneral({ range = "7d" } = {}) {
+    return apiRequest("/reportes/resumen-general", { params: { range } });
+  },
+
   getBestSellers({ range = "7d", limit = 10 } = {}) {
     return apiRequest("/reportes/best-sellers", { params: { range, limit } });
   },

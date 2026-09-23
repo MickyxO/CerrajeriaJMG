@@ -7,12 +7,9 @@ import LoginPage from "./pages/auth/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import PosPage from "./pages/pos/PosPage";
 import ItemsPage from "./pages/items/ItemsPage";
-import CombosPage from "./pages/combos/CombosPage";
-import CategoriasPage from "./pages/categorias/CategoriasPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import VentaDetallePage from "./pages/ventas/VentaDetallePage";
 import CajaPage from "./pages/caja/CajaPage";
-import InventarioPage from "./pages/inventario/InventarioPage";
 import UsuariosPage from "./pages/usuarios/UsuariosPage";
 import ReportesPage from "./pages/reportes/ReportesPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -35,13 +32,13 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/pos" element={<PosPage />} />
-          <Route path="/items" element={<ItemsPage />} />
-          <Route path="/combos" element={<CombosPage />} />
-          <Route path="/categorias" element={<CategoriasPage />} />
+          <Route path="/caja" element={<CajaPage />} />
           <Route path="/ventas" element={<VentasPage />} />
           <Route path="/ventas/:id" element={<VentaDetallePage />} />
-          <Route path="/caja" element={<CajaPage />} />
-          <Route path="/inventario" element={<InventarioPage />} />
+          <Route path="/items" element={<ItemsPage />} />
+          <Route path="/catalogo" element={<Navigate to="/items" replace />} />
+          <Route path="/categorias" element={<Navigate to="/items" replace />} />
+          <Route path="/inventario" element={<Navigate to="/items" replace />} />
           <Route path="/reportes" element={<ReportesPage />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
         </Route>

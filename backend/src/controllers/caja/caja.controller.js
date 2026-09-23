@@ -32,14 +32,8 @@ class CajaController {
                 });
             }
 
-            // Si hay una caja vieja abierta, se cierra automáticamente antes de informar estado.
-            await CajaService.autoCloseOpenCajaIfNeeded();
-
-            const [cajaAbierta, bizNow, ultimoCierreAuto] = await Promise.all([
-                CajaService.getCajaAbierta(),
-                CajaService.getBusinessNowInfo(),
-                CajaService.getUltimoCierreAutomaticoReciente(),
-            ]);
+            const userId = req.usuario?.id_usuario || req.body?.idUsuario || null;
+            const { cajaAbierta, bizNow, ultimoCierreAuto } = await CajaService.getEstadoCajaConAutoApertura(userId);
 
             const autoCloseNotice = ultimoCierreAuto
                 ? {
@@ -172,6 +166,36 @@ class CajaController {
                 success: true, 
                 message: "Gasto registrado correctamente.", 
                 id_movimiento: idMovimiento 
+            });
+
+        } catch (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+    }
+
+    // POST: Registrar préstamo o devolución de cambio (Entrada / Salida)
+    async registrarPrestamoCambio(req, res) {
+        try {
+            const { Monto, Tipo, Trabajador, IdUsuario, Nota } = req.body || {};
+
+            if (!Monto || Number(Monto) <= 0) {
+                return res.status(400).json({ success: false, message: "El monto debe ser mayor a 0." });
+            }
+
+            const result = await CajaService.registrarPrestamoCambio({
+                Monto: Number(Monto),
+                Tipo: Tipo || 'ENTRADA',
+                Trabajador: Trabajador || 'Trabajador',
+                IdUsuario: IdUsuario || req.user?.id_usuario || 1,
+                Nota,
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: result.tipo_movimiento === 'ENTRADA'
+                    ? "Préstamo de cambio ingresado a caja correctamente."
+                    : "Devolución de préstamo registrada correctamente.",
+                data: result,
             });
 
         } catch (err) {

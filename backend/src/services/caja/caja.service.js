@@ -133,37 +133,70 @@ class CajaService {
     async getCajaAbierta() {
         try {
             const query = `
-                SELECT * FROM caja 
-                WHERE estado = 'ABIERTA' 
-                ORDER BY fecha_apertura DESC, hora_apertura DESC
+                SELECT c.*,
+                    COALESCE((
+                        SELECT SUM(v.total)
+                        FROM ventas v
+                        WHERE DATE(timezone($1, v.fecha_venta AT TIME ZONE 'UTC')) = c.fecha_apertura
+                          AND v.metodo_pago = 'Efectivo'
+                          AND v.estado = 'COMPLETADA'
+                    ), 0) as ventas_efectivo_dia,
+                    COALESCE((
+                        SELECT SUM(m.monto)
+                        FROM movimientos_caja m
+                        WHERE DATE(timezone($1, m.fecha_hora AT TIME ZONE 'UTC')) = c.fecha_apertura
+                          AND m.metodo_pago = 'Efectivo'
+                          AND COALESCE(m.tipo_movimiento, 'SALIDA') = 'SALIDA'
+                    ), 0) as gastos_efectivo_dia
+                FROM caja c 
+                WHERE c.estado = 'ABIERTA' 
+                ORDER BY c.fecha_apertura DESC, c.hora_apertura DESC
                 LIMIT 1
             `;
-            const { rows } = await pool.query(query);
+            const { rows } = await pool.query(query, [BUSINESS_TZ]);
             
             if (rows.length === 0) return null;
             
             const r = rows[0];
-            return new Caja(r.id_caja, r.fecha_apertura, r.hora_apertura, r.monto_inicial, r.monto_actual, r.estado, r.id_usuario_apertura);
+            const montoCalculado = Number(r.monto_inicial || 0) + Number(r.ventas_efectivo_dia || 0) - Number(r.gastos_efectivo_dia || 0);
+
+            // Mantener sincronizada la columna monto_actual en la base de datos
+            if (Number(r.monto_actual ?? 0) !== montoCalculado) {
+                pool.query("UPDATE caja SET monto_actual = $1 WHERE id_caja = $2", [montoCalculado, r.id_caja]).catch(() => {});
+            }
+
+            return new Caja(r.id_caja, r.fecha_apertura, r.hora_apertura, r.monto_inicial, montoCalculado, r.estado, r.id_usuario_apertura);
         } catch (err) {
             console.error("Error consultando caja: ", err.message);
             throw err;
         }
     }
 
-    // Caja ABIERTA de HOY.
-    async getCajaDelDia() {
+    // Obtiene la caja abierta actual o crea una automáticamente (silenciosa / just-in-time)
+    async getOrCreateCajaAbierta(idUsuario = null, montoInicialDefault = 0) {
+        // 1. Cerrar caja anterior si quedó abierta de un día previo
+        await this.autoCloseOpenCajaIfNeeded();
+
+        // 2. Si ya hay una caja abierta, la devolvemos de inmediato
+        let caja = await this.getCajaAbierta();
+        if (caja) {
+            return caja;
+        }
+
+        // 3. Si no hay caja abierta, la abrimos automáticamente para hoy
+        let userId = idUsuario;
+        if (!userId) {
+            const uRes = await pool.query("SELECT id_usuario FROM usuarios WHERE activo = true ORDER BY id_usuario ASC LIMIT 1");
+            userId = uRes.rows[0]?.id_usuario || null;
+        }
+
         try {
             const query = `
-                SELECT * FROM caja
-                WHERE estado = 'ABIERTA'
-                                    AND fecha_apertura = timezone($1, now())::date
-                ORDER BY hora_apertura DESC
-                LIMIT 1
+                INSERT INTO caja (fecha_apertura, hora_apertura, monto_inicial, monto_actual, id_usuario_apertura, estado)
+                VALUES (timezone($3, now())::date, timezone('UTC', now()), $1, $1, $2, 'ABIERTA')
+                RETURNING id_caja, fecha_apertura, hora_apertura, monto_inicial, monto_actual, estado, id_usuario_apertura
             `;
-                        const { rows } = await pool.query(query, [BUSINESS_TZ]);
-
-            if (rows.length === 0) return null;
-
+            const { rows } = await pool.query(query, [montoInicialDefault, userId, BUSINESS_TZ]);
             const r = rows[0];
             return new Caja(
                 r.id_caja,
@@ -171,6 +204,85 @@ class CajaService {
                 r.hora_apertura,
                 r.monto_inicial,
                 r.monto_actual,
+                r.estado,
+                r.id_usuario_apertura
+            );
+        } catch (err) {
+            // Si hubo concurrencia y otra petición la abrió en el mismo instante
+            if (err.code === '23505') {
+                const cajaExistente = await this.getCajaAbierta();
+                if (cajaExistente) return cajaExistente;
+            }
+            console.error("Error en getOrCreateCajaAbierta: ", err.message);
+            throw err;
+        }
+    }
+
+    // Consulta el estado de caja para el día de hoy, con auto-apertura si es un nuevo día
+    async getEstadoCajaConAutoApertura(idUsuario = null) {
+        await this.autoCloseOpenCajaIfNeeded();
+
+        let cajaAbierta = await this.getCajaAbierta();
+
+        // Si no hay caja abierta actualmente, la auto-abrimos de inmediato para hoy
+        if (!cajaAbierta) {
+            cajaAbierta = await this.getOrCreateCajaAbierta(idUsuario, 0);
+        }
+
+        const [bizNow, ultimoCierreAuto] = await Promise.all([
+            this.getBusinessNowInfo(),
+            this.getUltimoCierreAutomaticoReciente(),
+        ]);
+
+        return {
+            cajaAbierta,
+            bizNow,
+            ultimoCierreAuto
+        };
+    }
+
+    // Caja ABIERTA de HOY.
+    async getCajaDelDia() {
+        try {
+            const query = `
+                SELECT c.*,
+                    COALESCE((
+                        SELECT SUM(v.total)
+                        FROM ventas v
+                        WHERE DATE(timezone($1, v.fecha_venta AT TIME ZONE 'UTC')) = c.fecha_apertura
+                          AND v.metodo_pago = 'Efectivo'
+                          AND v.estado = 'COMPLETADA'
+                    ), 0) as ventas_efectivo_dia,
+                    COALESCE((
+                        SELECT SUM(m.monto)
+                        FROM movimientos_caja m
+                        WHERE DATE(timezone($1, m.fecha_hora AT TIME ZONE 'UTC')) = c.fecha_apertura
+                          AND m.metodo_pago = 'Efectivo'
+                          AND COALESCE(m.tipo_movimiento, 'SALIDA') = 'SALIDA'
+                    ), 0) as gastos_efectivo_dia
+                FROM caja c
+                WHERE c.estado = 'ABIERTA'
+                  AND c.fecha_apertura = timezone($1, now())::date
+                ORDER BY c.hora_apertura DESC
+                LIMIT 1
+            `;
+            const { rows } = await pool.query(query, [BUSINESS_TZ]);
+
+            if (rows.length === 0) return null;
+
+            const r = rows[0];
+            const montoCalculado = Number(r.monto_inicial || 0) + Number(r.ventas_efectivo_dia || 0) - Number(r.gastos_efectivo_dia || 0);
+
+            if (Number(r.monto_actual ?? 0) !== montoCalculado) {
+                pool.query("UPDATE caja SET monto_actual = $1 WHERE id_caja = $2", [montoCalculado, r.id_caja]).catch(() => {});
+            }
+
+            return new Caja(
+                r.id_caja,
+                r.fecha_apertura,
+                r.hora_apertura,
+                r.monto_inicial,
+                montoCalculado,
                 r.estado,
                 r.id_usuario_apertura
             );
@@ -183,20 +295,43 @@ class CajaService {
     async getCajaPorFecha(fecha) {
         try {
             const query = `
-                SELECT * FROM caja
-                WHERE fecha_apertura = $1::date
-                ORDER BY hora_apertura DESC
+                SELECT c.*,
+                    COALESCE((
+                        SELECT SUM(v.total)
+                        FROM ventas v
+                        WHERE DATE(timezone($2, v.fecha_venta AT TIME ZONE 'UTC')) = c.fecha_apertura
+                          AND v.metodo_pago = 'Efectivo'
+                          AND v.estado = 'COMPLETADA'
+                    ), 0) as ventas_efectivo_dia,
+                    COALESCE((
+                        SELECT SUM(m.monto)
+                        FROM movimientos_caja m
+                        WHERE DATE(timezone($2, m.fecha_hora AT TIME ZONE 'UTC')) = c.fecha_apertura
+                          AND m.metodo_pago = 'Efectivo'
+                          AND COALESCE(m.tipo_movimiento, 'SALIDA') = 'SALIDA'
+                    ), 0) as gastos_efectivo_dia
+                FROM caja c
+                WHERE c.fecha_apertura = $1::date
+                ORDER BY c.hora_apertura DESC
                 LIMIT 1
             `;
-            const { rows } = await pool.query(query, [fecha]);
+            const { rows } = await pool.query(query, [fecha, BUSINESS_TZ]);
             if (rows.length === 0) return null;
             const r = rows[0];
+
+            let montoCalculado = Number(r.monto_actual ?? 0);
+            if (r.estado === 'ABIERTA') {
+                montoCalculado = Number(r.monto_inicial || 0) + Number(r.ventas_efectivo_dia || 0) - Number(r.gastos_efectivo_dia || 0);
+            } else if (r.monto_final !== null && r.monto_final !== undefined) {
+                montoCalculado = Number(r.monto_final);
+            }
+
             return new Caja(
                 r.id_caja,
                 r.fecha_apertura,
                 r.hora_apertura,
                 r.monto_inicial,
-                r.monto_actual,
+                montoCalculado,
                 r.estado,
                 r.id_usuario_apertura
             );
@@ -242,7 +377,7 @@ class CajaService {
             return rows[0].id_caja;
 
         } catch (err) {
-            if (err.code === '23505') throw new Error("Ya se abrió una caja con la fecha de hoy.");
+            if (err.code === '23505') throw new Error("Ya existe una caja abierta en el sistema. Debe cerrarla antes de abrir una nueva.");
             console.error("Error abriendo caja: ", err.message);
             throw err;
         }
@@ -287,16 +422,27 @@ class CajaService {
                     SELECT id_caja, monto_inicial, monto_actual
                     FROM caja
                     WHERE estado = 'ABIERTA'
-                      AND fecha_apertura = timezone($1, now())::date
-                    ORDER BY hora_apertura DESC
+                    ORDER BY fecha_apertura DESC, hora_apertura DESC
                     LIMIT 1
                     FOR UPDATE
-                `,
-                [BUSINESS_TZ]
+                `
             );
 
             if (resCaja.rows.length === 0) {
-                throw new Error("No hay caja abierta hoy para actualizar monto inicial.");
+                // Si no hay caja abierta, la creamos directamente con este monto inicial
+                let userId = idUsuario;
+                if (!userId) {
+                    const uRes = await client.query("SELECT id_usuario FROM usuarios WHERE activo = true ORDER BY id_usuario ASC LIMIT 1");
+                    userId = uRes.rows[0]?.id_usuario || null;
+                }
+                const query = `
+                    INSERT INTO caja (fecha_apertura, hora_apertura, monto_inicial, monto_actual, id_usuario_apertura, estado)
+                    VALUES (timezone($3, now())::date, timezone('UTC', now()), $1, $1, $2, 'ABIERTA')
+                    RETURNING *, 0::numeric as diferencia_aplicada
+                `;
+                const { rows } = await client.query(query, [nuevoMontoInicial, userId, BUSINESS_TZ]);
+                await client.query('COMMIT');
+                return rows[0];
             }
 
             const caja = resCaja.rows[0];
@@ -343,17 +489,17 @@ class CajaService {
 
         if (!Monto || Monto <= 0) throw new Error("El monto del gasto debe ser mayor a 0.");
 
+        // Aseguramos que exista una caja abierta (se auto-abre silenciosamente si no hay)
+        const cajaActual = await this.getOrCreateCajaAbierta(IdUsuario);
+        const idCaja = cajaActual.IdCaja;
+
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN');
 
-            const queryCaja = "SELECT id_caja FROM caja WHERE estado = 'ABIERTA' AND fecha_apertura = timezone($1, now())::date LIMIT 1 FOR UPDATE";
-            const resCaja = await client.query(queryCaja, [BUSINESS_TZ]);
-            
-            if (resCaja.rows.length === 0) throw new Error("No hay caja abierta. Abra la caja antes de registrar gastos.");
-            
-            const idCaja = resCaja.rows[0].id_caja;
+            // Bloqueamos la fila de la caja
+            await client.query("SELECT id_caja FROM caja WHERE id_caja = $1 FOR UPDATE", [idCaja]);
 
             // 1. Insertar el Gasto con el MetodoPago
             const queryMov = `
@@ -371,13 +517,72 @@ class CajaService {
                 await client.query(queryUpdate, [Monto, idCaja]);
             } 
 
-
             await client.query('COMMIT');
             return resMov.rows[0].id_movimiento;
 
         } catch (err) {
             await client.query('ROLLBACK');
             console.error("Error registrando gasto: ", err.message);
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    async registrarPrestamoCambio(datos) {
+        const { Monto, Tipo = 'ENTRADA', Trabajador, IdUsuario, Nota } = datos || {};
+
+        const numMonto = Number(Monto);
+        if (!Number.isFinite(numMonto) || numMonto <= 0) {
+            throw new Error("El monto del préstamo/cambio debe ser mayor a 0.");
+        }
+
+        const tipoMov = Tipo === 'SALIDA' ? 'SALIDA' : 'ENTRADA';
+        const trabajadorNombre = (Trabajador || 'Trabajador').toString().trim();
+        const notaTxt = (Nota || '').toString().trim();
+
+        const concepto = tipoMov === 'ENTRADA'
+            ? `Préstamo cambio - ${trabajadorNombre}${notaTxt ? ` (${notaTxt})` : ''}`
+            : `Devolución préstamo cambio - ${trabajadorNombre}${notaTxt ? ` (${notaTxt})` : ''}`;
+
+        // Aseguramos que exista una caja abierta (se auto-abre silenciosamente si no hay)
+        const cajaActual = await this.getOrCreateCajaAbierta(IdUsuario);
+        const idCaja = cajaActual.IdCaja;
+
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // Bloqueamos la fila de la caja
+            await client.query("SELECT id_caja FROM caja WHERE id_caja = $1 FOR UPDATE", [idCaja]);
+
+            // 1. Insertar el movimiento en efectivo
+            const queryMov = `
+                INSERT INTO movimientos_caja (id_caja, monto, concepto, id_usuario, metodo_pago, tipo_movimiento)
+                VALUES ($1, $2, $3, $4, 'Efectivo', $5)
+                RETURNING id_movimiento
+            `;
+            const resMov = await client.query(queryMov, [idCaja, numMonto, concepto, IdUsuario, tipoMov]);
+
+            // 2. Actualizar monto_actual en caja (+ si entró dinero a la gaveta, - si se devolvió al trabajador)
+            if (tipoMov === 'ENTRADA') {
+                await client.query("UPDATE caja SET monto_actual = monto_actual + $1 WHERE id_caja = $2", [numMonto, idCaja]);
+            } else {
+                await client.query("UPDATE caja SET monto_actual = monto_actual - $1 WHERE id_caja = $2", [numMonto, idCaja]);
+            }
+
+            await client.query('COMMIT');
+            return {
+                id_movimiento: resMov.rows[0].id_movimiento,
+                tipo_movimiento: tipoMov,
+                monto: numMonto,
+                concepto,
+            };
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error("Error registrando préstamo/devolución de cambio: ", err.message);
             throw err;
         } finally {
             client.release();
@@ -574,6 +779,7 @@ async getMovimientosDelDia(fecha = null) {
                             v.notas as concepto, 
                             v.fecha_venta as fecha_hora,
                             'ENTRADA' as tipo_movimiento,
+                            'VENTA' as origen,
                             u.nombre_completo,
                             COALESCE(
                                 json_agg(
@@ -590,7 +796,7 @@ async getMovimientosDelDia(fecha = null) {
                         INNER JOIN usuarios u ON v.id_usuario = u.id_usuario
                         LEFT JOIN detalle_ventas dv ON v.id_venta = dv.id_venta
                         LEFT JOIN items i ON dv.id_item = i.id_item
-                        WHERE ${filtroFechaVentas}
+                        WHERE ${filtroFechaVentas} AND v.estado = 'COMPLETADA'
                         GROUP BY v.id_venta, u.nombre_completo
                     )
                     UNION ALL
@@ -602,6 +808,7 @@ async getMovimientosDelDia(fecha = null) {
                             m.concepto,
                             m.fecha_hora,
                             m.tipo_movimiento,
+                            'MOVIMIENTO_CAJA' as origen,
                             u.nombre_completo,
                             '[]'::json as items
                         FROM movimientos_caja m
@@ -623,6 +830,7 @@ async getMovimientosDelDia(fecha = null) {
                 concepto: row.concepto,
                 fechaHora: row.fecha_hora,
                 tipo: row.tipo_movimiento,     // 'ENTRADA' o 'SALIDA'
+                origen: row.origen,            // 'VENTA' o 'MOVIMIENTO_CAJA'
                 usuario: row.nombre_completo,
                 items: typeof row.items === 'string' ? JSON.parse(row.items) : (row.items ?? [])
             }));
@@ -665,76 +873,123 @@ async getMovimientosDelDia(fecha = null) {
                                 SELECT metodo_pago, SUM(total) as total_ventas
                                 FROM ventas
                                 WHERE DATE(timezone($2, fecha_venta AT TIME ZONE 'UTC')) = $1::date
+                                  AND estado = 'COMPLETADA'
                                 GROUP BY metodo_pago
                             `
                         : `
                                 SELECT metodo_pago, SUM(total) as total_ventas
                                 FROM ventas
                                 WHERE DATE(timezone($1, fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date
+                                  AND estado = 'COMPLETADA'
                                 GROUP BY metodo_pago
                             `;
         
-        // 2. GASTOS POR METODO (Para gráficas o desglose)
-                const gastosQuery = fecha
-                        ? `
-                                SELECT metodo_pago, SUM(monto) as total_gastos
-                                FROM movimientos_caja
-                                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
-                                GROUP BY metodo_pago
-                            `
-                        : `
-                                SELECT metodo_pago, SUM(monto) as total_gastos
-                                FROM movimientos_caja
-                                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
-                                GROUP BY metodo_pago
-                            `;
+        // 2. GASTOS OPERATIVOS POR METODO (Excluye devoluciones de préstamo para no distorsionar gastos del taller)
+        const gastosQuery = fecha
+            ? `
+                SELECT metodo_pago, SUM(monto) as total_gastos
+                FROM movimientos_caja
+                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
+                  AND COALESCE(tipo_movimiento, 'SALIDA') = 'SALIDA'
+                  AND concepto NOT ILIKE '%devolución préstamo%'
+                GROUP BY metodo_pago
+              `
+            : `
+                SELECT metodo_pago, SUM(monto) as total_gastos
+                FROM movimientos_caja
+                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
+                  AND COALESCE(tipo_movimiento, 'SALIDA') = 'SALIDA'
+                  AND concepto NOT ILIKE '%devolución préstamo%'
+                GROUP BY metodo_pago
+              `;
 
-        // 3. Totales del día (para calcular balance neto sin inconsistencias)
-                const ventasTotalQuery = fecha
-                        ? `
-                                SELECT COALESCE(SUM(total), 0) as total_ventas
-                                FROM ventas
-                                WHERE DATE(timezone($2, fecha_venta AT TIME ZONE 'UTC')) = $1::date
-                            `
-                        : `
-                                SELECT COALESCE(SUM(total), 0) as total_ventas
-                                FROM ventas
-                                WHERE DATE(timezone($1, fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date
-                            `;
+        // 3. Totales del día (Ventas y Gastos Operativos Reales)
+        const ventasTotalQuery = fecha
+            ? `
+                SELECT COALESCE(SUM(total), 0) as total_ventas
+                FROM ventas
+                WHERE DATE(timezone($2, fecha_venta AT TIME ZONE 'UTC')) = $1::date
+                  AND estado = 'COMPLETADA'
+              `
+            : `
+                SELECT COALESCE(SUM(total), 0) as total_ventas
+                FROM ventas
+                WHERE DATE(timezone($1, fecha_venta AT TIME ZONE 'UTC')) = timezone($1, now())::date
+                  AND estado = 'COMPLETADA'
+              `;
 
-                const gastosTotalQuery = fecha
-                        ? `
-                                SELECT COALESCE(SUM(monto), 0) as total_gastos
-                                FROM movimientos_caja
-                                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
-                            `
-                        : `
-                                SELECT COALESCE(SUM(monto), 0) as total_gastos
-                                FROM movimientos_caja
-                                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
-                            `;
+        const gastosTotalQuery = fecha
+            ? `
+                SELECT COALESCE(SUM(monto), 0) as total_gastos
+                FROM movimientos_caja
+                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
+                  AND COALESCE(tipo_movimiento, 'SALIDA') = 'SALIDA'
+                  AND concepto NOT ILIKE '%devolución préstamo%'
+              `
+            : `
+                SELECT COALESCE(SUM(monto), 0) as total_gastos
+                FROM movimientos_caja
+                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
+                  AND COALESCE(tipo_movimiento, 'SALIDA') = 'SALIDA'
+                  AND concepto NOT ILIKE '%devolución préstamo%'
+              `;
+
+        // 4. Entradas y salidas totales de efectivo en caja (incluye préstamos, devoluciones y gastos en efectivo)
+        const movimientosEfectivoQuery = fecha
+            ? `
+                SELECT
+                    COALESCE(SUM(CASE WHEN tipo_movimiento = 'ENTRADA' AND metodo_pago = 'Efectivo' THEN monto ELSE 0 END), 0) as entradas_efectivo,
+                    COALESCE(SUM(CASE WHEN tipo_movimiento = 'SALIDA' AND metodo_pago = 'Efectivo' THEN monto ELSE 0 END), 0) as salidas_efectivo
+                FROM movimientos_caja
+                WHERE DATE(timezone($2, fecha_hora AT TIME ZONE 'UTC')) = $1::date
+              `
+            : `
+                SELECT
+                    COALESCE(SUM(CASE WHEN tipo_movimiento = 'ENTRADA' AND metodo_pago = 'Efectivo' THEN monto ELSE 0 END), 0) as entradas_efectivo,
+                    COALESCE(SUM(CASE WHEN tipo_movimiento = 'SALIDA' AND metodo_pago = 'Efectivo' THEN monto ELSE 0 END), 0) as salidas_efectivo
+                FROM movimientos_caja
+                WHERE DATE(timezone($1, fecha_hora AT TIME ZONE 'UTC')) = timezone($1, now())::date
+              `;
 
         // Ejecutamos consultas en paralelo
         const params = fecha ? [fecha, BUSINESS_TZ] : [BUSINESS_TZ];
-        const [resVentas, resGastos, resVentasTotal, resGastosTotal] = await Promise.all([
+        const [resVentas, resGastos, resVentasTotal, resGastosTotal, resMovEfectivo] = await Promise.all([
             pool.query(ventasQuery, params),
             pool.query(gastosQuery, params),
             pool.query(ventasTotalQuery, params),
-            pool.query(gastosTotalQuery, params)
+            pool.query(gastosTotalQuery, params),
+            pool.query(movimientosEfectivoQuery, params)
         ]);
 
         const totalVentas = Number(resVentasTotal.rows[0]?.total_ventas ?? 0);
         const totalGastos = Number(resGastosTotal.rows[0]?.total_gastos ?? 0);
+        const gananciaNeta = totalVentas - totalGastos;
         const balanceNeto = monto_inicial + totalVentas - totalGastos;
+
+        const ventaEfectivoRow = resVentas.rows.find(r => r.metodo_pago === 'Efectivo');
+        const gastoEfectivoRow = resGastos.rows.find(r => r.metodo_pago === 'Efectivo');
+        const ventasEfectivo = Number(ventaEfectivoRow?.total_ventas ?? 0);
+        const gastosEfectivo = Number(gastoEfectivoRow?.total_gastos ?? 0);
+
+        const entradasEfectivo = Number(resMovEfectivo.rows[0]?.entradas_efectivo ?? 0);
+        const salidasEfectivo = Number(resMovEfectivo.rows[0]?.salidas_efectivo ?? 0);
+
+        const efectivoEnCaja = monto_inicial + ventasEfectivo + entradasEfectivo - salidasEfectivo;
 
         // Estructuramos la respuesta
         return {
             monto_inicial: monto_inicial,
+            total_ventas: totalVentas,
+            total_gastos: totalGastos,
+            ganancia_neta: gananciaNeta,
+            ventas_efectivo: ventasEfectivo,
+            gastos_efectivo: gastosEfectivo,
+            entradas_efectivo: entradasEfectivo,
+            salidas_efectivo: salidasEfectivo,
+            efectivo_en_caja: efectivoEnCaja,
             ventas_desglose: resVentas.rows, 
             gastos_desglose: resGastos.rows,
-            // Accedemos a la primera fila y a la columna balance_neto
-            // Nota: PostgreSQL devuelve esto como string a veces, usamos Number() o parseFloat() por seguridad
-            ganancia_dia: balanceNeto
+            ganancia_dia: balanceNeto // Mantenido para retrocompatibilidad
         };
 
     } catch (err) {

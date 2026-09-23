@@ -37,12 +37,12 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.hostname === 'res.cloudinary.com',
-            handler: 'CacheFirst',
+            urlPattern: ({ url }) => url.pathname.startsWith('/uploads/'),
+            handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'cloudinary-images',
+              cacheName: 'local-uploads-images',
               expiration: {
-                maxEntries: 200,
+                maxEntries: 500,
                 maxAgeSeconds: 60 * 60 * 24 * 30,
               },
             },
