@@ -1,5 +1,4 @@
 const UsuariosService = require("../../services/usuarios/usuarios.service");
-const { signAccessToken } = require("../../middlewares/auth");
 
 class UsuariosController {
 
@@ -31,10 +30,9 @@ class UsuariosController {
         }
     }
 
-    // Endpoint especial para la PWA (Login con PIN)
+    // Login ligero por PIN / Contraseña (sin JWT)
     async login(req, res) {
         try {
-            // Se espera que el front mande { "username": "juan", "pin": "secreto" }
             const { username, pin } = req.body; 
             
             if (!username || !pin) {
@@ -44,28 +42,18 @@ class UsuariosController {
             const usuario = await UsuariosService.verificarPin(username, pin);
 
             if (!usuario) {
-                // 401 Unauthorized es el código correcto para fallos de login
                 return res.status(401).json({ error: "Credenciales incorrectas o usuario inactivo" });
             }
 
-            const token = signAccessToken({
-                sub: usuario.IdUsuario,
-                username: usuario.Username,
-                rol: usuario.Rol,
-            });
-
-            res.status(200).json({ message: "Acceso correcto", usuario, token });
+            // En intranet: devolvemos directamente el usuario para que el front guarde id_usuario en LocalStorage
+            res.status(200).json({ message: "Acceso correcto", usuario });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     }
 
     async me(req, res) {
-        // req.auth lo setea el middleware requireAuth
-        res.status(200).json({
-            ok: true,
-            auth: req.auth || null,
-        });
+        res.status(200).json({ ok: true });
     }
 
     async create(req, res) {
@@ -73,7 +61,6 @@ class UsuariosController {
             const insertId = await UsuariosService.createUsuario(req.body);
             res.status(201).json({ message: "Usuario creado exitosamente", insertId });
         } catch (err) {
-            // Usamos 400 porque suelen ser errores de validación (PIN repetido, falta nombre)
             res.status(400).json({ error: err.message });
         }
     }
@@ -92,7 +79,6 @@ class UsuariosController {
         try {
             const id = req.params.id;
             const result = await UsuariosService.deleteUsuario(id);
-            // El servicio devuelve un objeto { message: "..." }
             res.status(200).json(result);
         } catch (err) {
             res.status(400).json({ error: err.message });

@@ -2,15 +2,12 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 
-const { isCloudinaryConfigured } = require("../config/cloudinary");
-
 const ITEMS_UPLOAD_DIR = path.resolve(__dirname, "../../uploads/items");
 const CATEGORIES_UPLOAD_DIR = path.resolve(__dirname, "../../uploads/categorias");
-// Solo tiene sentido crear carpeta si vamos a guardar en disco.
-if (!isCloudinaryConfigured) {
-  fs.mkdirSync(ITEMS_UPLOAD_DIR, { recursive: true });
-  fs.mkdirSync(CATEGORIES_UPLOAD_DIR, { recursive: true });
-}
+
+// Aseguramos que existan las carpetas de subida en disco
+fs.mkdirSync(ITEMS_UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(CATEGORIES_UPLOAD_DIR, { recursive: true });
 
 function makeSafeFilename(originalName) {
   const ext = path.extname(originalName || "").toLowerCase();
@@ -29,8 +26,8 @@ function makeDiskStorage(dirPath) {
   });
 }
 
-const itemStorage = isCloudinaryConfigured ? multer.memoryStorage() : makeDiskStorage(ITEMS_UPLOAD_DIR);
-const categoryStorage = isCloudinaryConfigured ? multer.memoryStorage() : makeDiskStorage(CATEGORIES_UPLOAD_DIR);
+const itemStorage = makeDiskStorage(ITEMS_UPLOAD_DIR);
+const categoryStorage = makeDiskStorage(CATEGORIES_UPLOAD_DIR);
 
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/jpeg", "image/png", "image/webp"];
@@ -43,13 +40,13 @@ const fileFilter = (req, file, cb) => {
 const uploadItemImage = multer({
   storage: itemStorage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
 const uploadCategoryImage = multer({
   storage: categoryStorage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 module.exports = {

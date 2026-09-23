@@ -40,6 +40,11 @@ export const cajaService = {
     return apiRequest("/postgasto", { method: "POST", body: payload });
   },
 
+  /** Backend: POST /postprestamocambio */
+  registrarPrestamoCambio(payload) {
+    return apiRequest("/postprestamocambio", { method: "POST", body: payload });
+  },
+
   /** Backend: PUT /putgasto/:id */
   actualizarGasto(id, payload) {
     return apiRequest(`/putgasto/${id}`, { method: "PUT", body: payload });

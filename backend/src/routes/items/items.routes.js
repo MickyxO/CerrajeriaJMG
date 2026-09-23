@@ -354,38 +354,7 @@ router.put(
 	ItemsController.uploadImagen
 );
 
-/**
- * @swagger
- * /putitemimagenurl/{id}:
- *   put:
- *     tags:
- *       - Items
- *     summary: Subir/actualizar la imagen de un item desde una URL (application/json)
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID del item
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               url:
- *                 type: string
- *             example:
- *               url: "https://example.com/imagen.jpg"
- *     responses:
- *       200:
- *         description: Imagen actualizada correctamente
- *       400:
- *         description: Error de validación
- */
-router.put("/putitemimagenurl/:id", ItemsController.uploadImagenDesdeUrl);
+
 
 /**
  * @swagger

@@ -178,6 +178,41 @@ router.post("/postgasto", CajaController.registrarGasto);
 
 /**
  * @swagger
+ * /postprestamocambio:
+ *   post:
+ *     tags:
+ *       - Caja
+ *     summary: Registrar préstamo o devolución de cambio (Entrada / Salida de efectivo)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               Monto:
+ *                 type: number
+ *               Tipo:
+ *                 type: string
+ *                 enum: [ENTRADA, SALIDA]
+ *               Trabajador:
+ *                 type: string
+ *               IdUsuario:
+ *                 type: integer
+ *               Nota:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Movimiento registrado correctamente
+ *       400:
+ *         description: Error de validación
+ *       500:
+ *         description: Error interno
+ */
+router.post("/postprestamocambio", CajaController.registrarPrestamoCambio);
+
+/**
+ * @swagger
  * /putgasto/{id}:
  *   put:
  *     tags:

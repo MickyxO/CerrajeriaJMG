@@ -35,15 +35,17 @@ class ItemsService {
             row.compatibilidad_marca,
             row.tipo_chip,
             row.frecuencia,
-            row.activo, // <--- AGREGADO: Para pasar el estado al modelo
-            row.imagen_url
+            row.activo,
+            row.imagen_url,
+            row.codigo_ubicacion,
+            row.alerta_stock
         );
     }
 
     async getAllItems({ incluyeInactivos = false } = {}) {
         try {
             const query = `
-                SELECT i.*, c.nombre as nombre_categoria 
+                SELECT i.*, c.nombre as nombre_categoria, c.clasificacion as clasificacion_categoria
                 FROM items i
                 INNER JOIN categorias c ON i.id_categoria = c.id_categoria
                 ${incluyeInactivos ? "" : "WHERE i.activo = TRUE"}
@@ -55,6 +57,7 @@ class ItemsService {
             return rows.map(row => {
                 const item = this._mapRowToModel(row);
                 item.NombreCategoria = row.nombre_categoria; 
+                item.ClasificacionCategoria = row.clasificacion_categoria;
                 return item;
             });
 
@@ -189,7 +192,7 @@ class ItemsService {
                 return { categorias: [], articulos: [] };
             }
 
-            const normalizedLimit = Math.min(Math.max(Number(limit) || 180, 20), 500);
+            const normalizedLimit = Math.min(Math.max(Number(limit) || 500, 20), 1500);
             const qClean = String(q || "").trim();
             const qAsId = this._toPositiveInt(qClean);
 
@@ -212,6 +215,7 @@ class ItemsService {
                     baseWhere.push(`(
                         i.id_item = $${idx}
                         OR i.nombre ILIKE $${idx + 1}
+                        OR COALESCE(i.codigo_ubicacion, '') ILIKE $${idx + 1}
                         OR COALESCE(i.compatibilidad_marca, '') ILIKE $${idx + 1}
                         OR COALESCE(i.tipo_chip, '') ILIKE $${idx + 1}
                         OR COALESCE(i.frecuencia, '') ILIKE $${idx + 1}
@@ -221,6 +225,7 @@ class ItemsService {
                 } else {
                     baseWhere.push(`(
                         i.nombre ILIKE $${idx}
+                        OR COALESCE(i.codigo_ubicacion, '') ILIKE $${idx}
                         OR COALESCE(i.compatibilidad_marca, '') ILIKE $${idx}
                         OR COALESCE(i.tipo_chip, '') ILIKE $${idx}
                         OR COALESCE(i.frecuencia, '') ILIKE $${idx}
@@ -282,6 +287,8 @@ class ItemsService {
                     i.tipo_chip,
                     i.frecuencia,
                     i.imagen_url,
+                    i.codigo_ubicacion,
+                    i.alerta_stock,
                     c.nombre AS nombre_categoria,
                     c.clasificacion AS clasificacion_categoria
                 FROM items i
@@ -317,6 +324,8 @@ class ItemsService {
                 TipoChip: row.tipo_chip,
                 Frecuencia: row.frecuencia,
                 ImagenUrl: row.imagen_url,
+                CodigoUbicacion: row.codigo_ubicacion,
+                AlertaStock: row.alerta_stock,
             }));
 
             return { categorias, articulos };
@@ -330,7 +339,7 @@ class ItemsService {
         const { 
             Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia,
             EsServicio, StockActual, StockMinimo, CompatibilidadMarca, TipoChip, Frecuencia,
-            ImagenUrl
+            ImagenUrl, CodigoUbicacion, AlertaStock
         } = datos;
 
         if (!Nombre || !IdCategoria || !PrecioVenta) {
@@ -345,15 +354,15 @@ class ItemsService {
                 INSERT INTO items (
                     nombre, descripcion, id_categoria, precio_venta, costo_referencia,
                     es_servicio, stock_actual, stock_minimo, compatibilidad_marca, tipo_chip, frecuencia,
-                    imagen_url
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    imagen_url, codigo_ubicacion, alerta_stock
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 RETURNING id_item
             `;
             
             const values = [
                 Nombre, Descripcion, IdCategoria, PrecioVenta, CostoReferencia || 0,
                 EsServicio || false, StockActual || 10, StockMinimo || 2, CompatibilidadMarca, TipoChip, Frecuencia,
-                ImagenUrl || null
+                ImagenUrl || null, CodigoUbicacion || null, AlertaStock !== undefined ? Boolean(AlertaStock) : false
             ];
 
             const { rows } = await pool.query(query, values);
@@ -379,6 +388,8 @@ class ItemsService {
             'TipoChip': 'tipo_chip',
             'Frecuencia': 'frecuencia',
             'ImagenUrl': 'imagen_url',
+            'CodigoUbicacion': 'codigo_ubicacion',
+            'AlertaStock': 'alerta_stock',
             'Activo': 'activo' 
         };
 

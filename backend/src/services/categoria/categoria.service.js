@@ -110,9 +110,9 @@ class CategoriaService {
     async updateCategoria(id, cuerpo) {
         await ensureCategoriaSchema();
 
-        const nombre = cuerpo?.NombreCategoria ?? cuerpo?.nombreCategoria;
+        const nombre = cuerpo?.NombreCategoria ?? cuerpo?.nombreCategoria ?? cuerpo?.Nombre ?? cuerpo?.nombre;
         const clasificacion = cuerpo?.Clasificacion ?? cuerpo?.clasificacion;
-        const imagenUrl = cuerpo?.ImagenUrl ?? cuerpo?.imagenUrl;
+        const imagenUrl = cuerpo?.ImagenUrl ?? cuerpo?.imagenUrl ?? cuerpo?.imagen_url;
 
         const sets = [];
         const values = [];

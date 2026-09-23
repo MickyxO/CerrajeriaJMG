@@ -36,7 +36,9 @@ CREATE TABLE items (
     compatibilidad_marca VARCHAR(255), 
     tipo_chip VARCHAR(50), 
     frecuencia VARCHAR(20),
+    codigo_ubicacion VARCHAR(20),
 
+    alerta_stock BOOLEAN DEFAULT TRUE,
     activo BOOLEAN DEFAULT TRUE 
 );
 
@@ -50,26 +52,11 @@ CREATE TABLE ventas (
     metodo_pago VARCHAR(50) DEFAULT 'Efectivo', 
     notas TEXT,
     subtotal NUMERIC(10,2) DEFAULT 0,
-    monto_iva NUMERIC(10,2) DEFAULT 0 
+    monto_iva NUMERIC(10,2) DEFAULT 0,
+    estado VARCHAR(20) DEFAULT 'COMPLETADA' -- 'COMPLETADA', 'ANULADA'
 );
 
--- 5. DEFINICIÓN DE COMBOS 
-CREATE TABLE combos (
-    id_combo SERIAL PRIMARY KEY,
-    nombre_combo VARCHAR(100) NOT NULL, 
-    precio_sugerido_combo NUMERIC(10,2) NULL 
-);
-
--- 6. CONTENIDO DE LOS COMBOS
--- Relaciona qué items componen el combo
-CREATE TABLE combo_items (
-    id_combo_item SERIAL PRIMARY KEY,
-    id_combo INT REFERENCES combos(id_combo) ON DELETE CASCADE,
-    id_item INT REFERENCES items(id_item), -- El componente (Chip, Espadín, etc.)
-    cantidad_default INT DEFAULT 1 -- Cuántos de este item lleva el combo
-);
-
--- 7. DETALLE DE VENTA
+-- 5. DETALLE DE VENTA
 CREATE TABLE detalle_ventas (
     id_detalle SERIAL PRIMARY KEY,
     id_venta INT REFERENCES ventas(id_venta) ON DELETE CASCADE,
@@ -78,9 +65,9 @@ CREATE TABLE detalle_ventas (
     precio_unitario NUMERIC(10,2) NOT NULL, -- Precio al momento de la venta
     subtotal NUMERIC(10,2) NOT NULL,
 
-    -- Snapshots: para que cambios posteriores en items/combos no alteren ventas históricas
+    -- Snapshots: para que cambios posteriores en items no alteren ventas históricas
     nombre_item_snapshot VARCHAR(150),
-    id_combo INT REFERENCES combos(id_combo),
+    id_combo INT,
     nombre_combo_snapshot VARCHAR(100),
     precio_combo_unitario_snapshot NUMERIC(10,2),
     combo_cantidad_snapshot INT
@@ -111,11 +98,11 @@ CREATE TABLE caja (
     id_usuario_apertura INT REFERENCES usuarios(id_usuario),
     id_usuario_cierre INT REFERENCES usuarios(id_usuario),
     
-    estado VARCHAR(20) DEFAULT 'ABIERTA', -- 'ABIERTA', 'CERRADA'
-    
-    -- Restricción: Solo una caja abierta por día 
-    CONSTRAINT unique_fecha_caja UNIQUE (fecha_apertura) 
+    estado VARCHAR(20) DEFAULT 'ABIERTA' -- 'ABIERTA', 'CERRADA'
 );
+
+-- Restricción: Máximo una caja abierta a la vez en el sistema (permite múltiples turnos/cortes por día)
+CREATE UNIQUE INDEX unique_caja_abierta ON caja ((1)) WHERE estado = 'ABIERTA';
 
 -- 10. SALIDAS DE DINERO (Gastos / Retiros)
 CREATE TABLE movimientos_caja (

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
-const LOGO_SOURCES = ["/jmg-logo.jpg", "/jmg-logo.png"];
+const LOGO_SOURCES = ["/jmg-logo.svg", "/jmg-logo.jpg", "/jmg-logo.png"];
 
 export default function LoginPage() {
   const { login, isLoading, isAuthenticated } = useAuth();
@@ -45,19 +45,24 @@ export default function LoginPage() {
           alt="JMG Cerrajería"
           onError={() => setLogoIndex((i) => i + 1)}
           loading="eager"
-          className="pointer-events-none absolute right-[3%] top-8 hidden w-52 opacity-30 drop-shadow-[0_18px_30px_rgba(7,27,74,0.35)] motion-safe:animate-drift md:block lg:w-72"
+          className="pointer-events-none absolute right-[3%] top-8 hidden w-52 opacity-20 drop-shadow-[0_18px_30px_rgba(7,27,74,0.35)] motion-safe:animate-drift md:block lg:w-72"
         />
       ) : null}
 
       <div className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-[34px] border border-blue-100/55 bg-white/82 shadow-[0_28px_70px_rgba(7,27,74,0.28)] backdrop-blur-xl md:grid-cols-[1.08fr_0.92fr]">
         <section className="relative overflow-hidden border-b border-white/30 bg-[linear-gradient(150deg,rgba(7,27,74,0.99)_0%,rgba(31,88,214,0.93)_100%)] p-7 text-white md:border-b-0 md:border-r md:p-10" aria-label="Marca">
           <div className="relative z-10">
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/45 bg-white/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]">
-              Cerrajería JMG
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/25 to-indigo-900/40 border border-white/20 p-2 shadow-inner backdrop-blur-md shrink-0">
+                <img src="/jmg-logo.svg" alt="Logo Cerrajería JMG" className="h-full w-full object-contain filter drop-shadow-md" />
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/45 bg-white/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]">
+                Cerrajería JMG
+              </div>
             </div>
             <h1 className="font-display text-3xl font-semibold leading-tight md:text-4xl">Control total para vender rápido y operar con precisión</h1>
             <p className="mt-4 max-w-md text-sm text-white/85 md:text-base">
-              Ingresa para administrar inventario, combos, ventas y caja con una interfaz más firme, visual y productiva.
+              Ingresa para administrar inventario, catálogo, ventas y caja con una interfaz más firme, visual y productiva.
             </p>
 
             <div className="mt-7 flex flex-wrap gap-2.5" aria-hidden="true">

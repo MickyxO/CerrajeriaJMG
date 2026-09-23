@@ -8,7 +8,8 @@ class Venta {
         MetodoPago = 'Efectivo',
         Notas = null,
         Subtotal = null,
-        MontoIva = null
+        MontoIva = null,
+        Estado = 'COMPLETADA'
     ) {
         this.IdVenta = IdVenta;
         this.FechaVenta = FechaVenta;
@@ -19,6 +20,7 @@ class Venta {
         this.Notas = Notas;
         this.Subtotal = Subtotal;
         this.MontoIva = MontoIva;
+        this.Estado = Estado;
     }
 }
 

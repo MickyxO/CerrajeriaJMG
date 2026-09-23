@@ -1,6 +1,16 @@
 const ReportesService = require("../../services/reportes/reportes.service");
 
 class ReportesController {
+  async resumenGeneral(req, res) {
+    try {
+      const { range } = req.query || {};
+      const result = await ReportesService.getResumenGeneral({ range });
+      return res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+  }
+
   async bestSellers(req, res) {
     try {
       const { range, limit } = req.query || {};
