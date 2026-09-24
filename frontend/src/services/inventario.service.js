@@ -15,4 +15,12 @@ export const inventarioService = {
       body: { idItem, nuevoStockActual, idUsuario, comentario },
     });
   },
+
+  /** Backend: POST /postdesperdicio */
+  registrarDesperdicio({ idItem, cantidad, idUsuario, motivo } = {}) {
+    return apiRequest("/postdesperdicio", {
+      method: "POST",
+      body: { idItem, cantidad, idUsuario, motivo },
+    });
+  },
 };

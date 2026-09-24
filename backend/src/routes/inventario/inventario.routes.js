@@ -70,4 +70,35 @@ router.get("/getmovimientosinventario", InventarioController.getMovimientos);
  */
 router.post("/postajustestock", InventarioController.ajustarStock);
 
+/**
+ * @swagger
+ * /postdesperdicio:
+ *   post:
+ *     tags:
+ *       - Inventario
+ *     summary: Registrar material desperdiciado (llaves mordidas, errores de corte o garantías)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               idItem:
+ *                 type: integer
+ *               cantidad:
+ *                 type: integer
+ *               idUsuario:
+ *                 type: integer
+ *               motivo:
+ *                 type: string
+ *             required:
+ *               - idItem
+ *               - idUsuario
+ *     responses:
+ *       200:
+ *         description: Material desperdiciado registrado exitosamente
+ */
+router.post("/postdesperdicio", InventarioController.registrarDesperdicio);
+
 module.exports = router;

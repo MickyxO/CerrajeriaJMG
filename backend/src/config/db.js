@@ -1,7 +1,18 @@
 require('dotenv').config();
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const dns = require('dns');
+
+// Parsear TIMESTAMP WITHOUT TIME ZONE (OID 1114) como fecha UTC
+// Dado que la base de datos almacena los instantes en UTC (vía timezone('UTC', now())),
+// evitamos que node-postgres lo interprete erróneamente en la zona local del servidor sumando offset duplicado.
+types.setTypeParser(1114, (stringValue) => {
+  if (!stringValue) return null;
+  if (/[zZ]|[+-]\d{2}(?::?\d{2})?$/.test(stringValue)) {
+    return new Date(stringValue);
+  }
+  return new Date(stringValue.replace(' ', 'T') + 'Z');
+});
 
 // Forzar IPv4 para evitar retardos de resolución DNS en Windows localhost
 try {

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemsService } from "../../services/items.service";
 import { ventasService } from "../../services/ventas.service";
 import { cajaService } from "../../services/caja.service";
+import { inventarioService } from "../../services/inventario.service";
 import { API_URL } from "../../services/api";
 import { IMAGE_VARIANTS, resolveImageUrl } from "../../utils/image";
 import { useAuth } from "../../hooks/useAuth";
@@ -546,6 +547,7 @@ export default function PosPage() {
 
   // Omnibox de búsqueda unificada
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchByCoordinateOnly, setSearchByCoordinateOnly] = useState(false);
   const searchInputRef = useRef(null);
 
   // Edición inline de precio en el carrito
@@ -582,6 +584,38 @@ export default function PosPage() {
   const [isSavingPrestamo, setIsSavingPrestamo] = useState(false);
   const [prestamoError, setPrestamoError] = useState("");
 
+  // Modal de Material Desperdiciado (Llaves mordidas, fallos de corte, garantías)
+  const [showDesperdicioModal, setShowDesperdicioModal] = useState(false);
+  const [desperdicioSearch, setDesperdicioSearch] = useState("");
+  const [desperdicioItem, setDesperdicioItem] = useState(null);
+  const [desperdicioCantidad, setDesperdicioCantidad] = useState(1);
+  const [desperdicioMotivo, setDesperdicioMotivo] = useState("Corte fallido / Llave mordida");
+  const [desperdicioOtroMotivo, setDesperdicioOtroMotivo] = useState("");
+  const [isSavingDesperdicio, setIsSavingDesperdicio] = useState(false);
+  const [desperdicioError, setDesperdicioError] = useState("");
+
+  // Impresión directa de Ticket Térmico POS
+  const handlePrintTicket = useCallback(() => {
+    document.body.classList.add("printing-pos-ticket");
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-pos-ticket");
+    }, 500);
+  }, []);
+
+  // Atajo de teclado: Tecla 'P' para imprimir ticket cuando el modal de venta exitosa está abierto
+  useEffect(() => {
+    if (!successModal) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        handlePrintTicket();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [successModal, handlePrintTicket]);
+
   // Modal para vincular refacción / salida de inventario a un servicio
   const [vincularModal, setVincularModal] = useState({
     isOpen: false,
@@ -606,36 +640,31 @@ export default function PosPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [previewImage]);
 
-  // Cargar catálogo completo
-  useEffect(() => {
-    let mounted = true;
-    async function fetchCatalog() {
-      setIsLoadingCatalog(true);
-      setCatalogError("");
-      try {
-        const res = await itemsService.getPosCatalogo({
-          incluyeItems: true,
-          incluyeServicios: true,
-          soloConStock: false,
-          limit: 1500,
-        });
-        if (!mounted) return;
-        setCatalogo({
-          categorias: Array.isArray(res?.categorias) ? res.categorias : [],
-          articulos: Array.isArray(res?.articulos) ? res.articulos : [],
-        });
-      } catch (err) {
-        if (!mounted) return;
-        setCatalogError(err?.message || "Error al cargar catálogo POS.");
-      } finally {
-        if (mounted) setIsLoadingCatalog(false);
-      }
+  // Cargar / Refrescar catálogo completo
+  const reloadCatalog = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoadingCatalog(true);
+    setCatalogError("");
+    try {
+      const res = await itemsService.getPosCatalogo({
+        incluyeItems: true,
+        incluyeServicios: true,
+        soloConStock: false,
+        limit: 1500,
+      });
+      setCatalogo({
+        categorias: Array.isArray(res?.categorias) ? res.categorias : [],
+        articulos: Array.isArray(res?.articulos) ? res.articulos : [],
+      });
+    } catch (err) {
+      setCatalogError(err?.message || "Error al cargar catálogo POS.");
+    } finally {
+      if (showLoading) setIsLoadingCatalog(false);
     }
-    fetchCatalog();
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    reloadCatalog(true);
+  }, [reloadCatalog]);
 
   // Autofocus en búsqueda
   useEffect(() => {
@@ -757,38 +786,19 @@ export default function PosPage() {
   const articulosParaMostrar = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
-    // 1. Búsqueda activa por Omnibox
-    if (q) {
-      const allItems = catalogo.articulos || [];
-      return allItems.filter((it) => {
-        const nombre = String(it.Nombre || "").toLowerCase();
-        const codigo = String(it.CodigoUbicacion || "").toLowerCase();
-        const marca = String(it.CompatibilidadMarca || "").toLowerCase();
-        const cat = String(it.NombreCategoria || "").toLowerCase();
-        const id = String(it.IdItem || "");
-
-        return (
-          codigo === q ||
-          codigo.includes(q) ||
-          nombre.includes(q) ||
-          marca.includes(q) ||
-          cat.includes(q) ||
-          id === q
-        );
-      });
-    }
-
-    // 2. Si hay subcategoría seleccionada
-    if (subCategoriaId === "TODOS") {
-      return articulosEnMacroActiva;
-    }
-
+    // Caso A: Si hay una subcategoría seleccionada (o 'TODOS' dentro de la macro-pestaña)
+    // El buscador se acopla estrictamente a los artículos de esta categoría
     if (subCategoriaId !== null) {
-      let items = articulosEnMacroActiva.filter(
-        (it) => String(it.IdCategoria) === String(subCategoriaId)
-      );
+      let items = [];
+      if (subCategoriaId === "TODOS") {
+        items = articulosEnMacroActiva;
+      } else {
+        items = articulosEnMacroActiva.filter(
+          (it) => String(it.IdCategoria) === String(subCategoriaId)
+        );
+      }
 
-      // Si estamos en AUTOMOTRIZ, aplicar filtros especializados
+      // Si estamos en AUTOMOTRIZ, aplicar filtros especializados de automotriz
       if (macroTab === "AUTOMOTRIZ") {
         if (autoBrandFilter !== "TODAS") {
           items = items.filter((it) => {
@@ -826,17 +836,73 @@ export default function PosPage() {
         }
       }
 
+      // Si además hay texto en el Omnibox de búsqueda, filtrar dentro de esta categoría
+      if (q) {
+        items = items.filter((it) => {
+          const codigo = String(it.CodigoUbicacion || "").trim().toLowerCase();
+
+          // Si está activo el modo exclusivo por coordenada
+          if (searchByCoordinateOnly) {
+            if (!codigo) return false;
+            return codigo === q || codigo.startsWith(q) || codigo.includes(q);
+          }
+
+          const nombre = String(it.Nombre || "").toLowerCase();
+          const marca = String(it.CompatibilidadMarca || "").toLowerCase();
+          const cat = String(it.NombreCategoria || "").toLowerCase();
+          const id = String(it.IdItem || "");
+
+          return (
+            codigo === q ||
+            codigo.includes(q) ||
+            nombre.includes(q) ||
+            marca.includes(q) ||
+            cat.includes(q) ||
+            id === q
+          );
+        });
+      }
+
       return items;
     }
 
-    // 3. Si no hay subcategoría seleccionada, no mostramos productos individuales
-    // (mostramos los cuadros grandes de subcategorías)
+    // Caso B: No hay subcategoría seleccionada (subCategoriaId === null)
+    // Si hay búsqueda activa por Omnibox, buscamos a nivel global en todo el catálogo
+    if (q) {
+      const allItems = catalogo.articulos || [];
+      return allItems.filter((it) => {
+        const codigo = String(it.CodigoUbicacion || "").trim().toLowerCase();
+
+        // Si está activo el modo exclusivo por coordenada
+        if (searchByCoordinateOnly) {
+          if (!codigo) return false;
+          return codigo === q || codigo.startsWith(q) || codigo.includes(q);
+        }
+
+        const nombre = String(it.Nombre || "").toLowerCase();
+        const marca = String(it.CompatibilidadMarca || "").toLowerCase();
+        const cat = String(it.NombreCategoria || "").toLowerCase();
+        const id = String(it.IdItem || "");
+
+        return (
+          codigo === q ||
+          codigo.includes(q) ||
+          nombre.includes(q) ||
+          marca.includes(q) ||
+          cat.includes(q) ||
+          id === q
+        );
+      });
+    }
+
+    // Caso C: Ni subcategoría ni búsqueda activa -> mostramos cuadros grandes de categorías
     return [];
   }, [
     catalogo.articulos,
     articulosEnMacroActiva,
     subCategoriaId,
     searchQuery,
+    searchByCoordinateOnly,
     macroTab,
     autoBrandFilter,
     autoButtonsFilter,
@@ -961,9 +1027,6 @@ export default function PosPage() {
     setTimeout(() => setAddedFeedback(null), 1800);
   };
 
-  // Retrocompatibilidad
-  const handleAddQuickResidential = handleFastKeyClick;
-
   // Manejo de Servicio General rápido
   const handleAddQuickService = () => {
     const servItem = catalogo.articulos.find((it) => it.IdItem === 681) || {
@@ -979,11 +1042,22 @@ export default function PosPage() {
     setEditingPriceVal("");
   };
 
-  // Confirmar cambio de precio inline
-  const handleSaveInlinePrice = (key) => {
-    const n = Number(editingPriceVal);
-    if (Number.isFinite(n) && n >= 0) {
+  // Cambio en tiempo real de precio inline mientras el usuario escribe
+  const handleInlinePriceChange = (key, val) => {
+    setEditingPriceVal(val);
+    const n = Number(val);
+    if (val !== "" && Number.isFinite(n) && n >= 0) {
       setPrice(key, n);
+    }
+  };
+
+  // Confirmar y salir de la edición de precio
+  const handleSaveInlinePrice = (key, fallbackPrice = 0) => {
+    const n = Number(editingPriceVal);
+    if (editingPriceVal !== "" && Number.isFinite(n) && n >= 0) {
+      setPrice(key, n);
+    } else {
+      setPrice(key, Number(fallbackPrice || 0));
     }
     setEditingPriceKey(null);
     setEditingPriceVal("");
@@ -1074,6 +1148,33 @@ export default function PosPage() {
     });
   }, [vincularModal.isOpen, vincularModal.searchQuery, catalogo.articulos]);
 
+  // Artículos físicos filtrados para el modal de Material Desperdiciado
+  const articulosParaDesperdicio = useMemo(() => {
+    if (!showDesperdicioModal) return [];
+    const q = desperdicioSearch.trim().toLowerCase();
+    const allItems = catalogo.articulos || [];
+
+    // Solo artículos físicos (llaves, forjas, carcasas, controles, chapas, candados)
+    const soloFisicos = allItems.filter(
+      (it) => !it.EsServicio && it.ClasificacionCategoria !== "Servicio" && it.NombreCategoria !== "Servicios"
+    );
+
+    if (!q) {
+      return soloFisicos.slice(0, 30);
+    }
+
+    const terms = q.split(/\s+/).filter(Boolean);
+    return soloFisicos.filter((it) => {
+      const nombre = (it.Nombre || "").toLowerCase();
+      const codigo = (it.CodigoUbicacion || "").toLowerCase();
+      const marca = (it.CompatibilidadMarca || "").toLowerCase();
+      const cat = (it.NombreCategoria || "").toLowerCase();
+      const combo = `${nombre} ${codigo} ${marca} ${cat}`;
+
+      return terms.every((t) => combo.includes(t));
+    });
+  }, [showDesperdicioModal, desperdicioSearch, catalogo.articulos]);
+
   // Billetes sugeridos para pago en efectivo
   const totalPagar = totals.total;
   const suggestedBills = useMemo(() => {
@@ -1103,14 +1204,33 @@ export default function PosPage() {
       setChargeError("El carrito está vacío.");
       return;
     }
-    if (totalPagar <= 0) {
+
+    // Resolver líneas efectivas garantizando que cualquier edición de precio abierta se aplique de inmediato
+    let effectiveLines = lines;
+    if (editingPriceKey) {
+      const n = Number(editingPriceVal);
+      if (editingPriceVal !== "" && Number.isFinite(n) && n >= 0) {
+        setPrice(editingPriceKey, n);
+        effectiveLines = lines.map((l) =>
+          l.key === editingPriceKey ? { ...l, precio: n } : l
+        );
+      }
+      setEditingPriceKey(null);
+      setEditingPriceVal("");
+    }
+
+    const totalVenta = round2(
+      effectiveLines.reduce((sum, l) => sum + l.cantidad * l.precio, 0)
+    );
+
+    if (totalVenta <= 0) {
       setChargeError("El total de la venta debe ser mayor a $0.");
       return;
     }
 
     setIsCharging(true);
     try {
-      const carritoPayload = lines.map((l) => ({
+      const carritoPayload = effectiveLines.map((l) => ({
         tipo: l.tipo,
         id: l.id,
         cantidad: l.cantidad,
@@ -1124,7 +1244,7 @@ export default function PosPage() {
           metodoPago,
           nombreCliente: nombreCliente.trim() || "Mostrador",
           notas: notas.trim() || "",
-          total: totalPagar,
+          total: totalVenta,
           requiereFactura: Boolean(requiereFactura),
         },
         carrito: carritoPayload,
@@ -1135,6 +1255,66 @@ export default function PosPage() {
           ? resVenta.idVenta ?? resVenta.IdVenta ?? resVenta.id ?? ""
           : resVenta;
 
+      // Descontar inmediatamente el stock en el catálogo en memoria (Optimistic UI)
+      setCatalogo((prev) => {
+        if (!prev?.articulos?.length) return prev;
+        const deductions = new Map();
+        for (const line of effectiveLines) {
+          if (line.tipo === "item" && line.id) {
+            const idNum = Number(line.id);
+            const qty = Number(line.cantidad) || 1;
+            deductions.set(idNum, (deductions.get(idNum) || 0) + qty);
+          }
+        }
+        if (deductions.size === 0) return prev;
+
+        const nextArticulos = prev.articulos.map((art) => {
+          const qtySold = deductions.get(Number(art.IdItem));
+          if (qtySold && art.StockActual != null && !art.EsServicio) {
+            if (Number(art.StockActual) >= 9000) return art;
+            const newStock = Math.max(0, Number(art.StockActual) - qtySold);
+            return {
+              ...art,
+              StockActual: newStock,
+              stock_actual: newStock,
+            };
+          }
+          return art;
+        });
+
+        return {
+          ...prev,
+          articulos: nextArticulos,
+        };
+      });
+
+      // Refrescar silenciosamente el catálogo desde la base de datos en segundo plano
+      reloadCatalog(false).catch(() => {});
+
+      clear();
+      setNombreCliente("");
+      setNotas("");
+      setRequiereFactura(false);
+      setMontoRecibido("");
+
+      const calcCambio =
+        metodoPago === "Efectivo" && Number(montoRecibido) >= totalVenta
+          ? round2(Number(montoRecibido) - totalVenta)
+          : 0;
+
+      const snapshotLines = effectiveLines.map((l) => ({
+        nombre: l.nombre,
+        cantidad: l.cantidad,
+        precio: l.precio,
+        subtotal: round2(l.cantidad * l.precio),
+        nota: l.nota || "",
+        codigoUbicacion: l.codigoUbicacion || "",
+      }));
+
+      const snapshotCliente = nombreCliente.trim() || "Mostrador";
+      const snapshotNotas = notas.trim();
+      const snapshotMontoRecibido = Number(montoRecibido) || totalVenta;
+
       clear();
       setNombreCliente("");
       setNotas("");
@@ -1143,9 +1323,21 @@ export default function PosPage() {
 
       setSuccessModal({
         idVenta,
-        total: totalPagar,
-        cambio: cambio > 0 ? cambio : 0,
+        total: totalVenta,
+        cambio: calcCambio > 0 ? calcCambio : 0,
         metodoPago,
+        montoRecibido: snapshotMontoRecibido,
+        nombreCliente: snapshotCliente,
+        vendedor: user?.NombreCompleto || user?.Username || "Cajero",
+        fecha: new Date().toLocaleString("es-MX", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        items: snapshotLines,
+        notas: snapshotNotas,
       });
     } catch (err) {
       setChargeError(err?.message || "Error al procesar la venta.");
@@ -1229,6 +1421,70 @@ export default function PosPage() {
     }
   };
 
+  // Guardar Material Desperdiciado (Llave mordida, fallo de corte, garantía)
+  const handleSaveDesperdicio = async (e) => {
+    e?.preventDefault?.();
+    setDesperdicioError("");
+
+    if (!desperdicioItem?.IdItem) {
+      setDesperdicioError("Selecciona el artículo o llave a registrar como desperdicio.");
+      return;
+    }
+
+    const cant = Math.max(1, Math.trunc(Number(desperdicioCantidad) || 1));
+    const motivoFinal =
+      desperdicioMotivo === "Otro"
+        ? (desperdicioOtroMotivo.trim() || "Material desperdiciado")
+        : desperdicioMotivo;
+
+    setIsSavingDesperdicio(true);
+    try {
+      await inventarioService.registrarDesperdicio({
+        idItem: desperdicioItem.IdItem,
+        cantidad: cant,
+        idUsuario: user?.IdUsuario ?? 1,
+        motivo: motivoFinal,
+      });
+
+      // Actualizar stock inmediatamente en memoria (Optimistic UI)
+      setCatalogo((prev) => {
+        if (!prev?.articulos?.length) return prev;
+        return {
+          ...prev,
+          articulos: prev.articulos.map((art) => {
+            if (Number(art.IdItem) === Number(desperdicioItem.IdItem)) {
+              const curr = Number(art.StockActual ?? 0);
+              const next = Math.max(0, curr - cant);
+              return { ...art, StockActual: next, stock_actual: next };
+            }
+            return art;
+          }),
+        };
+      });
+
+      // Refrescar en segundo plano
+      reloadCatalog(false).catch(() => {});
+
+      setAddedFeedback({
+        name: `Desperdicio: -${cant} ${desperdicioItem.Nombre}`,
+        code: motivoFinal,
+      });
+      setTimeout(() => setAddedFeedback(null), 2500);
+
+      // Limpiar y cerrar modal
+      setShowDesperdicioModal(false);
+      setDesperdicioItem(null);
+      setDesperdicioSearch("");
+      setDesperdicioCantidad(1);
+      setDesperdicioMotivo("Corte fallido / Llave mordida");
+      setDesperdicioOtroMotivo("");
+    } catch (err) {
+      setDesperdicioError(err?.message || "Error al registrar material desperdiciado.");
+    } finally {
+      setIsSavingDesperdicio(false);
+    }
+  };
+
   return (
     <div className="posFastContainer flex flex-col gap-3 pb-8 w-full max-w-full overflow-x-hidden">
       {/* 1. BARRA SUPERIOR: BRANDING, VENDEDOR Y ACCIONES RÁPIDAS */}
@@ -1255,6 +1511,24 @@ export default function PosPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Botón Material Desperdiciado */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowDesperdicioModal(true);
+              setDesperdicioError("");
+            }}
+            className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/90 px-4 py-2.5 text-sm font-bold text-amber-800 transition-all hover:bg-amber-100 hover:border-amber-400 hover:shadow-xs active:scale-95 cursor-pointer"
+            title="Registrar llaves dañadas, cortes fallidos o garantías"
+          >
+            <svg className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+            <span>Material Desperdiciado</span>
+          </button>
+
           {/* Botón Préstamo / Cambio */}
           <button
             type="button"
@@ -1394,29 +1668,67 @@ export default function PosPage() {
             <input
               ref={searchInputRef}
               type="text"
-              className="w-full rounded-2xl border border-slate-300/90 bg-slate-50/70 py-3 pr-10 !pl-11 text-sm font-semibold text-slate-800 placeholder-slate-400 shadow-xs transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none"
-              placeholder="Buscar producto, coordenada física (ej. DD8), marca o ID..."
+              className={`w-full rounded-2xl border py-3 pr-32 sm:pr-36 !pl-11 text-sm font-semibold text-slate-800 placeholder-slate-400 shadow-xs transition-all focus:outline-none ${
+                searchByCoordinateOnly
+                  ? "border-indigo-400 bg-indigo-50/40 focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                  : "border-slate-300/90 bg-slate-50/70 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              }`}
+              placeholder={
+                searchByCoordinateOnly
+                  ? (subCategoriaId !== null && subCategoriaActivaNombre
+                      ? `📍 Filtrar por coordenada en ${subCategoriaActivaNombre}...`
+                      : "📍 Filtrar solo por coordenada física (ej. DD8, A1)...")
+                  : (subCategoriaId !== null && subCategoriaActivaNombre
+                      ? `Buscar en ${subCategoriaActivaNombre}...`
+                      : "Buscar producto, coordenada física (ej. DD8), marca o ID...")
+              }
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 if (e.target.value) setActiveFastKeySubmenu(null);
               }}
             />
-            {searchQuery && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1.5">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer rounded-lg transition-colors"
+                  title="Borrar búsqueda"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
-                  setSearchQuery("");
+                  setSearchByCoordinateOnly((prev) => !prev);
                   searchInputRef.current?.focus();
                 }}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs select-none ${
+                  searchByCoordinateOnly
+                    ? "bg-indigo-600 text-white shadow-indigo-200 ring-2 ring-indigo-300 active:scale-95"
+                    : "bg-slate-200/90 text-slate-700 hover:bg-slate-300 hover:text-slate-900 active:scale-95"
+                }`}
+                title={
+                  searchByCoordinateOnly
+                    ? "Modo coordenada activo: buscando exclusivamente por ubicación física. Clic para volver a búsqueda general."
+                    : "Activar búsqueda exclusiva por coordenada física (ej. DD8, A1)"
+                }
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
+                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                  <circle cx="12" cy="10" r="3" />
                 </svg>
+                <span className="hidden sm:inline">Coordenada</span>
               </button>
-            )}
+            </div>
           </div>
 
           {/* C. CONTENIDO: ¿BÚSQUEDA, SUBCATEGORÍAS EN CUADROS GRANDES, O PRODUCTOS? */}
@@ -1429,36 +1741,8 @@ export default function PosPage() {
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center text-sm font-semibold text-rose-700">
               {catalogError}
             </div>
-          ) : searchQuery ? (
-            /* CASO 1: BÚSQUEDA ACTIVA EN OMNIBOX -> MUESTRA PRODUCTOS ENCONTRADOS DIRECTAMENTE */
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between px-1 text-xs font-bold text-slate-500">
-                <span>Resultados de búsqueda ({articulosParaMostrar.length}):</span>
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="text-blue-600 hover:underline cursor-pointer"
-                >
-                  Limpiar búsqueda
-                </button>
-              </div>
-
-              {articulosParaMostrar.length === 0 ? (
-                <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 text-center text-slate-400">
-                  <svg className="h-10 w-10 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.3-4.3" />
-                  </svg>
-                  <p className="mt-2 text-xs font-semibold">No se encontraron productos con "{searchQuery}".</p>
-                </div>
-              ) : (
-                <div className="grid max-h-[580px] grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-                  {articulosParaMostrar.map((item) => renderItemCard(item, addItem, setPreviewImage))}
-                </div>
-              )}
-            </div>
           ) : subCategoriaId !== null ? (
-            /* CASO 2: SELECCIONÓ UNA SUBCATEGORÍA -> MUESTRA PRODUCTOS DE ESA SUBCATEGORÍA */
+            /* CASO 2: SELECCIONÓ UNA SUBCATEGORÍA -> MUESTRA PRODUCTOS DE ESA SUBCATEGORÍA (BÚSQUEDA ACOPLADA) */
             <div className="flex flex-col min-w-0 max-w-full gap-2.5">
               {/* Barra de navegación superior con botón para regresar a los cuadros grandes */}
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
@@ -1479,6 +1763,45 @@ export default function PosPage() {
                   {subCategoriaActivaNombre} ({articulosParaMostrar.length})
                 </div>
               </div>
+
+              {/* Indicador contextual de búsqueda acoplada a la categoría activa */}
+              {searchQuery && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-blue-50/80 border border-blue-200/80 px-3 py-1.5 text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-blue-900">
+                      Buscando en {subCategoriaActivaNombre}:
+                    </span>
+                    <span className="font-bold text-slate-800 italic bg-white/80 px-2 py-0.5 rounded-md border border-blue-100">
+                      "{searchQuery}"
+                    </span>
+                    <span className="rounded-md bg-blue-200/70 px-1.5 py-0.5 text-[11px] font-black text-blue-900">
+                      {articulosParaMostrar.length} {articulosParaMostrar.length === 1 ? "resultado" : "resultados"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSubCategoriaId(null)}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1"
+                      title="Buscar este término en todas las categorías"
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
+                      <span>Buscar en todo el catálogo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-700 hover:underline cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* FILTROS ESPECIALIZADOS DE AUTOMOTRIZ (POR MARCA, BOTONES, MECANISMO, STOCK Y MODELO) */}
               {macroTab === "AUTOMOTRIZ" && (
@@ -1671,16 +1994,82 @@ export default function PosPage() {
               )}
 
               {articulosParaMostrar.length === 0 ? (
-                <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 text-center text-slate-400">
-                  <svg className="h-10 w-10 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 8 12 3 3 8l9 5 9-5Z" />
-                    <path d="M3 8v8l9 5 9-5V8" />
-                    <path d="M12 13v8" />
-                  </svg>
-                  <p className="mt-2 text-xs font-semibold">No hay productos en esta categoría.</p>
+                <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 text-center text-slate-400 p-4">
+                  {searchQuery ? (
+                    <>
+                      <svg className="h-10 w-10 text-slate-300 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
+                      </svg>
+                      <p className="mt-1 text-xs font-bold text-slate-700">
+                        No se encontraron productos con "{searchQuery}" en {subCategoriaActivaNombre}.
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">
+                        Quizá pertenezca a otra categoría o clasificación.
+                      </p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery("")}
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 cursor-pointer"
+                        >
+                          Limpiar búsqueda
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSubCategoriaId(null)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 cursor-pointer active:scale-95 transition-all"
+                        >
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="2" y1="12" x2="22" y2="12" />
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                          </svg>
+                          <span>Buscar en todo el catálogo</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-10 w-10 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 8 12 3 3 8l9 5 9-5Z" />
+                        <path d="M3 8v8l9 5 9-5V8" />
+                        <path d="M12 13v8" />
+                      </svg>
+                      <p className="mt-2 text-xs font-semibold">No hay productos en esta categoría.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="grid max-h-[560px] grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+                  {articulosParaMostrar.map((item) => renderItemCard(item, addItem, setPreviewImage))}
+                </div>
+              )}
+            </div>
+          ) : searchQuery ? (
+            /* CASO 1: BÚSQUEDA GLOBAL DESDE LA VISTA PRINCIPAL (subCategoriaId === null) */
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1 text-xs font-bold text-slate-500">
+                <span>Resultados de búsqueda global ({articulosParaMostrar.length}):</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-blue-600 hover:underline cursor-pointer"
+                >
+                  Limpiar búsqueda
+                </button>
+              </div>
+
+              {articulosParaMostrar.length === 0 ? (
+                <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 text-center text-slate-400">
+                  <svg className="h-10 w-10 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                  <p className="mt-2 text-xs font-semibold">No se encontraron productos con "{searchQuery}".</p>
+                </div>
+              ) : (
+                <div className="grid max-h-[580px] grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
                   {articulosParaMostrar.map((item) => renderItemCard(item, addItem, setPreviewImage))}
                 </div>
               )}
@@ -1866,7 +2255,6 @@ export default function PosPage() {
                           )}
 
                           {modelsForActiveSubmenu.map((m) => {
-                            const hasStock = m.stock !== null && m.stock > 0;
                             const isLowStock = m.stock !== null && m.stock > 0 && m.stock <= 2;
                             const isZeroStock = m.stock !== null && m.stock <= 0;
 
@@ -2226,28 +2614,37 @@ export default function PosPage() {
                         </strong>
 
                         {/* PRECIO UNITARIO EDITABLE INLINE */}
-                        <div className="mt-0.5 flex items-center gap-1.5">
-                          <span className="text-[11px] text-slate-500">Precio c/u:</span>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-[11px] font-semibold text-slate-500">Precio c/u:</span>
                           {isEditingThisPrice ? (
-                            <div className="inline-flex items-center gap-1">
-                              <span className="text-xs font-bold text-slate-700">$</span>
+                            <div className="inline-flex items-center gap-1.5">
+                              <span className="text-sm font-black text-slate-700">$</span>
                               <input
                                 type="number"
+                                step="any"
+                                min="0"
                                 autoFocus
-                                className="w-20 rounded-md border border-blue-400 bg-white px-1.5 py-0.5 text-xs font-extrabold text-blue-700 focus:outline-none"
+                                onFocus={(e) => e.target.select()}
+                                className="w-24 rounded-xl border-2 border-blue-500 bg-white px-2.5 py-1 text-sm font-black text-blue-700 focus:outline-none shadow-xs"
                                 value={editingPriceVal}
-                                onChange={(e) => setEditingPriceVal(e.target.value)}
+                                onChange={(e) => handleInlinePriceChange(line.key, e.target.value)}
+                                onBlur={() => handleSaveInlinePrice(line.key, line.precio)}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveInlinePrice(line.key);
-                                  if (e.key === "Escape") setEditingPriceKey(null);
+                                  if (e.key === "Enter") handleSaveInlinePrice(line.key, line.precio);
+                                  if (e.key === "Escape") {
+                                    setEditingPriceKey(null);
+                                    setEditingPriceVal("");
+                                  }
                                 }}
                               />
                               <button
                                 type="button"
-                                onClick={() => handleSaveInlinePrice(line.key)}
-                                className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleSaveInlinePrice(line.key, line.precio)}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 active:scale-95 cursor-pointer shadow-xs"
+                                title="Confirmar precio"
                               >
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="20 6 9 17 4 12" />
                                 </svg>
                               </button>
@@ -2259,13 +2656,15 @@ export default function PosPage() {
                                 setEditingPriceKey(line.key);
                                 setEditingPriceVal(String(line.precio));
                               }}
-                              className="group inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs font-extrabold text-blue-700 shadow-xs transition-all hover:bg-blue-50 cursor-pointer"
-                              title="Haz clic para modificar el precio de este producto"
+                              className="group inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-1 text-xs sm:text-sm font-black text-blue-700 shadow-2xs transition-all hover:bg-blue-100 hover:border-blue-400 active:scale-95 cursor-pointer"
+                              title="Toca para modificar el precio de este producto"
                             >
                               <span>{formatMoney(line.precio)}</span>
-                              <svg className="h-3 w-3 text-blue-400 group-hover:text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                              </svg>
+                              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-100/80 text-blue-600 group-hover:bg-blue-200 group-hover:text-blue-800 transition-colors">
+                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                </svg>
+                              </span>
                             </button>
                           )}
                         </div>
@@ -2676,17 +3075,134 @@ export default function PosPage() {
               )}
             </div>
 
-            <button
-              type="button"
-              autoFocus
-              onClick={() => {
-                setSuccessModal(null);
-                searchInputRef.current?.focus();
-              }}
-              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white shadow-md hover:bg-slate-800 active:scale-98 cursor-pointer"
-            >
-              Nueva Venta (Enter)
-            </button>
+            <div className="mt-2 flex w-full flex-col gap-2">
+              <button
+                type="button"
+                onClick={handlePrintTicket}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3 text-sm font-black text-slate-950 shadow-md hover:bg-amber-400 active:scale-98 cursor-pointer transition-all"
+              >
+                <svg className="h-4 w-4 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                <span>Imprimir Ticket (P)</span>
+              </button>
+
+              <button
+                type="button"
+                autoFocus
+                onClick={() => {
+                  setSuccessModal(null);
+                  searchInputRef.current?.focus();
+                }}
+                className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white shadow-md hover:bg-slate-800 active:scale-98 cursor-pointer"
+              >
+                Nueva Venta (Enter)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== TICKET TÉRMICO IMPRIMIBLE POS (58mm / 80mm) ===================== */}
+      {successModal && (
+        <div id="printable-pos-ticket" className="hidden" aria-hidden="true">
+          <div style={{ textAlign: "center", marginBottom: "6px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "1px" }}>
+              CERRAJERÍA JMG
+            </div>
+            <div style={{ fontSize: "9px", marginTop: "2px" }}>
+              Duplicados de Llaves · Chapas · Candados
+            </div>
+            <div style={{ fontSize: "9px" }}>
+              Llaves con Chip · Controles · Carcasas
+            </div>
+            <div style={{ fontSize: "9px" }}>
+              Aperturas Residenciales y Automotrices
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+            <div>
+              <strong>Ticket #:</strong>{" "}
+              {typeof successModal.idVenta === "object"
+                ? (successModal.idVenta?.idVenta ?? successModal.idVenta?.IdVenta ?? "")
+                : successModal.idVenta}
+            </div>
+            <div><strong>Fecha:</strong> {successModal.fecha}</div>
+            <div><strong>Atendió:</strong> {successModal.vendedor}</div>
+            <div><strong>Cliente:</strong> {successModal.nombreCliente}</div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <table style={{ width: "100%", fontSize: "10px", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #000", textAlign: "left" }}>
+                <th style={{ width: "18%", paddingBottom: "2px" }}>Cant</th>
+                <th style={{ width: "52%", paddingBottom: "2px" }}>Concepto</th>
+                <th style={{ width: "30%", textAlign: "right", paddingBottom: "2px" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {successModal.items?.map((it, idx) => (
+                <tr key={idx} style={{ verticalAlign: "top" }}>
+                  <td style={{ paddingTop: "2px" }}>{it.cantidad}x</td>
+                  <td style={{ paddingTop: "2px" }}>
+                    <div>{it.nombre}</div>
+                    {it.codigoUbicacion && (
+                      <div style={{ fontSize: "8px", color: "#333" }}>
+                        [Ubic: {it.codigoUbicacion}]
+                      </div>
+                    )}
+                    {it.nota && (
+                      <div style={{ fontSize: "8px", fontStyle: "italic", color: "#444" }}>
+                        ({it.nota})
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ paddingTop: "2px", textAlign: "right", fontWeight: "bold" }}>
+                    {formatMoney(it.subtotal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <div style={{ fontSize: "10px", textAlign: "right", lineHeight: "1.4" }}>
+            <div style={{ fontSize: "13px", fontWeight: "900" }}>
+              TOTAL: {formatMoney(successModal.total)}
+            </div>
+            <div>Método: {successModal.metodoPago}</div>
+            {successModal.metodoPago === "Efectivo" && (
+              <>
+                <div>Recibido: {formatMoney(successModal.montoRecibido)}</div>
+                {successModal.cambio > 0 && (
+                  <div style={{ fontWeight: "bold" }}>
+                    Cambio: {formatMoney(successModal.cambio)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {successModal.notas && (
+            <div style={{ marginTop: "4px", fontSize: "9px" }}>
+              <strong>Nota:</strong> {successModal.notas}
+            </div>
+          )}
+
+          <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+          <div style={{ textAlign: "center", fontSize: "9px", lineHeight: "1.3" }}>
+            <div style={{ fontWeight: "bold" }}>¡Gracias por su preferencia!</div>
+            <div>Garantía en duplicados presentando este comprobante y llave original.</div>
+            <div style={{ marginTop: "2px" }}>Servicio a domicilio y emergencias</div>
           </div>
         </div>
       )}
@@ -2991,6 +3507,262 @@ export default function PosPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== MODAL DE MATERIAL DESPERDICIADO ===================== */}
+      {showDesperdicioModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="flex w-full max-w-lg flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl max-h-[92vh] overflow-hidden">
+            {/* Cabecera */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">
+                    Registrar Material Desperdiciado
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Descuenta del inventario llaves mordidas, forjas rotas o garantías
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDesperdicioModal(false);
+                  setDesperdicioItem(null);
+                  setDesperdicioSearch("");
+                  setDesperdicioError("");
+                }}
+                className="rounded-full bg-slate-100 p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 mt-3 flex flex-col gap-3">
+              {/* 1. Selector de Artículo */}
+              {!desperdicioItem ? (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-slate-600">
+                    Buscar pieza o llave desperdiciada:
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Buscar por código (R1, MG1, X24...) o nombre..."
+                      value={desperdicioSearch}
+                      onChange={(e) => setDesperdicioSearch(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:outline-none"
+                    />
+                    <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </div>
+
+                  {/* Lista de resultados */}
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/50">
+                    {articulosParaDesperdicio.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        No se encontraron artículos físicos con ese criterio.
+                      </div>
+                    ) : (
+                      articulosParaDesperdicio.map((art) => (
+                        <button
+                          key={art.IdItem}
+                          type="button"
+                          onClick={() => {
+                            setDesperdicioItem(art);
+                            setDesperdicioError("");
+                          }}
+                          className="w-full flex items-center justify-between p-2.5 text-left hover:bg-amber-50/80 transition-colors cursor-pointer group"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <strong className="block text-xs font-bold text-slate-800 truncate group-hover:text-amber-800">
+                              {art.Nombre}
+                            </strong>
+                            <span className="text-[10px] text-slate-500">
+                              {art.NombreCategoria}
+                              {art.CompatibilidadMarca ? ` · ${art.CompatibilidadMarca}` : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {art.CodigoUbicacion && (
+                              <span className="rounded-md bg-amber-100/70 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
+                                📍 {art.CodigoUbicacion}
+                              </span>
+                            )}
+                            <span className="text-xs font-bold text-slate-700">
+                              Stock: {art.StockActual ?? 0}
+                            </span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Artículo Seleccionado */
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 flex items-center justify-between">
+                  <div className="min-w-0 pr-2">
+                    <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider">
+                      Artículo Seleccionado
+                    </span>
+                    <strong className="block text-sm font-bold text-slate-900 truncate">
+                      {desperdicioItem.Nombre}
+                    </strong>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-600">
+                      <span>Stock actual: <strong>{desperdicioItem.StockActual ?? 0}</strong></span>
+                      {desperdicioItem.CodigoUbicacion && (
+                        <span>· Ubic: <strong>{desperdicioItem.CodigoUbicacion}</strong></span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDesperdicioItem(null)}
+                    className="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-rose-600 cursor-pointer"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              )}
+
+              {/* 2. Cantidad */}
+              {desperdicioItem && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-600">
+                    Cantidad a descontar:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDesperdicioCantidad((q) => Math.max(1, q - 1))}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-base font-bold text-slate-700 hover:bg-slate-100 active:scale-95 cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={desperdicioItem.StockActual ? Number(desperdicioItem.StockActual) : 999}
+                      value={desperdicioCantidad}
+                      onChange={(e) => setDesperdicioCantidad(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="h-10 w-24 rounded-xl border border-slate-300 text-center text-sm font-black text-slate-800 focus:border-amber-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDesperdicioCantidad((q) => q + 1)}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-base font-bold text-slate-700 hover:bg-slate-100 active:scale-95 cursor-pointer"
+                    >
+                      +
+                    </button>
+                    <div className="flex items-center gap-1.5 ml-2">
+                      {[1, 2, 5].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setDesperdicioCantidad(preset)}
+                          className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                            desperdicioCantidad === preset
+                              ? "bg-amber-600 text-white shadow-xs"
+                              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          }`}
+                        >
+                          {preset} pza{preset > 1 ? "s" : ""}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Motivo del desperdicio */}
+              {desperdicioItem && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-slate-600">
+                    Motivo del desperdicio:
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { id: "Corte fallido / Llave mordida", label: "Corte fallido / Llave mordida", icon: "✂️" },
+                      { id: "Garantía de cliente (no abrió la chapa)", label: "Garantía cliente (no abrió)", icon: "🔄" },
+                      { id: "Pieza / forja con defecto de fábrica", label: "Defecto de fábrica", icon: "⚠️" },
+                      { id: "Otro", label: "Otro motivo...", icon: "✏️" },
+                    ].map((mot) => (
+                      <button
+                        key={mot.id}
+                        type="button"
+                        onClick={() => setDesperdicioMotivo(mot.id)}
+                        className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs font-bold transition-all cursor-pointer ${
+                          desperdicioMotivo === mot.id
+                            ? "border-amber-500 bg-amber-50/80 text-amber-900 shadow-xs"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span>{mot.icon}</span>
+                        <span className="truncate">{mot.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {desperdicioMotivo === "Otro" && (
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Escribe el motivo detallado..."
+                      value={desperdicioOtroMotivo}
+                      onChange={(e) => setDesperdicioOtroMotivo(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:outline-none"
+                    />
+                  )}
+                </div>
+              )}
+
+              {desperdicioError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-xs font-semibold text-rose-700">
+                  {desperdicioError}
+                </div>
+              )}
+            </div>
+
+            {/* Footer / Acciones */}
+            <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDesperdicioModal(false);
+                  setDesperdicioItem(null);
+                  setDesperdicioSearch("");
+                  setDesperdicioError("");
+                }}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!desperdicioItem || isSavingDesperdicio}
+                onClick={handleSaveDesperdicio}
+                className="rounded-xl bg-amber-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-amber-700 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <span>🗑️</span>
+                <span>{isSavingDesperdicio ? "Registrando..." : "Confirmar Desperdicio"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

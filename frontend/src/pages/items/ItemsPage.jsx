@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { itemsService } from "../../services/items.service";
 import { categoriaService } from "../../services/categoria.service";
 import { inventarioService } from "../../services/inventario.service";
@@ -76,6 +76,7 @@ export default function ItemsPage() {
 
   // Filtros de Items
   const [q, setQ] = useState("");
+  const [soloPorCoordenada, setSoloPorCoordenada] = useState(false);
   const [selectedCategoria, setSelectedCategoria] = useState("TODAS");
   const [filtroStock, setFiltroStock] = useState("TODOS"); // TODOS | BAJO_STOCK | AGOTADOS | EN_STOCK
   const [filtroMacro, setFiltroMacro] = useState("TODAS"); // TODAS | Residencial | Automotriz | Accesorios | Servicios
@@ -300,9 +301,16 @@ export default function ItemsPage() {
       // Búsqueda por texto (nombre, marca, ubicación, id)
       if (q.trim()) {
         const term = q.trim().toLowerCase();
+        const ubi = (it.CodigoUbicacion ?? "").trim().toLowerCase();
+
+        // Modo exclusivo por coordenada física
+        if (soloPorCoordenada) {
+          if (!ubi) return false;
+          return ubi === term || ubi.startsWith(term) || ubi.includes(term);
+        }
+
         const nombre = (it.Nombre ?? "").toLowerCase();
         const marca = (it.CompatibilidadMarca ?? "").toLowerCase();
-        const ubi = (it.CodigoUbicacion ?? "").toLowerCase();
         const chip = (it.TipoChip ?? "").toLowerCase();
         const idStr = String(it.IdItem ?? "");
         return (
@@ -316,7 +324,7 @@ export default function ItemsPage() {
 
       return true;
     });
-  }, [items, filtroEstado, filtroMacro, catClasificacionMap, selectedCategoria, filtroStock, q]);
+  }, [items, filtroEstado, filtroMacro, catClasificacionMap, selectedCategoria, filtroStock, q, soloPorCoordenada]);
 
   // Métricas del catálogo
   const metricas = useMemo(() => {
@@ -335,7 +343,7 @@ export default function ItemsPage() {
         if (stock < 9000) {
           piezasFisicas += stock;
         }
-        if (Boolean(it.AlertaStock)) {
+        if (it.AlertaStock) {
           if (stock === 0) {
             agotados++;
           } else if (stock <= min) {
@@ -370,8 +378,6 @@ export default function ItemsPage() {
     setIsSavingCount(true);
     setCountError(null);
     try {
-      const stockAnterior = Number(countModalItem.StockActual ?? 0);
-      const delta = n - stockAnterior;
       const motivoFinal = `${conteoMotivo}${conteoComentario.trim() ? ` · ${conteoComentario.trim()}` : ""}`;
 
       await inventarioService.ajustarStock({
@@ -474,7 +480,7 @@ export default function ItemsPage() {
         savedItem = await itemsService.crearItem(payload);
       }
 
-      const itemId = savedItem?.IdItem ?? itemForm.IdItem;
+      const itemId = savedItem?.IdItem ?? savedItem?.insertId ?? savedItem?.id_item ?? itemForm.IdItem;
 
       // Subir imagen si se seleccionó archivo o url remota
       if (itemId && uploadFile) {
@@ -654,6 +660,27 @@ export default function ItemsPage() {
           </button>
         </div>
       </header>
+
+      {/* BANNER DE ERROR AL CARGAR CATÁLOGO */}
+      {error && (
+        <div className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-700">
+          <div className="flex items-center gap-2">
+            <svg className="h-4 w-4 shrink-0 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadAll}
+            className="rounded-xl border border-rose-300 bg-white px-3 py-1.5 text-xs font-black text-rose-700 hover:bg-rose-100 cursor-pointer shadow-2xs"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* 2. KPIS RÁPIDOS                                          */}
@@ -981,22 +1008,53 @@ export default function ItemsPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, clave, coordenada o compatibilidad..."
-                  className="w-full !pl-11 pr-8 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+                  placeholder={
+                    soloPorCoordenada
+                      ? "📍 Filtrar solo por coordenada física (ej. DD8, A1)..."
+                      : "Buscar por nombre, clave, coordenada o compatibilidad..."
+                  }
+                  className={`w-full !pl-11 pr-32 sm:pr-36 py-2.5 rounded-2xl border text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
+                    soloPorCoordenada
+                      ? "border-indigo-400 bg-indigo-50/40 focus:border-indigo-600 focus:bg-white"
+                      : "border-slate-200 bg-slate-50 focus:border-blue-500 focus:bg-white"
+                  }`}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                 />
-                {q && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1.5">
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => setQ("")}
+                      className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer rounded-lg transition-colors"
+                      title="Borrar búsqueda"
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setQ("")}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    onClick={() => setSoloPorCoordenada((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer shadow-2xs select-none ${
+                      soloPorCoordenada
+                        ? "bg-indigo-600 text-white shadow-indigo-200 ring-2 ring-indigo-300 active:scale-95"
+                        : "bg-slate-200/90 text-slate-700 hover:bg-slate-300 hover:text-slate-900 active:scale-95"
+                    }`}
+                    title={
+                      soloPorCoordenada
+                        ? "Modo coordenada activo: solo busca por ubicación física. Clic para volver a búsqueda general."
+                        : "Activar búsqueda exclusiva por coordenada física (ej. DD8, A1)"
+                    }
                   >
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6 6 18M6 6l12 12" />
+                    <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                      <circle cx="12" cy="10" r="3" />
                     </svg>
+                    <span className="hidden sm:inline">Coordenada</span>
                   </button>
-                )}
+                </div>
               </div>
 
               {/* Botón Popup Selector de Categoría */}

@@ -1,9 +1,16 @@
-const DEFAULT_API_URL = "http://localhost:3000";
+function getDynamicApiUrl() {
+  if (import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // En el navegador dentro de la red local / intranet, conectar automáticamente a la IP del servidor
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const protocol = window.location.protocol || "http:";
+    return `${protocol}//${window.location.hostname}:3000`;
+  }
+  return "http://localhost:3000";
+}
 
-export const API_URL = (import.meta.env?.VITE_API_URL || DEFAULT_API_URL).replace(
-	/\/$/,
-	""
-);
+export const API_URL = getDynamicApiUrl().replace(/\/$/, "");
 
 function buildUrl(path, params) {
 	const url = new URL(path, API_URL);

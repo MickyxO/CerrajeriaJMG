@@ -31,7 +31,7 @@ class CajaService {
         try {
             const query = `
                 SELECT
-                    timezone($1, now()) AS now_local,
+                    now() AS now_local,
                     timezone($1, now())::date AS fecha_local,
                     EXTRACT(HOUR FROM timezone($1, now()))::int AS hora_local,
                     EXTRACT(MINUTE FROM timezone($1, now()))::int AS minuto_local
@@ -104,7 +104,13 @@ class CajaService {
     async getUltimoCierreAutomaticoReciente(hoursWindow = 48) {
         try {
             const query = `
-                SELECT id_caja, fecha_apertura, hora_apertura, hora_cierre, monto_final
+                SELECT 
+                    id_caja, 
+                    fecha_apertura, 
+                    hora_apertura, 
+                    hora_cierre, 
+                    monto_final,
+                    (fecha_apertura < timezone($1, hora_cierre AT TIME ZONE 'UTC')::date) AS es_dia_previo
                 FROM caja
                 WHERE estado = 'CERRADA'
                   AND id_usuario_cierre IS NULL
@@ -122,6 +128,7 @@ class CajaService {
                 horaApertura: r.hora_apertura,
                 horaCierre: r.hora_cierre,
                 montoFinal: r.monto_final,
+                esDiaPrevio: Boolean(r.es_dia_previo),
             };
         } catch (err) {
             console.error("Error consultando último cierre automático: ", err.message);
@@ -503,8 +510,8 @@ class CajaService {
 
             // 1. Insertar el Gasto con el MetodoPago
             const queryMov = `
-                INSERT INTO movimientos_caja (id_caja, monto, concepto, id_usuario, metodo_pago, tipo_movimiento)
-                VALUES ($1, $2, $3, $4, $5, 'SALIDA')
+                INSERT INTO movimientos_caja (id_caja, monto, concepto, id_usuario, metodo_pago, tipo_movimiento, fecha_hora)
+                VALUES ($1, $2, $3, $4, $5, 'SALIDA', timezone('UTC', now()))
                 RETURNING id_movimiento
             `;
             const resMov = await client.query(queryMov, [idCaja, Monto, Concepto, IdUsuario, MetodoPago]);
@@ -559,8 +566,8 @@ class CajaService {
 
             // 1. Insertar el movimiento en efectivo
             const queryMov = `
-                INSERT INTO movimientos_caja (id_caja, monto, concepto, id_usuario, metodo_pago, tipo_movimiento)
-                VALUES ($1, $2, $3, $4, 'Efectivo', $5)
+                INSERT INTO movimientos_caja (id_caja, monto, concepto, id_usuario, metodo_pago, tipo_movimiento, fecha_hora)
+                VALUES ($1, $2, $3, $4, 'Efectivo', $5, timezone('UTC', now()))
                 RETURNING id_movimiento
             `;
             const resMov = await client.query(queryMov, [idCaja, numMonto, concepto, IdUsuario, tipoMov]);
