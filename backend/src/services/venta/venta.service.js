@@ -47,10 +47,12 @@ class VentaService {
 
             let sumaSubtotal = 0;
 
-            // Cálculo del IVA
+            // Cálculo del Subtotal y del IVA
             let montoIVA = 0;
-            // Verificamos si el flag 'requiereFactura' viene en true
-            if (datosVenta.requiereFactura === true) {
+            if (datosVenta.subtotal !== undefined && datosVenta.subtotal !== null && Number.isFinite(Number(datosVenta.subtotal))) {
+                sumaSubtotal = round2(datosVenta.subtotal);
+                montoIVA = datosVenta.requiereFactura ? round2(sumaSubtotal * 0.16) : 0;
+            } else if (datosVenta.requiereFactura === true) {
                 sumaSubtotal = round2(datosVenta.total / 1.16);
                 montoIVA = round2(datosVenta.total - sumaSubtotal);
             } else {

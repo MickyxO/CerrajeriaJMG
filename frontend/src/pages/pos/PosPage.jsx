@@ -554,6 +554,9 @@ export default function PosPage() {
   const [editingPriceKey, setEditingPriceKey] = useState(null);
   const [editingPriceVal, setEditingPriceVal] = useState("");
 
+  // Subtotal editable manualmente
+  const [subtotalEditado, setSubtotalEditado] = useState(null);
+
   // Formulario de cobro
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [montoRecibido, setMontoRecibido] = useState("");
@@ -563,6 +566,13 @@ export default function PosPage() {
   const [showExtraDetails, setShowExtraDetails] = useState(false);
   const [isCharging, setIsCharging] = useState(false);
   const [chargeError, setChargeError] = useState("");
+
+  // Si se vacía el carrito, restablecer el subtotal editado
+  useEffect(() => {
+    if (lines.length === 0) {
+      setSubtotalEditado(null);
+    }
+  }, [lines.length]);
 
   // Modal de Venta Exitosa
   const [successModal, setSuccessModal] = useState(null);
@@ -1178,8 +1188,32 @@ export default function PosPage() {
     });
   }, [showDesperdicioModal, desperdicioSearch, catalogo.articulos]);
 
+  // Subtotal base calculado desde las líneas del carrito
+  const subtotalCalculado = totals.total;
+
+  // Subtotal efectivo (editado manualmente o calculado de productos)
+  const subtotalEfectivo = useMemo(() => {
+    if (subtotalEditado !== null && subtotalEditado !== "") {
+      const parsed = Number(subtotalEditado);
+      if (Number.isFinite(parsed) && parsed >= 0) {
+        return round2(parsed);
+      }
+    }
+    return subtotalCalculado;
+  }, [subtotalEditado, subtotalCalculado]);
+
+  // IVA calculado: si requiereFactura está activo, 16% sobre el subtotal efectivo
+  const montoIva = useMemo(() => {
+    if (!requiereFactura) return 0;
+    return round2(subtotalEfectivo * 0.16);
+  }, [requiereFactura, subtotalEfectivo]);
+
+  // Total a pagar: subtotal efectivo + IVA (si está activo)
+  const totalPagar = useMemo(() => {
+    return round2(subtotalEfectivo + montoIva);
+  }, [subtotalEfectivo, montoIva]);
+
   // Billetes sugeridos para pago en efectivo
-  const totalPagar = totals.total;
   const suggestedBills = useMemo(() => {
     if (totalPagar <= 0) return [];
     const bills = [50, 100, 200, 500, 1000];
@@ -1222,14 +1256,14 @@ export default function PosPage() {
       setEditingPriceVal("");
     }
 
-    const totalVenta = round2(
-      effectiveLines.reduce((sum, l) => sum + l.cantidad * l.precio, 0)
-    );
-
-    if (totalVenta <= 0) {
+    if (totalPagar <= 0) {
       setChargeError("El total de la venta debe ser mayor a $0.");
       return;
     }
+
+    const finalSubtotal = subtotalEfectivo;
+    const finalIva = montoIva;
+    const totalVenta = totalPagar;
 
     setIsCharging(true);
     try {
@@ -1247,6 +1281,8 @@ export default function PosPage() {
           metodoPago,
           nombreCliente: nombreCliente.trim() || "Mostrador",
           notas: notas.trim() || "",
+          subtotal: finalSubtotal,
+          montoIva: finalIva,
           total: totalVenta,
           requiereFactura: Boolean(requiereFactura),
         },
@@ -1319,6 +1355,7 @@ export default function PosPage() {
       const snapshotMontoRecibido = Number(montoRecibido) || totalVenta;
 
       clear();
+      setSubtotalEditado(null);
       setNombreCliente("");
       setNotas("");
       setRequiereFactura(false);
@@ -1326,6 +1363,9 @@ export default function PosPage() {
 
       setSuccessModal({
         idVenta,
+        subtotal: finalSubtotal,
+        iva: finalIva,
+        requiereFactura: Boolean(requiereFactura),
         total: totalVenta,
         cambio: calcCambio > 0 ? calcCambio : 0,
         metodoPago,
@@ -2878,22 +2918,73 @@ export default function PosPage() {
           )}
 
           {/* C. TOTALES DEL TICKET */}
-          <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+          <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+            {/* Subtotal editable */}
             <div className="flex items-center justify-between text-xs text-slate-600">
-              <span>Subtotal:</span>
-              <span className="font-bold">{formatMoney(totals.total)}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-700">Subtotal:</span>
+                {subtotalEditado !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setSubtotalEditado(null)}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    title="Restablecer subtotal al total de productos"
+                  >
+                    (Restablecer)
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-slate-500">$</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={subtotalEditado !== null ? subtotalEditado : (totals.total || 0)}
+                  onChange={(e) => setSubtotalEditado(e.target.value)}
+                  className="w-28 rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-right text-xs font-black text-slate-800 shadow-2xs focus:border-blue-500 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                  placeholder="0.00"
+                  title="Puedes editar el subtotal manualmente"
+                />
+              </div>
             </div>
+
+            {/* IVA si está activo */}
             {requiereFactura && (
               <div className="flex items-center justify-between text-xs text-slate-600">
-                <span>IVA (16% incluido):</span>
-                <span className="font-bold">{formatMoney(round2(totals.total - totals.total / 1.16))}</span>
+                <span className="font-semibold text-slate-600">IVA (16%):</span>
+                <span className="font-black text-slate-800">+{formatMoney(montoIva)}</span>
               </div>
             )}
-            <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1.5">
+
+            {/* Total a Pagar */}
+            <div className="mt-0.5 flex items-center justify-between border-t border-slate-200 pt-1.5">
               <span className="text-sm font-extrabold uppercase tracking-wider text-slate-800">
                 Total a Pagar:
               </span>
               <span className="text-2xl font-black text-blue-700">{formatMoney(totalPagar)}</span>
+            </div>
+
+            {/* Checkbox de IVA justo debajo de Total a Pagar */}
+            <div className="border-t border-slate-200/90 pt-2">
+              <label className="flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/60 px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer select-none hover:bg-blue-100/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={requiereFactura}
+                  onChange={(e) => setRequiereFactura(e.target.checked)}
+                  className="h-4 w-4 rounded-md border-blue-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <div className="flex flex-1 items-center justify-between">
+                  <span className={requiereFactura ? "text-blue-900 font-black" : "text-slate-700 font-bold"}>
+                    + IVA (Factura 16%)
+                  </span>
+                  {requiereFactura && (
+                    <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[10px] font-black text-white">
+                      +{formatMoney(montoIva)}
+                    </span>
+                  )}
+                </div>
+              </label>
             </div>
           </div>
 
@@ -3014,7 +3105,7 @@ export default function PosPage() {
             </div>
           )}
 
-          {/* F. DETALLES ADICIONALES (COLAPSABLE: CLIENTE, NOTAS, FACTURA) */}
+          {/* F. DETALLES ADICIONALES (COLAPSABLE: CLIENTE, NOTAS) */}
           <div className="border-t border-slate-100 pt-2">
             <button
               type="button"
@@ -3028,7 +3119,7 @@ export default function PosPage() {
                   <polyline points="9 18 15 12 9 6" />
                 )}
               </svg>
-              <span>Detalles adicionales (Cliente, Notas, Factura)</span>
+              <span>Detalles adicionales (Cliente, Notas)</span>
             </button>
 
             {showExtraDetails && (
@@ -3053,16 +3144,6 @@ export default function PosPage() {
                     value={notas}
                     onChange={(e) => setNotas(e.target.value)}
                   />
-                </label>
-
-                <label className="flex items-center gap-2 pt-1 text-xs font-semibold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={requiereFactura}
-                    onChange={(e) => setRequiereFactura(e.target.checked)}
-                    className="h-4 w-4 rounded-sm text-blue-600"
-                  />
-                  <span>Requiere Factura (Total incluye IVA)</span>
                 </label>
               </div>
             )}
@@ -3113,6 +3194,16 @@ export default function PosPage() {
                 <span>Método:</span>
                 <strong className="text-slate-800">{successModal.metodoPago}</strong>
               </div>
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Subtotal:</span>
+                <strong className="text-slate-800">{formatMoney(successModal.subtotal ?? successModal.total)}</strong>
+              </div>
+              {successModal.requiereFactura && (
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>IVA (16%):</span>
+                  <strong className="text-slate-800">+{formatMoney(successModal.iva)}</strong>
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs text-slate-600">
                 <span>Total Cobrado:</span>
                 <strong className="text-base text-blue-700">{formatMoney(successModal.total)}</strong>
@@ -3227,7 +3318,11 @@ export default function PosPage() {
           <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
 
           <div style={{ fontSize: "10px", textAlign: "right", lineHeight: "1.4" }}>
-            <div style={{ fontSize: "13px", fontWeight: "900" }}>
+            <div>Subtotal: {formatMoney(successModal.subtotal ?? successModal.total)}</div>
+            {successModal.requiereFactura && (
+              <div>IVA (16%): +{formatMoney(successModal.iva || round2(successModal.total - (successModal.subtotal ?? successModal.total)))}</div>
+            )}
+            <div style={{ fontSize: "13px", fontWeight: "900", marginTop: "2px" }}>
               TOTAL: {formatMoney(successModal.total)}
             </div>
             <div>Método: {successModal.metodoPago}</div>
