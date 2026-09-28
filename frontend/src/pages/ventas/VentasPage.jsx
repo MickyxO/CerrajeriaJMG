@@ -275,7 +275,7 @@ export default function VentasPage() {
   }, [ticketDetalle]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="space-y-5 text-slate-800">
       {confirmDialog}
 
       {/* Cabecera Principal */}
@@ -505,7 +505,74 @@ export default function VentasPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        {/* ══ MOBILE: Cards táctiles (< md) ══ */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {!isLoading && ventas.length === 0 ? (
+            <div className="py-12 text-center text-sm text-slate-400 font-medium px-4">
+              No se encontraron tickets con los filtros aplicados.
+            </div>
+          ) : (
+            ventas.map((v) => {
+              const isAnulada =
+                (v.Notas && String(v.Notas).includes("[ANULADA]")) ||
+                String(v.Estado).toUpperCase() === "ANULADA" ||
+                Number(v.Total) === 0;
+
+              return (
+                <button
+                  key={v.IdVenta}
+                  type="button"
+                  onClick={() => abrirTicket(v.IdVenta)}
+                  className="w-full text-left px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                >
+                  {/* Línea 1: Folio + Estado + Total */}
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-black text-slate-900 text-sm">
+                        <span className="text-slate-400 font-bold">#</span>{v.IdVenta}
+                      </span>
+                      <span
+                        className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                          isAnulada
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}
+                      >
+                        {isAnulada ? "Anulada" : "Completada"}
+                      </span>
+                    </div>
+                    <span className="font-black text-slate-900 text-base shrink-0">
+                      {formatMoney(v.Total)}
+                    </span>
+                  </div>
+
+                  {/* Línea 2: Cliente + Fecha + Método + Chevron */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="text-sm font-semibold text-slate-700 truncate">
+                        {v.NombreCliente || "Mostrador"}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {formatDateTime(v.FechaVenta)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200">
+                        {v.MetodoPago || "Efectivo"}
+                      </span>
+                      <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m9 18 6-6-6-6" />
+                      </svg>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* ══ DESKTOP: Tabla completa (≥ md) ══ */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
               <tr>

@@ -594,6 +594,9 @@ export default function PosPage() {
   const [isSavingDesperdicio, setIsSavingDesperdicio] = useState(false);
   const [desperdicioError, setDesperdicioError] = useState("");
 
+  // Vista mobile: 'catalogo' | 'ticket'  (en xl siempre se muestran ambas columnas)
+  const [mobileView, setMobileView] = useState("catalogo");
+
   // Impresión directa de Ticket Térmico POS
   const handlePrintTicket = useCallback(() => {
     document.body.classList.add("printing-pos-ticket");
@@ -1510,7 +1513,7 @@ export default function PosPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Botón Material Desperdiciado */}
           <button
             type="button"
@@ -1518,15 +1521,15 @@ export default function PosPage() {
               setShowDesperdicioModal(true);
               setDesperdicioError("");
             }}
-            className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/90 px-4 py-2.5 text-sm font-bold text-amber-800 transition-all hover:bg-amber-100 hover:border-amber-400 hover:shadow-xs active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/90 px-2.5 py-2.5 sm:px-4 text-sm font-bold text-amber-800 transition-all hover:bg-amber-100 hover:border-amber-400 hover:shadow-xs active:scale-95 cursor-pointer"
             title="Registrar llaves dañadas, cortes fallidos o garantías"
           >
-            <svg className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="h-4 w-4 shrink-0 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
               <line x1="10" y1="11" x2="10" y2="17" />
               <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
-            <span>Material Desperdiciado</span>
+            <span className="hidden sm:inline">Material Desperdiciado</span>
           </button>
 
           {/* Botón Préstamo / Cambio */}
@@ -1540,50 +1543,99 @@ export default function PosPage() {
               setPrestamoError("");
               setShowPrestamoModal(true);
             }}
-            className="flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/80 px-4 py-2.5 text-sm font-bold text-indigo-700 transition-all hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-xs active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/80 px-2.5 py-2.5 sm:px-4 text-sm font-bold text-indigo-700 transition-all hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-xs active:scale-95 cursor-pointer"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="8" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
               <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
             </svg>
-            <span>Préstamo / Cambio</span>
+            <span className="hidden sm:inline">Préstamo / Cambio</span>
           </button>
 
           {/* Botón Gasto Rápido */}
           <button
             type="button"
             onClick={() => setShowGastoModal(true)}
-            className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-2.5 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100 hover:border-rose-300 hover:shadow-xs active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/80 px-2.5 py-2.5 sm:px-5 text-sm font-bold text-rose-700 transition-all hover:bg-rose-100 hover:border-rose-300 hover:shadow-xs active:scale-95 cursor-pointer"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
-            <span>+ Gasto Rápido</span>
+            <span className="hidden sm:inline">+ Gasto Rápido</span>
           </button>
 
           {/* Botón Ver Caja */}
           <button
             type="button"
             onClick={() => navigate("/caja")}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-100 hover:border-slate-300 hover:shadow-xs active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-2.5 py-2.5 sm:px-5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-100 hover:border-slate-300 hover:shadow-xs active:scale-95 cursor-pointer"
           >
-            <svg className="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="h-4 w-4 shrink-0 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="6" width="20" height="12" rx="2" />
               <circle cx="12" cy="12" r="2" />
               <path d="M6 12h.01M18 12h.01" />
             </svg>
-            <span>Caja del Día</span>
+            <span className="hidden sm:inline">Caja del Día</span>
           </button>
         </div>
       </header>
 
+      {/* ══ TAB SWITCHER MOBILE: Catálogo ↔ Ticket (solo < xl) ══ */}
+      <div className="xl:hidden flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+        {/* Tab Catálogo */}
+        <button
+          type="button"
+          onClick={() => setMobileView("catalogo")}
+          className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-bold transition-colors ${
+            mobileView === "catalogo"
+              ? "bg-blue-600 text-white"
+              : "text-slate-500 hover:bg-slate-50"
+          }`}
+        >
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 8 12 3 3 8l9 5 9-5Z" />
+            <path d="M3 8v8l9 5 9-5V8" />
+            <path d="M12 13v8" />
+          </svg>
+          Catálogo
+        </button>
+
+        {/* Divisor */}
+        <div className="w-px bg-slate-200" />
+
+        {/* Tab Ticket */}
+        <button
+          type="button"
+          onClick={() => setMobileView("ticket")}
+          className={`relative flex flex-1 items-center justify-center gap-2 py-3 text-sm font-bold transition-colors ${
+            mobileView === "ticket"
+              ? "bg-blue-600 text-white"
+              : "text-slate-500 hover:bg-slate-50"
+          }`}
+        >
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+            <path d="M16 8h-8" /><path d="M16 12h-8" /><path d="M14 16h-6" />
+          </svg>
+          Ticket
+          {/* Badge con cantidad de artículos */}
+          {lines.reduce((a, l) => a + l.cantidad, 0) > 0 && (
+            <span className={`ml-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[11px] font-black ${
+              mobileView === "ticket" ? "bg-white text-blue-600" : "bg-blue-600 text-white"
+            }`}>
+              {lines.reduce((a, l) => a + l.cantidad, 0)}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* 2. ÁREA PRINCIPAL: DIVIDIDA EN CATÁLOGO TÁCTIL (IZQUIERDA) Y TICKET/COBRO (DERECHA) */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.55fr_1fr] w-full min-w-0 max-w-full">
         {/* ===================== COLUMNA IZQUIERDA: CATÁLOGO TÁCTIL ===================== */}
-        <section className="flex flex-col min-w-0 max-w-full gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <section className={`${mobileView === "catalogo" ? "flex" : "hidden"} xl:flex flex-col min-w-0 max-w-full gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs`}>
           {/* A. MACRO-PESTAÑAS PRINCIPALES (TOUCH TABS) */}
           <nav className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Macro Categorías">
             <button
@@ -2559,7 +2611,7 @@ export default function PosPage() {
         </section>
 
         {/* ===================== COLUMNA DERECHA: TICKET Y COBRO ===================== */}
-        <section className="flex flex-col gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <section className={`${mobileView === "ticket" ? "flex" : "hidden"} xl:flex flex-col gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs`}>
           {/* A. CABECERA DEL TICKET */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">

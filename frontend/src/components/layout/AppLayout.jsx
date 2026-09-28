@@ -60,7 +60,6 @@ function IconBox(props) {
   );
 }
 
-
 function IconTag(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -148,6 +147,7 @@ export default function AppLayout() {
 
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const pageTitle = useMemo(() => getPageTitle(location.pathname), [location.pathname]);
 
@@ -174,13 +174,25 @@ export default function AppLayout() {
     []
   );
 
+  // Ítems del bottom nav — los 4 más usados + "Más" que abre el drawer
+  const bottomNavItems = [
+    { to: "/dashboard", label: "Inicio", Icon: IconHome },
+    { to: "/pos", label: "POS", Icon: IconCart },
+    { to: "/caja", label: "Caja", Icon: IconCash },
+    { to: "/items", label: "Catálogo", Icon: IconBox },
+  ];
+
   useEffect(() => {
     setDrawerOpen(false);
+    setUserMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setDrawerOpen(false);
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+        setUserMenuOpen(false);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -197,25 +209,32 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="min-h-dvh bg-transparent text-[color:var(--jmg-text)]">
-      {drawerOpen ? (
+    <div className="min-h-screen bg-transparent text-[color:var(--jmg-text)]">
+
+      {/* Overlay del drawer — solo mobile */}
+      {drawerOpen && (
         <button
           type="button"
           aria-label="Cerrar menú"
           onClick={() => setDrawerOpen(false)}
           className="fixed inset-0 z-40 bg-slate-950/52 backdrop-blur-[2px] lg:hidden"
         />
-      ) : null}
+      )}
 
+      {/* ══ Drawer lateral — solo mobile ══ */}
       <aside
-        className={
-          drawerOpen
-            ? "fixed inset-y-0 left-0 z-50 w-[280px] border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 shadow-soft backdrop-blur-xl transition-transform duration-300 lg:hidden"
-            : "fixed inset-y-0 left-0 z-50 w-[280px] -translate-x-full border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 shadow-soft backdrop-blur-xl transition-transform duration-300 lg:hidden"
-        }
+        className={[
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col",
+          "border-r border-blue-200/35",
+          "bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)]",
+          "p-4 shadow-soft backdrop-blur-xl",
+          "transition-transform duration-300 lg:hidden",
+          drawerOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
         aria-label="Menú"
       >
-        <div className="mb-7 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/10 p-3">
+        {/* Logo en drawer */}
+        <div className="mb-6 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/10 p-3">
           <BrandMarkLogo className="h-11 w-11" />
           <div className="leading-tight">
             <strong className="block font-black text-base text-white tracking-tight">Cerrajería JMG</strong>
@@ -223,7 +242,8 @@ export default function AppLayout() {
           </div>
         </div>
 
-        <nav className="flex flex-col gap-4">
+        {/* Navegación scrollable en drawer */}
+        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
           {navGroups.map((group) => (
             <div key={group.title} className="flex flex-col gap-1.5">
               <span className="px-3 text-[10px] font-black uppercase tracking-wider text-blue-200/70">
@@ -243,10 +263,30 @@ export default function AppLayout() {
             </div>
           ))}
         </nav>
+
+        {/* Logout en el drawer (mobile) */}
+        <div className="mt-4 border-t border-white/15 pt-4">
+          <p className="mb-2 px-1 text-xs text-blue-200/70 font-medium truncate">
+            Sesión: <span className="text-white font-semibold">{userLabel}</span>
+          </p>
+          <button
+            type="button"
+            className="w-full rounded-2xl border border-white/20 bg-white/10 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+            onClick={logout}
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
-      <div className="mx-auto grid min-h-dvh max-w-[1800px] lg:grid-cols-[280px_1fr]">
-        <aside className="sticky top-0 hidden h-dvh border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 backdrop-blur-xl lg:block" aria-label="Menú">
+      {/* ══ Layout principal ══ */}
+      <div className="mx-auto grid min-h-screen max-w-[1800px] lg:grid-cols-[280px_1fr]">
+
+        {/* Sidebar desktop — oculto en mobile */}
+        <aside
+          className="sticky top-0 hidden h-screen flex-col border-r border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] p-4 backdrop-blur-xl lg:flex"
+          aria-label="Menú"
+        >
           <div className="mb-7 flex items-center gap-3 rounded-3xl border border-white/20 bg-white/12 p-3 shadow-soft">
             <BrandMarkLogo className="h-11 w-11" />
             <div className="leading-tight">
@@ -255,7 +295,7 @@ export default function AppLayout() {
             </div>
           </div>
 
-          <nav className="flex flex-col gap-4">
+          <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
             {navGroups.map((group) => (
               <div key={group.title} className="flex flex-col gap-1.5">
                 <span className="px-3 text-[10px] font-black uppercase tracking-wider text-blue-200/70">
@@ -270,46 +310,157 @@ export default function AppLayout() {
               </div>
             ))}
           </nav>
+
+          {/* Logout en sidebar desktop */}
+          <div className="mt-4 border-t border-white/15 pt-4">
+            <p className="mb-2 px-1 text-xs text-blue-200/70 font-medium truncate">
+              Sesión: <span className="text-white font-semibold">{userLabel}</span>
+            </p>
+            <button
+              type="button"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 py-2 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+              onClick={logout}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </aside>
 
-        <div className="flex min-h-dvh min-w-0 flex-col">
-          <header className="sticky top-0 z-30 border-b border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] px-3 py-3 backdrop-blur-xl sm:px-4 lg:px-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+        {/* Columna de contenido */}
+        <div className="flex min-h-screen min-w-0 flex-col">
+
+          {/* Header */}
+          <header className="sticky top-0 z-30 border-b border-blue-200/35 bg-[linear-gradient(165deg,rgba(7,27,74,0.98)_0%,rgba(31,88,214,0.92)_100%)] px-3 py-2.5 backdrop-blur-xl sm:px-4 lg:px-6">
+            <div className="flex items-center justify-between gap-2">
+
+              {/* Izquierda: hamburguesa (solo mobile) + título */}
+              <div className="flex min-w-0 items-center gap-2">
                 <button
                   type="button"
-                  className="grid h-10 w-10 place-items-center rounded-xl border border-white/40 bg-white/92 text-[color:var(--jmg-navy)] shadow-sm hover:brightness-110 lg:hidden"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/30 bg-white/15 text-white shadow-sm hover:bg-white/25 transition-colors lg:hidden"
                   onClick={() => setDrawerOpen((v) => !v)}
                   aria-label="Abrir menú"
                   title="Menú"
                 >
-                  <IconMenu style={{ width: 18, height: 18 }} aria-hidden="true" />
+                  <IconMenu style={{ width: 16, height: 16 }} aria-hidden="true" />
                 </button>
-                <div className="truncate font-display text-lg font-semibold text-white">{pageTitle}</div>
+                <div className="truncate font-display text-base font-semibold text-white sm:text-lg">
+                  {pageTitle}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 rounded-2xl border border-white/35 bg-blue-950/35 px-3 py-1.5 text-xs text-blue-50 shadow-sm sm:text-sm">
-                <span className="hidden sm:inline font-medium text-blue-50">
+              {/* Derecha (desktop/tablet ≥ sm): usuario + logout */}
+              <div className="hidden sm:flex items-center gap-2 rounded-2xl border border-white/35 bg-blue-950/35 px-3 py-1.5 text-sm text-blue-50 shadow-sm">
+                <span className="font-medium text-blue-50">
                   <strong className="font-semibold text-white">Usuario:</strong> {userLabel}
                 </span>
                 <button
                   type="button"
-                  className="rounded-xl border border-[color:var(--jmg-navy)]/30 bg-white px-3 py-1.5 font-semibold text-[color:var(--jmg-navy)] hover:bg-blue-50"
+                  className="rounded-xl border border-[color:var(--jmg-navy)]/30 bg-white px-3 py-1.5 text-sm font-semibold text-[color:var(--jmg-navy)] hover:bg-blue-50"
                   onClick={logout}
                 >
                   Cerrar sesión
                 </button>
               </div>
+
+              {/* Derecha (mobile < sm): ícono de usuario con popover de sesión */}
+              <div className="sm:hidden relative">
+                <button
+                  type="button"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/30 bg-white/15 text-white shadow-sm hover:bg-white/25 transition-colors"
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  aria-label="Menú de usuario"
+                  aria-expanded={userMenuOpen}
+                  title="Usuario"
+                >
+                  <IconUsers style={{ width: 16, height: 16 }} aria-hidden="true" />
+                </button>
+
+                {/* Popover */}
+                {userMenuOpen && (
+                  <>
+                    {/* Overlay para cerrar al tocar fuera */}
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-40"
+                      aria-label="Cerrar menú de usuario"
+                      onClick={() => setUserMenuOpen(false)}
+                    />
+                    {/* Card del popover */}
+                    <div className="absolute right-0 top-11 z-50 min-w-[180px] rounded-2xl border border-white/20 bg-[rgba(7,27,74,0.97)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                      <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                        Sesión activa
+                      </p>
+                      <p className="mb-3 truncate text-sm font-semibold text-white">
+                        {userLabel}
+                      </p>
+                      <button
+                        type="button"
+                        className="w-full rounded-xl border border-white/20 bg-white/10 py-2 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+                        onClick={() => { setUserMenuOpen(false); logout(); }}
+                      >
+                        Cerrar sesión
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </header>
 
-          <main className="flex-1 p-3 sm:p-4 lg:p-6">
+          {/* Contenido — padding-bottom extra en mobile para el bottom nav */}
+          <main className="flex-1 p-3 pb-[5.5rem] sm:p-4 sm:pb-4 lg:p-6">
             <div key={location.pathname} className="motion-safe:animate-page-enter">
               <Outlet />
             </div>
           </main>
         </div>
       </div>
+
+      {/* ══ BOTTOM NAVIGATION BAR — solo mobile (lg:hidden) ══ */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-stretch border-t border-blue-200/20 bg-[linear-gradient(165deg,rgba(7,27,74,0.99)_0%,rgba(20,60,160,0.99)_100%)] shadow-[0_-4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl lg:hidden"
+        aria-label="Navegación principal"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
+        {bottomNavItems.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold transition-colors duration-150 ${
+                isActive ? "text-white" : "text-blue-300 hover:text-blue-100"
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-150 ${
+                    isActive ? "bg-white/20 shadow-inner" : ""
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="leading-none">{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+
+        {/* Botón "Más" — abre el drawer con el resto de opciones */}
+        <button
+          type="button"
+          onClick={() => setDrawerOpen((v) => !v)}
+          className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold text-blue-300 hover:text-blue-100 transition-colors duration-150"
+          aria-label="Más opciones"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl">
+            <IconMenu style={{ width: 20, height: 20 }} aria-hidden="true" />
+          </span>
+          <span className="leading-none">Más</span>
+        </button>
+      </nav>
     </div>
   );
 }
