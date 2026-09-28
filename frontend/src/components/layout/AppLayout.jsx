@@ -147,6 +147,7 @@ export default function AppLayout() {
 
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const pageTitle = useMemo(() => getPageTitle(location.pathname), [location.pathname]);
 
@@ -183,11 +184,15 @@ export default function AppLayout() {
 
   useEffect(() => {
     setDrawerOpen(false);
+    setUserMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setDrawerOpen(false);
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+        setUserMenuOpen(false);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -332,7 +337,7 @@ export default function AppLayout() {
               <div className="flex min-w-0 items-center gap-2">
                 <button
                   type="button"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/92 text-[color:var(--jmg-navy)] shadow-sm hover:brightness-110 lg:hidden"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/30 bg-white/15 text-white shadow-sm hover:bg-white/25 transition-colors lg:hidden"
                   onClick={() => setDrawerOpen((v) => !v)}
                   aria-label="Abrir menú"
                   title="Menú"
@@ -358,16 +363,48 @@ export default function AppLayout() {
                 </button>
               </div>
 
-              {/* Derecha (mobile < sm): ícono de usuario que abre el drawer */}
-              <button
-                type="button"
-                className="sm:hidden grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/92 text-[color:var(--jmg-navy)] shadow-sm hover:brightness-110"
-                onClick={() => setDrawerOpen((v) => !v)}
-                aria-label="Menú de usuario"
-                title="Usuario"
-              >
-                <IconUsers style={{ width: 16, height: 16 }} aria-hidden="true" />
-              </button>
+              {/* Derecha (mobile < sm): ícono de usuario con popover de sesión */}
+              <div className="sm:hidden relative">
+                <button
+                  type="button"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/30 bg-white/15 text-white shadow-sm hover:bg-white/25 transition-colors"
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  aria-label="Menú de usuario"
+                  aria-expanded={userMenuOpen}
+                  title="Usuario"
+                >
+                  <IconUsers style={{ width: 16, height: 16 }} aria-hidden="true" />
+                </button>
+
+                {/* Popover */}
+                {userMenuOpen && (
+                  <>
+                    {/* Overlay para cerrar al tocar fuera */}
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-40"
+                      aria-label="Cerrar menú de usuario"
+                      onClick={() => setUserMenuOpen(false)}
+                    />
+                    {/* Card del popover */}
+                    <div className="absolute right-0 top-11 z-50 min-w-[180px] rounded-2xl border border-white/20 bg-[rgba(7,27,74,0.97)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                      <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                        Sesión activa
+                      </p>
+                      <p className="mb-3 truncate text-sm font-semibold text-white">
+                        {userLabel}
+                      </p>
+                      <button
+                        type="button"
+                        className="w-full rounded-xl border border-white/20 bg-white/10 py-2 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+                        onClick={() => { setUserMenuOpen(false); logout(); }}
+                      >
+                        Cerrar sesión
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </header>
 
