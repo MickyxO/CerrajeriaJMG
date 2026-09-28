@@ -187,14 +187,21 @@ $env:PGPASSWORD = $DbPass
 
 try {
     # 5.1 Verificar si la base de datos existe; si no, crearla automaticamente
-    $psqlPath = Join-Path (Split-Path -Parent $PgRestorePath) "psql.exe"
-    if (Test-Path $psqlPath) {
-        $checkDb = & $psqlPath -h $DbHost -p $DbPort -U $DbUser -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$DbName';" 2>$null
-        if (-not $checkDb -or $checkDb.Trim() -ne "1") {
-            Write-Info "La base de datos '$DbName' no existe todavia. Creandola automaticamente..." "Yellow"
-            & $psqlPath -h $DbHost -p $DbPort -U $DbUser -d postgres -c "CREATE DATABASE $DbName;" 2>$null
-            Write-Info "Base de datos '$DbName' creada exitosamente." "Green"
-        }
+    $binDir = Split-Path -Parent $PgRestorePath
+    $createdbPath = Join-Path $binDir "createdb.exe"
+    $psqlPath = Join-Path $binDir "psql.exe"
+
+    Write-Info "Verificando existencia de la base de datos '$DbName'..." "Cyan"
+    if (Test-Path $createdbPath) {
+        $prevErr = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        & $createdbPath -h $DbHost -p $DbPort -U $DbUser $DbName 2>$null
+        $ErrorActionPreference = $prevErr
+    } elseif (Test-Path $psqlPath) {
+        $prevErr = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        & $psqlPath -h $DbHost -p $DbPort -U $DbUser -d postgres -c "CREATE DATABASE $DbName;" 2>$null
+        $ErrorActionPreference = $prevErr
     }
     $restoreArgs = @(
         "-h", $DbHost,
