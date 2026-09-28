@@ -618,10 +618,10 @@ export default function ItemsPage() {
       {/* ======================================================== */}
       {/* 1. CABECERA & HERO DE CATÁLOGO & STOCK                   */}
       {/* ======================================================== */}
-      <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs">
+      <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 shadow-xs">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 shadow-xs">
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 8 12 3 3 8l9 5 9-5Z" />
                 <path d="M3 8v8l9 5 9-5V8" />
@@ -638,25 +638,27 @@ export default function ItemsPage() {
         </div>
 
         {/* BOTONES DE ACCIÓN RÁPIDA */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full sm:w-auto items-center gap-2">
           <button
             type="button"
             onClick={openNewItemModal}
-            className="flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-blue-700 active:scale-95 cursor-pointer"
+            className="flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-2xl bg-blue-600 px-3.5 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-blue-700 active:scale-95 cursor-pointer"
           >
             <span>+</span>
-            <span>Nuevo Producto o Servicio</span>
+            <span className="hidden sm:inline">Nuevo Producto o Servicio</span>
+            <span className="sm:hidden">Producto</span>
           </button>
           <button
             type="button"
             onClick={openNewCatModal}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-100 active:scale-95 cursor-pointer"
+            className="flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-100 active:scale-95 cursor-pointer"
           >
             <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
               <line x1="7" y1="7" x2="7.01" y2="7" />
             </svg>
-            <span>Nueva Categoría</span>
+            <span className="hidden sm:inline">Nueva Categoría</span>
+            <span className="sm:hidden">Categoría</span>
           </button>
         </div>
       </header>
@@ -765,11 +767,11 @@ export default function ItemsPage() {
       {/* ======================================================== */}
       {/* 3. TABS PRINCIPALES                                      */}
       {/* ======================================================== */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
         <button
           type="button"
           onClick={() => setActiveTab("ITEMS")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-extrabold transition-colors cursor-pointer ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === "ITEMS"
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -780,13 +782,14 @@ export default function ItemsPage() {
             <path d="M3 8v8l9 5 9-5V8" />
             <path d="M12 13v8" />
           </svg>
-          <span>Productos & Stock</span>
+          <span className="hidden sm:inline">Productos & Stock</span>
+          <span className="sm:hidden">Productos</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("CATEGORIAS")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-extrabold transition-colors cursor-pointer ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === "CATEGORIAS"
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -802,7 +805,7 @@ export default function ItemsPage() {
         <button
           type="button"
           onClick={() => setActiveTab("KARDEX")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-extrabold transition-colors cursor-pointer ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === "KARDEX"
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -812,7 +815,8 @@ export default function ItemsPage() {
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <rect x="8" y="2" width="8" height="4" rx="1" />
           </svg>
-          <span>Historial de Movimientos (Kardex)</span>
+          <span className="hidden sm:inline">Historial de Movimientos (Kardex)</span>
+          <span className="sm:hidden">Kardex</span>
         </button>
       </div>
 
@@ -826,12 +830,12 @@ export default function ItemsPage() {
             {/* FILA 1: MACRO-CLASIFICACIÓN Y ESTADO (ACTIVOS / INACTIVOS) */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
               {/* Botones de Macro Clasificación */}
-              <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-xs font-bold">
+              <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-xs font-bold overflow-x-auto no-scrollbar max-w-full">
                 {/* Todas */}
                 <button
                   type="button"
                   onClick={() => handleSelectMacro("TODAS")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroMacro === "TODAS"
                       ? "bg-white text-slate-900 shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -855,7 +859,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => handleSelectMacro("Residencial")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroMacro === "Residencial"
                       ? "bg-emerald-600 text-white shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -877,7 +881,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => handleSelectMacro("Automotriz")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroMacro === "Automotriz"
                       ? "bg-indigo-600 text-white shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -900,7 +904,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => handleSelectMacro("Accesorios")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroMacro === "Accesorios"
                       ? "bg-amber-600 text-white shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -922,7 +926,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => handleSelectMacro("Servicios")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroMacro === "Servicios"
                       ? "bg-purple-600 text-white shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -941,11 +945,11 @@ export default function ItemsPage() {
               </div>
 
               {/* Filtro de Estado: Activos / Inactivos / Todos */}
-              <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-xs font-bold">
+              <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-xs font-bold overflow-x-auto no-scrollbar max-w-full">
                 <button
                   type="button"
                   onClick={() => setFiltroEstado("ACTIVOS")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroEstado === "ACTIVOS"
                       ? "bg-white text-emerald-700 shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -963,7 +967,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroEstado("INACTIVOS")}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
+                  className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl px-3 py-1.5 transition-all cursor-pointer ${
                     filtroEstado === "INACTIVOS"
                       ? "bg-rose-100 text-rose-800 shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -981,7 +985,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroEstado("TODOS")}
-                  className={`rounded-xl px-2.5 py-1.5 transition-all cursor-pointer ${
+                  className={`rounded-xl px-2.5 py-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                     filtroEstado === "TODOS"
                       ? "bg-white text-slate-800 shadow-2xs font-black"
                       : "text-slate-500 hover:text-slate-800"
@@ -993,9 +997,9 @@ export default function ItemsPage() {
             </div>
 
             {/* FILA 2: BÚSQUEDA, SELECTOR MODAL DE CATEGORÍA, Y FILTRO DE STOCK */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-3 pt-0.5">
               {/* Buscador */}
-              <div className="relative min-w-[260px] flex-1">
+              <div className="relative w-full sm:flex-1 min-w-0">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -1010,10 +1014,10 @@ export default function ItemsPage() {
                   type="text"
                   placeholder={
                     soloPorCoordenada
-                      ? "📍 Filtrar solo por coordenada física (ej. DD8, A1)..."
-                      : "Buscar por nombre, clave, coordenada o compatibilidad..."
+                      ? "📍 Filtrar solo por coordenada física..."
+                      : "Buscar por nombre, clave, coordenada..."
                   }
-                  className={`w-full !pl-11 pr-32 sm:pr-36 py-2.5 rounded-2xl border text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
+                  className={`w-full !pl-11 pr-24 sm:pr-36 py-2.5 rounded-2xl border text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
                     soloPorCoordenada
                       ? "border-indigo-400 bg-indigo-50/40 focus:border-indigo-600 focus:bg-white"
                       : "border-slate-200 bg-slate-50 focus:border-blue-500 focus:bg-white"
@@ -1065,23 +1069,25 @@ export default function ItemsPage() {
                   setCatPickerSearch("");
                   setShowCatPickerModal(true);
                 }}
-                className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                className={`flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 rounded-2xl border px-3.5 py-2.5 text-xs font-bold transition-all cursor-pointer shadow-2xs ${
                   selectedCategoria !== "TODAS"
                     ? "border-blue-300 bg-blue-50/80 text-blue-800"
                     : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 }`}
               >
-                <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="7" height="7" x="3" y="3" rx="1" />
-                  <rect width="7" height="7" x="14" y="3" rx="1" />
-                  <rect width="7" height="7" x="14" y="14" rx="1" />
-                  <rect width="7" height="7" x="3" y="14" rx="1" />
-                </svg>
-                <span>
-                  {selectedCategoria === "TODAS"
-                    ? "Categoría: Todas las categorías"
-                    : `Categoría: ${catMap.get(String(selectedCategoria)) || selectedCategoria}`}
-                </span>
+                <div className="flex items-center gap-2 truncate">
+                  <svg className="h-4 w-4 shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="7" height="7" x="3" y="3" rx="1" />
+                    <rect width="7" height="7" x="14" y="3" rx="1" />
+                    <rect width="7" height="7" x="14" y="14" rx="1" />
+                    <rect width="7" height="7" x="3" y="14" rx="1" />
+                  </svg>
+                  <span className="truncate">
+                    {selectedCategoria === "TODAS"
+                      ? "Categoría: Todas"
+                      : `Categoría: ${catMap.get(String(selectedCategoria)) || selectedCategoria}`}
+                  </span>
+                </div>
                 {selectedCategoria !== "TODAS" ? (
                   <span
                     onClick={(e) => {
@@ -1096,18 +1102,18 @@ export default function ItemsPage() {
                     </svg>
                   </span>
                 ) : (
-                  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="h-3.5 w-3.5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 )}
               </button>
 
               {/* Filtro de Stock */}
-              <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-[11px] font-bold">
+              <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 text-[11px] font-bold overflow-x-auto no-scrollbar">
                 <button
                   type="button"
                   onClick={() => setFiltroStock("TODOS")}
-                  className={`rounded-xl px-2.5 py-1.5 transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial text-center rounded-xl px-2.5 py-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     filtroStock === "TODOS" ? "bg-white text-slate-800 shadow-2xs font-extrabold" : "text-slate-500"
                   }`}
                 >
@@ -1116,7 +1122,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroStock("BAJO_STOCK")}
-                  className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 rounded-xl px-2.5 py-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     filtroStock === "BAJO_STOCK" ? "bg-amber-100 text-amber-900 shadow-2xs font-extrabold" : "text-slate-500"
                   }`}
                 >
@@ -1130,7 +1136,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroStock("AGOTADOS")}
-                  className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 rounded-xl px-2.5 py-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     filtroStock === "AGOTADOS" ? "bg-rose-100 text-rose-900 shadow-2xs font-extrabold" : "text-slate-500"
                   }`}
                 >
@@ -1145,249 +1151,389 @@ export default function ItemsPage() {
             </div>
           </div>
 
-          {/* TABLA DE PRODUCTOS & STOCK */}
+          {/* CONTENEDOR PRINCIPAL DE PRODUCTOS */}
           <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-black uppercase tracking-wider text-slate-400">
-                    <th className="py-3.5 pl-6 pr-3">Producto / Servicio</th>
-                    <th className="px-3 py-3.5">Categoría</th>
-                    <th className="px-3 py-3.5">Ubicación (Rack / Cajón)</th>
-                    <th className="px-3 py-3.5">Precio Venta</th>
-                    <th className="px-3 py-3.5">Stock Físico</th>
-                    <th className="py-3.5 pl-3 pr-6 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {itemsFiltrados.map((item) => {
-                    const esServicio = Boolean(item.EsServicio);
-                    const stock = Number(item.StockActual ?? 0);
-                    const min = Number(item.StockMinimo ?? 0);
-                    const isLow = !esServicio && stock <= min && stock > 0;
-                    const isOut = !esServicio && stock === 0;
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* MOBILE: Cards de Producto (< lg)                    */}
+            {/* ═══════════════════════════════════════════════════ */}
+            <div className="lg:hidden divide-y divide-slate-100">
+            {itemsFiltrados.length === 0 && !isLoading && (
+              <div className="py-12 text-center text-xs font-semibold text-slate-400 px-4">
+                No se encontraron productos o servicios con los filtros aplicados.
+              </div>
+            )}
 
-                    const catName = catMap.get(String(item.IdCategoria)) || item.NombreCategoria || "-";
-                    const imgUrl = item.ImagenUrl ? resolveImageUrl(item.ImagenUrl, { apiBaseUrl: API_URL }) : null;
+            {itemsFiltrados.map((item) => {
+              const esServicio = Boolean(item.EsServicio);
+              const stock = Number(item.StockActual ?? 0);
+              const min = Number(item.StockMinimo ?? 0);
+              const isLow = !esServicio && stock <= min && stock > 0;
+              const isOut = !esServicio && stock === 0;
+              const catName = catMap.get(String(item.IdCategoria)) || item.NombreCategoria || "-";
+              const imgUrl = item.ImagenUrl ? resolveImageUrl(item.ImagenUrl, { apiBaseUrl: API_URL }) : null;
 
-                    return (
-                      <tr key={item.IdItem} className="hover:bg-slate-50/70 transition-colors">
-                        {/* PRODUCTO CON FOTO */}
-                        <td className="py-3.5 pl-6 pr-3">
-                          <div className="flex items-center gap-3">
-                            {imgUrl ? (
-                              <img
-                                src={imgUrl}
-                                alt={item.Nombre}
-                                onClick={() => setZoomSrc(imgUrl)}
-                                className="h-11 w-11 shrink-0 rounded-2xl border border-slate-200 object-cover p-0.5 cursor-zoom-in hover:scale-105 transition-transform"
-                              />
-                            ) : (
-                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
-                                {esServicio ? (
-                                  <svg className="h-5 w-5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                                  </svg>
-                                ) : (
-                                  <svg className="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="m21 2-2 2m-1.5 1.5L10 13l-4 4-2-2 4-4 7.5-7.5" />
-                                    <circle cx="7.5" cy="16.5" r="3.5" />
-                                  </svg>
-                                )}
-                              </div>
-                            )}
+              return (
+                <div key={item.IdItem} className={`px-4 py-3.5 ${!item.Activo ? "opacity-60" : ""}`}>
+                  {/* Fila superior: foto + nombre + precio */}
+                  <div className="flex items-start gap-3">
+                    {/* Thumbnail */}
+                    <div className="shrink-0">
+                      {imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={item.Nombre}
+                          onClick={() => setZoomSrc(imgUrl)}
+                          className="h-14 w-14 rounded-2xl border border-slate-200 object-cover cursor-zoom-in"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100">
+                          {esServicio ? (
+                            <svg className="h-6 w-6 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                            </svg>
+                          ) : (
+                            <svg className="h-6 w-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m21 2-2 2m-1.5 1.5L10 13l-4 4-2-2 4-4 7.5-7.5" /><circle cx="7.5" cy="16.5" r="3.5" />
+                            </svg>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <strong className="font-extrabold text-slate-900 text-sm">{item.Nombre}</strong>
-                                {esServicio && (
-                                  <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[10px] font-black text-purple-800">
-                                    Servicio
-                                  </span>
-                                )}
-                                {!item.Activo && (
-                                  <span className="rounded-md bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-black text-rose-700">
-                                    Inactivo
-                                  </span>
-                                )}
-                              </div>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-medium">
-                                {item.CompatibilidadMarca && <span>Marca: {item.CompatibilidadMarca}</span>}
-                                {item.TipoChip && <span>Chip: {item.TipoChip}</span>}
-                                {item.Frecuencia && <span>Freq: {item.Frecuencia}</span>}
-                              </div>
+                    {/* Nombre + badges + meta */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                        <strong className="text-sm font-extrabold text-slate-900 leading-tight">{item.Nombre}</strong>
+                        {esServicio && (
+                          <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[10px] font-black text-purple-800">Servicio</span>
+                        )}
+                        {!item.Activo && (
+                          <span className="rounded-md bg-rose-100 border border-rose-200 px-1.5 py-0.5 text-[10px] font-black text-rose-700">Inactivo</span>
+                        )}
+                      </div>
+
+                      {/* Categoría + Ubicación */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{catName}</span>
+                        {item.CodigoUbicacion && (
+                          <span className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
+                            <svg className="h-2.5 w-2.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
+                            </svg>
+                            {item.CodigoUbicacion}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Meta automotriz */}
+                      {(item.CompatibilidadMarca || item.TipoChip || item.Frecuencia) && (
+                        <div className="mt-0.5 flex flex-wrap gap-1.5 text-[10px] text-slate-400 font-medium">
+                          {item.CompatibilidadMarca && <span>Marca: {item.CompatibilidadMarca}</span>}
+                          {item.TipoChip && <span>Chip: {item.TipoChip}</span>}
+                          {item.Frecuencia && <span>Freq: {item.Frecuencia}</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Precio + Stock — columna derecha */}
+                    <div className="shrink-0 text-right">
+                      <div className="text-base font-black text-slate-900">{fmtMoney(item.PrecioVenta)}</div>
+                      {Number(item.CostoReferencia) > 0 && (
+                        <div className="text-[10px] text-slate-400">Costo: {fmtMoney(item.CostoReferencia)}</div>
+                      )}
+                      {/* Stock badge */}
+                      {!esServicio && item.AlertaStock && (
+                        <span className={`mt-1 inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-[11px] font-black ${
+                          isOut
+                            ? "bg-rose-100 text-rose-900 border border-rose-200"
+                            : isLow
+                            ? "bg-amber-100 text-amber-900 border border-amber-200"
+                            : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                        }`}>
+                          {isOut ? "Agotado" : isLow ? `${stock} ⚠` : `${stock} pzs`}
+                        </span>
+                      )}
+                      {!esServicio && !item.AlertaStock && (
+                        <span className="mt-1 inline-flex rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-400 border border-slate-200">
+                          Sin ctrl.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fila inferior: botones de acción */}
+                  <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                    {/* Contar Stock */}
+                    {!esServicio && item.Activo && item.AlertaStock && (
+                      <button
+                        type="button"
+                        onClick={() => openCountModal(item)}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 active:scale-95 cursor-pointer"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect width="18" height="18" x="3" y="3" rx="2" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="12" y1="8" x2="12" y2="16" />
+                        </svg>
+                        <span>Contar</span>
+                      </button>
+                    )}
+
+                    {/* Editar */}
+                    <button
+                      type="button"
+                      onClick={() => openEditItemModal(item)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 active:scale-95 cursor-pointer"
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      </svg>
+                      <span>Editar</span>
+                    </button>
+
+                    {/* Eliminar / Reactivar */}
+                    {!item.Activo ? (
+                      <button
+                        type="button"
+                        onClick={() => handleReactivarItem(item)}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 active:scale-95 cursor-pointer"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                        </svg>
+                        <span>Reactivar</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item)}
+                        className="flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 p-2 text-xs font-bold text-rose-700 active:scale-95 cursor-pointer"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ═══════════════════════════════════════════════════ */}
+          {/* DESKTOP: Tabla completa (≥ lg)                     */}
+          {/* ═══════════════════════════════════════════════════ */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  <th className="py-3.5 pl-6 pr-3">Producto / Servicio</th>
+                  <th className="px-3 py-3.5">Categoría</th>
+                  <th className="px-3 py-3.5">Ubicación (Rack / Cajón)</th>
+                  <th className="px-3 py-3.5">Precio Venta</th>
+                  <th className="px-3 py-3.5">Stock Físico</th>
+                  <th className="py-3.5 pl-3 pr-6 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {itemsFiltrados.map((item) => {
+                  const esServicio = Boolean(item.EsServicio);
+                  const stock = Number(item.StockActual ?? 0);
+                  const min = Number(item.StockMinimo ?? 0);
+                  const isLow = !esServicio && stock <= min && stock > 0;
+                  const isOut = !esServicio && stock === 0;
+
+                  const catName = catMap.get(String(item.IdCategoria)) || item.NombreCategoria || "-";
+                  const imgUrl = item.ImagenUrl ? resolveImageUrl(item.ImagenUrl, { apiBaseUrl: API_URL }) : null;
+
+                  return (
+                    <tr key={item.IdItem} className="hover:bg-slate-50/70 transition-colors">
+                      {/* PRODUCTO CON FOTO */}
+                      <td className="py-3.5 pl-6 pr-3">
+                        <div className="flex items-center gap-3">
+                          {imgUrl ? (
+                            <img
+                              src={imgUrl}
+                              alt={item.Nombre}
+                              onClick={() => setZoomSrc(imgUrl)}
+                              className="h-11 w-11 shrink-0 rounded-2xl border border-slate-200 object-cover p-0.5 cursor-zoom-in hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
+                              {esServicio ? (
+                                <svg className="h-5 w-5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                                </svg>
+                              ) : (
+                                <svg className="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="m21 2-2 2m-1.5 1.5L10 13l-4 4-2-2 4-4 7.5-7.5" /><circle cx="7.5" cy="16.5" r="3.5" />
+                                </svg>
+                              )}
+                            </div>
+                          )}
+
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <strong className="font-extrabold text-slate-900 text-sm">{item.Nombre}</strong>
+                              {esServicio && (
+                                <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[10px] font-black text-purple-800">Servicio</span>
+                              )}
+                              {!item.Activo && (
+                                <span className="rounded-md bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-black text-rose-700">Inactivo</span>
+                              )}
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-medium">
+                              {item.CompatibilidadMarca && <span>Marca: {item.CompatibilidadMarca}</span>}
+                              {item.TipoChip && <span>Chip: {item.TipoChip}</span>}
+                              {item.Frecuencia && <span>Freq: {item.Frecuencia}</span>}
                             </div>
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* CATEGORÍA */}
-                        <td className="px-3 py-3.5">
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700">
-                            {catName}
+                      {/* CATEGORÍA */}
+                      <td className="px-3 py-3.5">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700">{catName}</span>
+                      </td>
+
+                      {/* COORDENADA / UBICACIÓN */}
+                      <td className="px-3 py-3.5">
+                        {item.CodigoUbicacion ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-900 shadow-2xs">
+                            <svg className="h-3.5 w-3.5 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
+                            </svg>
+                            <span>{item.CodigoUbicacion}</span>
                           </span>
-                        </td>
+                        ) : (
+                          <span className="text-[11px] font-medium text-slate-400 italic">Sin coordenada</span>
+                        )}
+                      </td>
 
-                        {/* COORDENADA / UBICACIÓN */}
-                        <td className="px-3 py-3.5">
-                          {item.CodigoUbicacion ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-900 shadow-2xs">
-                              <svg className="h-3.5 w-3.5 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                                <circle cx="12" cy="10" r="3" />
-                              </svg>
-                              <span>{item.CodigoUbicacion}</span>
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-medium text-slate-400 italic">
-                              Sin coordenada
-                            </span>
+                      {/* PRECIO VENTA & COSTO */}
+                      <td className="px-3 py-3.5">
+                        <div>
+                          <strong className="text-sm font-black text-slate-900">{fmtMoney(item.PrecioVenta)}</strong>
+                          {Number(item.CostoReferencia) > 0 && (
+                            <div className="text-[11px] font-semibold text-slate-400">Costo: {fmtMoney(item.CostoReferencia)}</div>
                           )}
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* PRECIO VENTA & COSTO */}
-                        <td className="px-3 py-3.5">
-                          <div>
-                            <strong className="text-sm font-black text-slate-900">
-                              {fmtMoney(item.PrecioVenta)}
-                            </strong>
-                            {Number(item.CostoReferencia) > 0 && (
-                              <div className="text-[11px] font-semibold text-slate-400">
-                                Costo: {fmtMoney(item.CostoReferencia)}
-                              </div>
-                            )}
+                      {/* STOCK FÍSICO */}
+                      <td className="px-3 py-3.5">
+                        {esServicio ? (
+                          <span className="text-[11px] font-bold text-slate-400">Servicio (N/A)</span>
+                        ) : !item.AlertaStock ? (
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 border border-slate-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                              Sin control stock
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAlertaStock(item)}
+                              className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              + Activar control
+                            </button>
                           </div>
-                        </td>
-
-                        {/* STOCK FÍSICO */}
-                        <td className="px-3 py-3.5">
-                          {esServicio ? (
-                            <span className="text-[11px] font-bold text-slate-400">Servicio (N/A)</span>
-                          ) : !item.AlertaStock ? (
-                            <div className="flex flex-col items-start gap-1">
-                              <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 border border-slate-200">
-                                <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
-                                Sin control stock
+                        ) : (
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex items-center justify-center rounded-xl px-2.5 py-1 text-xs font-black ${
+                                isOut
+                                  ? "bg-rose-100 text-rose-900 border border-rose-200"
+                                  : isLow
+                                  ? "bg-amber-100 text-amber-900 border border-amber-200"
+                                  : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                              }`}>
+                                {stock} piezas
                               </span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-2 text-[10px] font-medium text-slate-400">
+                              <span>Mínimo alerta: {min}</span>
+                              <span>·</span>
                               <button
                                 type="button"
                                 onClick={() => handleToggleAlertaStock(item)}
-                                className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                                title="Activar conteo y alertas de stock para este producto"
+                                className="text-slate-400 hover:text-slate-600 hover:underline cursor-pointer"
                               >
-                                + Activar control
+                                Desactivar
                               </button>
                             </div>
-                          ) : (
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`inline-flex items-center justify-center rounded-xl px-2.5 py-1 text-xs font-black ${
-                                    isOut
-                                      ? "bg-rose-100 text-rose-900 border border-rose-200"
-                                      : isLow
-                                      ? "bg-amber-100 text-amber-900 border border-amber-200"
-                                      : "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                                  }`}
-                                >
-                                  {stock} piezas
-                                </span>
-                              </div>
-                              <div className="mt-0.5 flex items-center gap-2 text-[10px] font-medium text-slate-400">
-                                <span>Mínimo alerta: {min}</span>
-                                <span>·</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleAlertaStock(item)}
-                                  className="text-slate-400 hover:text-slate-600 hover:underline cursor-pointer"
-                                  title="Desactivar conteo y alertas de stock para este producto"
-                                >
-                                  Desactivar
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </td>
+                          </div>
+                        )}
+                      </td>
 
-                        {/* ACCIONES */}
-                        <td className="py-3.5 pl-3 pr-6 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* BOTÓN CONTAR STOCK RÁPIDO */}
-                            {!esServicio && item.Activo && item.AlertaStock && (
-                              <button
-                                type="button"
-                                onClick={() => openCountModal(item)}
-                                title="Contar o ajustar inventario físico"
-                                className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700 shadow-2xs hover:bg-blue-100 active:scale-95 cursor-pointer"
-                              >
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <rect width="18" height="18" x="3" y="3" rx="2" />
-                                  <line x1="8" y1="12" x2="16" y2="12" />
-                                  <line x1="12" y1="8" x2="12" y2="16" />
-                                </svg>
-                                <span>Contar Stock</span>
-                              </button>
-                            )}
-
-                            {/* BOTÓN EDITAR */}
+                      {/* ACCIONES */}
+                      <td className="py-3.5 pl-3 pr-6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {!esServicio && item.Activo && item.AlertaStock && (
                             <button
                               type="button"
-                              onClick={() => openEditItemModal(item)}
-                              title="Editar producto completo"
-                              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-100 active:scale-95 cursor-pointer"
+                              onClick={() => openCountModal(item)}
+                              title="Contar o ajustar inventario físico"
+                              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700 shadow-2xs hover:bg-blue-100 active:scale-95 cursor-pointer"
                             >
-                              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="12" y1="8" x2="12" y2="16" />
                               </svg>
-                              <span>Editar</span>
+                              <span>Contar Stock</span>
                             </button>
-
-                            {/* BOTÓN ELIMINAR / REACTIVAR */}
-                            {!item.Activo ? (
-                              <button
-                                type="button"
-                                onClick={() => handleReactivarItem(item)}
-                                title="Reactivar producto / servicio"
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-black text-emerald-700 shadow-2xs hover:bg-emerald-100 active:scale-95 cursor-pointer"
-                              >
-                                <svg className="h-3.5 w-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                                  <path d="M21 3v5h-5" />
-                                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                                  <path d="M8 16H3v5" />
-                                </svg>
-                                <span>Reactivar</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteItem(item)}
-                                title="Desactivar item"
-                                className="rounded-xl border border-rose-200 bg-rose-50 p-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 active:scale-95 cursor-pointer"
-                              >
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {itemsFiltrados.length === 0 && !isLoading && (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-xs font-semibold text-slate-400">
-                        No se encontraron productos o servicios con los filtros aplicados.
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openEditItemModal(item)}
+                            title="Editar producto completo"
+                            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-100 active:scale-95 cursor-pointer"
+                          >
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            </svg>
+                            <span>Editar</span>
+                          </button>
+                          {!item.Activo ? (
+                            <button
+                              type="button"
+                              onClick={() => handleReactivarItem(item)}
+                              title="Reactivar producto / servicio"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-black text-emerald-700 shadow-2xs hover:bg-emerald-100 active:scale-95 cursor-pointer"
+                            >
+                              <svg className="h-3.5 w-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                              </svg>
+                              <span>Reactivar</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(item)}
+                              title="Desactivar item"
+                              className="rounded-xl border border-rose-200 bg-rose-50 p-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 active:scale-95 cursor-pointer"
+                            >
+                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+
+                {itemsFiltrados.length === 0 && !isLoading && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-xs font-semibold text-slate-400">
+                      No se encontraron productos o servicios con los filtros aplicados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+    )}
 
       {/* ======================================================== */}
       {/* TAB 2: CATEGORÍAS                                        */}

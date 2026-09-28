@@ -212,12 +212,12 @@ export default function ReportesPage() {
   }, [tendencia]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="space-y-6 text-slate-800">
       {/* Cabecera Principal */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm print:hidden">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm print:hidden">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs shrink-0">
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="20" x2="18" y2="10" />
                 <line x1="12" y1="20" x2="12" y2="4" />
@@ -225,8 +225,8 @@ export default function ReportesPage() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Inteligencia y Reportes</h1>
-              <p className="text-sm text-slate-500 font-medium">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Inteligencia y Reportes</h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium">
                 Análisis financiero, márgenes reales y rendimiento de productos para toma de decisiones
               </p>
             </div>
@@ -234,48 +234,48 @@ export default function ReportesPage() {
         </div>
 
         {/* Acciones Rápidas */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all border border-slate-300 shadow-sm cursor-pointer"
+            className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs sm:text-sm transition-all border border-slate-300 shadow-sm cursor-pointer"
           >
             <svg className="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 6 2 18 2 18 9" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
               <rect x="6" y="14" width="12" height="8" />
             </svg>
-            <span>Imprimir reporte</span>
+            <span>Imprimir</span>
           </button>
           <button
             type="button"
             onClick={() => navigate("/items")}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all border border-slate-300 shadow-sm cursor-pointer"
+            className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs sm:text-sm transition-all border border-slate-300 shadow-sm cursor-pointer"
           >
             <svg className="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 8 12 3 3 8l9 5 9-5Z" />
               <path d="M3 8v8l9 5 9-5V8" />
               <path d="M12 13v8" />
             </svg>
-            <span>Catálogo & Stock</span>
+            <span>Catálogo</span>
           </button>
           <button
             type="button"
             onClick={() => navigate("/ventas")}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all border border-slate-300 shadow-sm cursor-pointer"
+            className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs sm:text-sm transition-all border border-slate-300 shadow-sm cursor-pointer"
           >
             <svg className="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
               <path d="M8 7h8M8 11h8M8 15h5" />
             </svg>
-            <span>Historial Tickets</span>
+            <span>Tickets</span>
           </button>
         </div>
       </div>
 
       {/* Selector de Rango Temporal */}
-      <div className="bg-white p-2.5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-2 print:hidden">
-        <span className="text-xs font-black uppercase tracking-wider text-slate-400 px-3">Periodo:</span>
+      <div className="bg-white p-2.5 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar print:hidden">
+        <span className="text-xs font-black uppercase tracking-wider text-slate-400 px-2 shrink-0">Periodo:</span>
         {RANGE_OPTIONS.map((r) => {
           const active = range === r.key;
           return (
@@ -283,14 +283,14 @@ export default function ReportesPage() {
               key={r.key}
               type="button"
               onClick={() => updateRange(r.key)}
-              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                 active
                   ? "bg-slate-900 text-white shadow-md shadow-slate-200 scale-[1.02]"
                   : "bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200"
               }`}
             >
               <span>{r.label}</span>
-              <span className={`text-[11px] font-medium ${active ? "text-slate-300" : "text-slate-400"}`}>
+              <span className={`text-[10px] sm:text-[11px] font-medium ${active ? "text-slate-300" : "text-slate-400"}`}>
                 ({r.sub})
               </span>
             </button>
@@ -537,49 +537,85 @@ export default function ReportesPage() {
             No se registraron ventas ni gastos en el rango seleccionado.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-200">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4">Fecha</th>
-                  <th className="py-3 px-4 text-right">Ventas</th>
-                  <th className="py-3 px-4 text-right">Gastos</th>
-                  <th className="py-3 px-4 text-right">Ganancia Neta</th>
-                  <th className="py-3 px-4 text-right">Tickets</th>
-                  <th className="py-3 px-4 w-1/4">Volumen</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {tendencia.map((d) => {
-                  const ventaPct = (d.ventas / maxDiaVenta) * 100;
-                  return (
-                    <tr key={d.fecha} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-bold text-slate-900">{fmtDate(d.fecha)}</td>
-                      <td className="py-3 px-4 text-right font-black text-slate-900">{fmtMoney(d.ventas)}</td>
-                      <td className="py-3 px-4 text-right font-bold text-rose-600">
-                        {d.gastos > 0 ? fmtMoney(d.gastos) : "-"}
-                      </td>
-                      <td
-                        className={`py-3 px-4 text-right font-black ${
-                          d.ganancia >= 0 ? "text-emerald-600" : "text-rose-600"
-                        }`}
-                      >
-                        {fmtMoney(d.ganancia)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-medium text-slate-500">{d.tickets}</td>
-                      <td className="py-3 px-4">
-                        <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                          <div
-                            className="bg-indigo-600 h-2.5 rounded-full"
-                            style={{ width: `${Math.min(100, Math.max(4, ventaPct))}%` }}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            {/* Vista Móvil: Cards (< md) */}
+            <div className="md:hidden divide-y divide-slate-100 bg-white">
+              {tendencia.map((d) => {
+                const ventaPct = (d.ventas / maxDiaVenta) * 100;
+                return (
+                  <div key={d.fecha} className="p-3.5 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-sm text-slate-900">{fmtDate(d.fecha)}</span>
+                      <span className={`text-sm font-black ${d.ganancia >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {d.ganancia >= 0 ? "+" : ""}{fmtMoney(d.ganancia)}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 gap-1.5 font-medium">
+                      <span>Ventas: <strong className="text-slate-800 font-bold">{fmtMoney(d.ventas)}</strong></span>
+                      {d.gastos > 0 && (
+                        <span>Gastos: <strong className="text-rose-600 font-bold">-{fmtMoney(d.gastos)}</strong></span>
+                      )}
+                      <span className="text-slate-400 font-semibold">{d.tickets} {d.tickets === 1 ? "ticket" : "tickets"}</span>
+                    </div>
+
+                    {/* Barra de volumen diario */}
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-indigo-600 h-2 rounded-full"
+                        style={{ width: `${Math.min(100, Math.max(4, ventaPct))}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Vista Desktop: Tabla completa (≥ md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Fecha</th>
+                    <th className="py-3 px-4 text-right">Ventas</th>
+                    <th className="py-3 px-4 text-right">Gastos</th>
+                    <th className="py-3 px-4 text-right">Ganancia Neta</th>
+                    <th className="py-3 px-4 text-right">Tickets</th>
+                    <th className="py-3 px-4 w-1/4">Volumen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {tendencia.map((d) => {
+                    const ventaPct = (d.ventas / maxDiaVenta) * 100;
+                    return (
+                      <tr key={d.fecha} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-bold text-slate-900">{fmtDate(d.fecha)}</td>
+                        <td className="py-3 px-4 text-right font-black text-slate-900">{fmtMoney(d.ventas)}</td>
+                        <td className="py-3 px-4 text-right font-bold text-rose-600">
+                          {d.gastos > 0 ? fmtMoney(d.gastos) : "-"}
+                        </td>
+                        <td
+                          className={`py-3 px-4 text-right font-black ${
+                            d.ganancia >= 0 ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          {fmtMoney(d.ganancia)}
+                        </td>
+                        <td className="py-3 px-4 text-right font-medium text-slate-500">{d.tickets}</td>
+                        <td className="py-3 px-4">
+                          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                            <div
+                              className="bg-indigo-600 h-2.5 rounded-full"
+                              style={{ width: `${Math.min(100, Math.max(4, ventaPct))}%` }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
@@ -618,47 +654,103 @@ export default function ReportesPage() {
               Sin ventas registradas en el periodo.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
-                  <tr>
-                    <th className="py-2.5 px-3">#</th>
-                    <th className="py-2.5 px-3">Producto</th>
-                    <th className="py-2.5 px-3 text-right">Unidades</th>
-                    <th className="py-2.5 px-3 text-right">Ingresos</th>
-                    <th className="py-2.5 px-3 text-center">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {best.map((r, idx) => {
-                    const isSelected = String(r.IdItem) === String(itemId);
-                    return (
-                      <tr
-                        key={r.IdItem}
-                        className={`transition-colors ${
-                          isSelected ? "bg-indigo-50/75 font-semibold" : "hover:bg-slate-50/80"
-                        }`}
-                      >
-                        <td className="py-2.5 px-3 font-bold text-slate-400 text-xs">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900 truncate max-w-[180px]">
-                          {r.Nombre || `#${r.IdItem}`}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-black text-slate-900">{r.Unidades}</td>
-                        <td className="py-2.5 px-3 text-right font-black text-indigo-700">{fmtMoney(r.Ingresos)}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => selectItem(r.IdItem)}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl transition-all cursor-pointer"
-                          >
-                            Ver
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              {/* Vista Móvil: Cards (< md) */}
+              <div className="md:hidden divide-y divide-slate-100 bg-white">
+                {best.map((r, idx) => {
+                  const isSelected = String(r.IdItem) === String(itemId);
+                  return (
+                    <div
+                      key={r.IdItem}
+                      className={`p-3.5 space-y-2 transition-colors ${
+                        isSelected ? "bg-indigo-50/75" : "hover:bg-slate-50/80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                            idx === 0
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : idx === 1
+                              ? "bg-slate-200 text-slate-800"
+                              : idx === 2
+                              ? "bg-amber-50 text-amber-800 border border-amber-200"
+                              : "bg-slate-100 text-slate-500"
+                          }`}>
+                            #{idx + 1}
+                          </span>
+                          <span className="font-bold text-sm text-slate-900 leading-snug">
+                            {r.Nombre || `#${r.IdItem}`}
+                          </span>
+                        </div>
+                        <span className="font-black text-sm text-indigo-700 shrink-0">
+                          {fmtMoney(r.Ingresos)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-0.5">
+                        <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 font-bold text-slate-700 border border-slate-200/80">
+                          <strong className="text-slate-900 font-extrabold">{r.Unidades}</strong> {r.Unidades === 1 ? "unidad vendida" : "unidades vendidas"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => selectItem(r.IdItem)}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl transition-all cursor-pointer border border-indigo-200/80 text-xs active:scale-95"
+                        >
+                          <span>Ver detalle</span>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Vista Desktop: Tabla completa (≥ md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-3">#</th>
+                      <th className="py-2.5 px-3">Producto</th>
+                      <th className="py-2.5 px-3 text-right">Unidades</th>
+                      <th className="py-2.5 px-3 text-right">Ingresos</th>
+                      <th className="py-2.5 px-3 text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {best.map((r, idx) => {
+                      const isSelected = String(r.IdItem) === String(itemId);
+                      return (
+                        <tr
+                          key={r.IdItem}
+                          className={`transition-colors ${
+                            isSelected ? "bg-indigo-50/75 font-semibold" : "hover:bg-slate-50/80"
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-bold text-slate-400 text-xs">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900 truncate max-w-[180px]">
+                            {r.Nombre || `#${r.IdItem}`}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-black text-slate-900">{r.Unidades}</td>
+                          <td className="py-2.5 px-3 text-right font-black text-indigo-700">{fmtMoney(r.Ingresos)}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => selectItem(r.IdItem)}
+                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl transition-all cursor-pointer"
+                            >
+                              Ver
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
@@ -696,47 +788,95 @@ export default function ReportesPage() {
               Sin datos para este periodo.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
-                  <tr>
-                    <th className="py-2.5 px-3">#</th>
-                    <th className="py-2.5 px-3">Producto</th>
-                    <th className="py-2.5 px-3 text-right">Unidades</th>
-                    <th className="py-2.5 px-3 text-right">Ingresos</th>
-                    <th className="py-2.5 px-3 text-center">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {worst.map((r, idx) => {
-                    const isSelected = String(r.IdItem) === String(itemId);
-                    return (
-                      <tr
-                        key={r.IdItem}
-                        className={`transition-colors ${
-                          isSelected ? "bg-indigo-50/75 font-semibold" : "hover:bg-slate-50/80"
-                        }`}
-                      >
-                        <td className="py-2.5 px-3 font-bold text-slate-400 text-xs">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900 truncate max-w-[180px]">
-                          {r.Nombre || `#${r.IdItem}`}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-black text-slate-600">{r.Unidades}</td>
-                        <td className="py-2.5 px-3 text-right font-black text-slate-600">{fmtMoney(r.Ingresos)}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => selectItem(r.IdItem)}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl transition-all cursor-pointer"
-                          >
-                            Ver
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              {/* Vista Móvil: Cards (< md) */}
+              <div className="md:hidden divide-y divide-slate-100 bg-white">
+                {worst.map((r, idx) => {
+                  const isSelected = String(r.IdItem) === String(itemId);
+                  return (
+                    <div
+                      key={r.IdItem}
+                      className={`p-3.5 space-y-2 transition-colors ${
+                        isSelected ? "bg-indigo-50/75" : "hover:bg-slate-50/80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 text-xs font-black">
+                            #{idx + 1}
+                          </span>
+                          <span className="font-bold text-sm text-slate-900 leading-snug">
+                            {r.Nombre || `#${r.IdItem}`}
+                          </span>
+                        </div>
+                        <span className="font-black text-sm text-slate-700 shrink-0">
+                          {fmtMoney(r.Ingresos)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-0.5">
+                        <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 font-bold text-slate-700 border border-slate-200/80">
+                          <strong className="text-slate-900 font-extrabold">{r.Unidades}</strong> {r.Unidades === 1 ? "unidad vendida" : "unidades vendidas"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => selectItem(r.IdItem)}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl transition-all cursor-pointer border border-indigo-200/80 text-xs active:scale-95"
+                        >
+                          <span>Ver detalle</span>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Vista Desktop: Tabla completa (≥ md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-3">#</th>
+                      <th className="py-2.5 px-3">Producto</th>
+                      <th className="py-2.5 px-3 text-right">Unidades</th>
+                      <th className="py-2.5 px-3 text-right">Ingresos</th>
+                      <th className="py-2.5 px-3 text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {worst.map((r, idx) => {
+                      const isSelected = String(r.IdItem) === String(itemId);
+                      return (
+                        <tr
+                          key={r.IdItem}
+                          className={`transition-colors ${
+                            isSelected ? "bg-indigo-50/75 font-semibold" : "hover:bg-slate-50/80"
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-bold text-slate-400 text-xs">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900 truncate max-w-[180px]">
+                            {r.Nombre || `#${r.IdItem}`}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-black text-slate-600">{r.Unidades}</td>
+                          <td className="py-2.5 px-3 text-right font-black text-slate-600">{fmtMoney(r.Ingresos)}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => selectItem(r.IdItem)}
+                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl transition-all cursor-pointer"
+                            >
+                              Ver
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
@@ -744,17 +884,17 @@ export default function ReportesPage() {
 
       {/* 5. DRILL-DOWN / DETALLE POR PRODUCTO */}
       {itemId && (
-        <section className="bg-white p-6 rounded-3xl border-2 border-indigo-200 shadow-md space-y-4">
+        <section className="bg-white p-4 sm:p-6 rounded-3xl border-2 border-indigo-200 shadow-md space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                   Detalle de Producto: {itemReport?.item?.Nombre || `Item #${itemId}`}
                 </h3>
                 <p className="text-xs text-slate-400 font-medium">
@@ -765,7 +905,7 @@ export default function ReportesPage() {
             <button
               type="button"
               onClick={() => selectItem("")}
-              className="inline-flex items-center gap-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all cursor-pointer"
             >
               <span>Cerrar detalle</span>
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -783,28 +923,28 @@ export default function ReportesPage() {
           ) : itemReport ? (
             <div className="space-y-6">
               {/* Tarjetas KPI del Item */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                  <div className="text-xs font-black text-slate-400 uppercase">Unidades Vendidas</div>
-                  <div className="text-2xl font-black text-slate-900 mt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-3.5 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div className="text-[11px] font-black text-slate-400 uppercase">Unidades</div>
+                  <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
                     {itemReport.resumen?.Unidades ?? 0}
                   </div>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                  <div className="text-xs font-black text-slate-400 uppercase">Ingresos Generados</div>
-                  <div className="text-2xl font-black text-indigo-600 mt-1">
+                <div className="p-3.5 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div className="text-[11px] font-black text-slate-400 uppercase">Ingresos</div>
+                  <div className="text-xl sm:text-2xl font-black text-indigo-600 mt-1">
                     {fmtMoney(itemReport.resumen?.Ingresos)}
                   </div>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                  <div className="text-xs font-black text-slate-400 uppercase">Tickets Presentes</div>
-                  <div className="text-2xl font-black text-slate-900 mt-1">
+                <div className="p-3.5 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div className="text-[11px] font-black text-slate-400 uppercase">Tickets</div>
+                  <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
                     {itemReport.resumen?.Tickets ?? 0}
                   </div>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                  <div className="text-xs font-black text-slate-400 uppercase">Precio Prom. Venta</div>
-                  <div className="text-2xl font-black text-emerald-600 mt-1">
+                <div className="p-3.5 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div className="text-[11px] font-black text-slate-400 uppercase">Precio Promedio</div>
+                  <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
                     {fmtMoney(itemReport.resumen?.PrecioPromedio)}
                   </div>
                 </div>
@@ -818,27 +958,43 @@ export default function ReportesPage() {
                     Sin ventas de este producto en el rango actual.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                    <table className="w-full text-left border-collapse text-sm">
-                      <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
-                        <tr>
-                          <th className="py-2.5 px-4">Fecha</th>
-                          <th className="py-2.5 px-4 text-right">Unidades</th>
-                          <th className="py-2.5 px-4 text-right">Ingresos</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {itemReport.porDia.map((d) => (
-                          <tr key={String(d.Fecha)} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-2.5 px-4 font-bold text-slate-800">{fmtDate(d.Fecha)}</td>
-                            <td className="py-2.5 px-4 text-right font-black text-slate-900">{d.Unidades}</td>
-                            <td className="py-2.5 px-4 text-right font-black text-indigo-700">
-                              {fmtMoney(d.Ingresos)}
-                            </td>
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                    {/* Vista Móvil: Listado (< sm) */}
+                    <div className="sm:hidden divide-y divide-slate-100 bg-white">
+                      {itemReport.porDia.map((d) => (
+                        <div key={String(d.Fecha)} className="p-3 flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-slate-800 text-xs">{fmtDate(d.Fecha)}</div>
+                            <div className="text-[11px] text-slate-500 font-semibold">{d.Unidades} {d.Unidades === 1 ? "unidad" : "unidades"}</div>
+                          </div>
+                          <div className="font-black text-indigo-700 text-sm">{fmtMoney(d.Ingresos)}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Vista Desktop: Tabla (≥ sm) */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-sm">
+                        <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider">
+                          <tr>
+                            <th className="py-2.5 px-4">Fecha</th>
+                            <th className="py-2.5 px-4 text-right">Unidades</th>
+                            <th className="py-2.5 px-4 text-right">Ingresos</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {itemReport.porDia.map((d) => (
+                            <tr key={String(d.Fecha)} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-2.5 px-4 font-bold text-slate-800">{fmtDate(d.Fecha)}</td>
+                              <td className="py-2.5 px-4 text-right font-black text-slate-900">{d.Unidades}</td>
+                              <td className="py-2.5 px-4 text-right font-black text-indigo-700">
+                                {fmtMoney(d.Ingresos)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
