@@ -19,6 +19,22 @@ async function safeUnlink(absPath) {
     }
 }
 
+async function removeLocalImageFile(url) {
+    if (!url || typeof url !== "string") return false;
+    if (url.startsWith("/uploads/items/")) {
+        const filename = url.split("/uploads/items/")[1] || "";
+        const abs = path.resolve(ITEMS_UPLOAD_DIR, filename);
+        if (abs.startsWith(ITEMS_UPLOAD_DIR)) {
+            try {
+                return await safeUnlink(abs);
+            } catch (e) {
+                console.warn("[upload] No se pudo borrar archivo de imagen física:", abs, e?.message);
+            }
+        }
+    }
+    return false;
+}
+
 class ItemsController {
     async getPosCatalog(req, res) {
         try {
@@ -127,7 +143,20 @@ class ItemsController {
 
     async update(req, res) {
         try {
-            const id = req.params.id;
+            const raw = req.params.id;
+            const id = Number(raw);
+            if (!Number.isInteger(id) || id <= 0) {
+                return res.status(400).json({ error: "ID inválido." });
+            }
+
+            // Si se está cambiando o eliminando la imagen explícitamente (ej: ImagenUrl es null o diferente)
+            if (req.body.ImagenUrl !== undefined) {
+                const oldItem = await ItemsService.getItemById(id, { incluyeInactivos: true });
+                if (oldItem && oldItem.ImagenUrl && oldItem.ImagenUrl !== req.body.ImagenUrl) {
+                    await removeLocalImageFile(oldItem.ImagenUrl);
+                }
+            }
+
             const result = await ItemsService.updateItem(id, req.body);
             res.status(200).json({ message: "Item actualizado exitosamente", result });
         } catch (err) {
@@ -147,9 +176,19 @@ class ItemsController {
 
     async uploadImagen(req, res) {
         try {
-            const id = req.params.id;
+            const raw = req.params.id;
+            const id = Number(raw);
+            if (!Number.isInteger(id) || id <= 0) {
+                return res.status(400).json({ error: "ID inválido." });
+            }
             if (!req.file) {
                 return res.status(400).json({ error: "No se recibió archivo de imagen." });
+            }
+
+            // Borrar imagen previa física si existía
+            const oldItem = await ItemsService.getItemById(id, { incluyeInactivos: true });
+            if (oldItem && oldItem.ImagenUrl) {
+                await removeLocalImageFile(oldItem.ImagenUrl);
             }
 
             const imagenUrl = `/uploads/items/${req.file.filename}`;
@@ -174,27 +213,13 @@ class ItemsController {
                 return res.status(404).json({ error: "Item no encontrado." });
             }
 
-            const currentUrl = item?.ImagenUrl || null;
             let storageDeleted = false;
-            let storageWarning = null;
-
-            if (currentUrl && String(currentUrl).startsWith("/uploads/items/")) {
-                const filename = String(currentUrl).split("/uploads/items/")[1] || "";
-                const abs = path.resolve(ITEMS_UPLOAD_DIR, filename);
-
-                if (!abs.startsWith(ITEMS_UPLOAD_DIR)) {
-                    storageWarning = "Ruta de archivo inválida.";
-                } else {
-                    try {
-                        storageDeleted = await safeUnlink(abs);
-                    } catch (e) {
-                        storageWarning = e?.message || "No se pudo eliminar el archivo local.";
-                    }
-                }
+            if (item?.ImagenUrl) {
+                storageDeleted = await removeLocalImageFile(item.ImagenUrl);
             }
 
             const result = await ItemsService.setImagenUrl(id, null);
-            return res.status(200).json({ message: "Imagen eliminada correctamente", result, storageDeleted, storageWarning });
+            return res.status(200).json({ message: "Imagen eliminada correctamente", result, storageDeleted });
         } catch (err) {
             return res.status(400).json({ error: err.message });
         }
