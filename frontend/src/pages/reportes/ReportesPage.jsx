@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { reportesService } from "../../services/reportes.service";
 
@@ -64,6 +64,7 @@ export default function ReportesPage() {
   const [itemLoading, setItemLoading] = useState(false);
   const [itemError, setItemError] = useState(null);
   const [itemReport, setItemReport] = useState(null);
+  const detailRef = useRef(null);
 
   // Sincronizar rango con query param inicial
   useEffect(() => {
@@ -91,6 +92,12 @@ export default function ReportesPage() {
       p.set("range", range);
       return p;
     });
+
+    if (nextItemId) {
+      setTimeout(() => {
+        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
   }
 
   // Cargar resumen financiero general
@@ -884,7 +891,7 @@ export default function ReportesPage() {
 
       {/* 5. DRILL-DOWN / DETALLE POR PRODUCTO */}
       {itemId && (
-        <section className="bg-white p-4 sm:p-6 rounded-3xl border-2 border-indigo-200 shadow-md space-y-4">
+        <section ref={detailRef} className="scroll-mt-6 bg-white p-4 sm:p-6 rounded-3xl border-2 border-indigo-200 shadow-md space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
