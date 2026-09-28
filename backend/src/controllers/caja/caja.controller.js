@@ -35,12 +35,19 @@ class CajaController {
             const userId = req.usuario?.id_usuario || req.body?.idUsuario || null;
             const { cajaAbierta, bizNow, ultimoCierreAuto } = await CajaService.getEstadoCajaConAutoApertura(userId);
 
-            const autoCloseNotice = ultimoCierreAuto
-                ? {
+            let autoCloseNotice = null;
+            if (ultimoCierreAuto) {
+                const esDiaPrevio = ultimoCierreAuto.esDiaPrevio;
+                const fechaAperturaStr = toIsoDate(ultimoCierreAuto.fechaApertura);
+                const desc = esDiaPrevio
+                    ? `Se cerró automáticamente la caja pendiente del día previo (${fechaAperturaStr}) que quedó abierta sin cierre manual.`
+                    : "Se realizó el cierre automático programado de caja (23:59 CDMX).";
+
+                autoCloseNotice = {
                     ...ultimoCierreAuto,
-                    message: "Se detectó un cierre automático de caja (23:59 CDMX o por caja de día previo sin cierre manual)."
-                }
-                : null;
+                    message: desc,
+                };
+            }
 
             if (!cajaAbierta) {
                 return res.status(200).json({ 

@@ -1,0 +1,18 @@
+# Ignorar archivos de volcado y respaldo
+*.dump
+*.sql
+*.tar
+*.gz
+
+# Ignorar archivos de logs generados
+*.log
+
+# No ignorar scripts ni documentación
+!backup.bat
+!backup.ps1
+!restore.bat
+!restore.ps1
+!setup_task.bat
+!README.md
+!.gitignore
+

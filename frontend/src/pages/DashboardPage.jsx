@@ -70,7 +70,7 @@ export default function DashboardPage() {
         setCajaData(estadoRes?.data || null);
         setEstadoMessage(estadoRes?.message || null);
         setEstadoAlertType(estadoRes?.alertType || null);
-        setAutoCloseNotice(estadoRes?.autoCloseNotice || null);
+        applyAutoCloseNotice(estadoRes?.autoCloseNotice || null);
         setResumen(resumenRes?.data || null);
         setMovimientos(Array.isArray(movsRes?.data) ? movsRes.data : []);
       } catch (e) {
@@ -87,6 +87,26 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  function applyAutoCloseNotice(notice) {
+    if (!notice) {
+      setAutoCloseNotice(null);
+      return;
+    }
+    const key = notice?.idCaja ? `dismissed_autoclose_${notice.idCaja}` : null;
+    if (key && sessionStorage.getItem(key) === "true") {
+      setAutoCloseNotice(null);
+    } else {
+      setAutoCloseNotice(notice);
+    }
+  }
+
+  function dismissAutoCloseNotice() {
+    if (autoCloseNotice?.idCaja) {
+      sessionStorage.setItem(`dismissed_autoclose_${autoCloseNotice.idCaja}`, "true");
+    }
+    setAutoCloseNotice(null);
+  }
 
   useEffect(() => {
     const msg = location?.state?.flash;
@@ -106,7 +126,7 @@ export default function DashboardPage() {
     setCajaData(estadoRes?.data || null);
     setEstadoMessage(estadoRes?.message || null);
     setEstadoAlertType(estadoRes?.alertType || null);
-    setAutoCloseNotice(estadoRes?.autoCloseNotice || null);
+    applyAutoCloseNotice(estadoRes?.autoCloseNotice || null);
     setResumen(resumenRes?.data || null);
     setMovimientos(Array.isArray(movsRes?.data) ? movsRes.data : []);
   }
@@ -178,13 +198,25 @@ export default function DashboardPage() {
       )}
 
       {autoCloseNotice?.message && (
-        <div className="flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800 shadow-xs" role="status">
-          <svg className="h-4 w-4 shrink-0 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-          <span>{autoCloseNotice.message}{autoCloseNotice?.horaCierre ? ` Último cierre automático: ${fmtDateTime(autoCloseNotice.horaCierre)}.` : ""}</span>
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800 shadow-xs" role="status">
+          <div className="flex items-center gap-2">
+            <svg className="h-4 w-4 shrink-0 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span>{autoCloseNotice.message}{autoCloseNotice?.horaCierre ? ` Último cierre automático: ${fmtDateTime(autoCloseNotice.horaCierre)}.` : ""}</span>
+          </div>
+          <button
+            type="button"
+            onClick={dismissAutoCloseNotice}
+            className="text-sky-500 hover:text-sky-700 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
+            title="Cerrar aviso"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 

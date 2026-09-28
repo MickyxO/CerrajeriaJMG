@@ -24,6 +24,15 @@ class InventarioController {
       return res.status(400).json({ error: err.message });
     }
   }
+
+  async registrarDesperdicio(req, res) {
+    try {
+      const result = await InventarioService.registrarDesperdicio(req.body);
+      return res.status(200).json({ message: "Material desperdiciado registrado", result });
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
 }
 
 module.exports = new InventarioController();
