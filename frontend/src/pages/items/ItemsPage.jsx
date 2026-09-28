@@ -94,6 +94,7 @@ export default function ItemsPage() {
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [remoteImageUrl, setRemoteImageUrl] = useState("");
+  const [eliminarFoto, setEliminarFoto] = useState(false);
 
   // Modal: Conteo Físico Rápido y Específico
   const [countModalItem, setCountModalItem] = useState(null);
@@ -408,6 +409,7 @@ export default function ItemsPage() {
     setItemFormError(null);
     setUploadFile(null);
     setRemoteImageUrl("");
+    setEliminarFoto(false);
     setShowItemModal(true);
   }
 
@@ -433,6 +435,7 @@ export default function ItemsPage() {
     setItemFormError(null);
     setUploadFile(null);
     setRemoteImageUrl("");
+    setEliminarFoto(false);
     setShowItemModal(true);
   }
 
@@ -473,6 +476,10 @@ export default function ItemsPage() {
         AlertaStock: Boolean(itemForm.AlertaStock),
       };
 
+      if (eliminarFoto && !uploadFile && !remoteImageUrl.trim()) {
+        payload.ImagenUrl = null;
+      }
+
       let savedItem = null;
       if (itemForm.IdItem) {
         savedItem = await itemsService.actualizarItem(itemForm.IdItem, payload);
@@ -481,6 +488,15 @@ export default function ItemsPage() {
       }
 
       const itemId = savedItem?.IdItem ?? savedItem?.insertId ?? savedItem?.id_item ?? itemForm.IdItem;
+
+      // Si se marcó para eliminar la foto y no se sube una nueva
+      if (itemId && eliminarFoto && !uploadFile && !remoteImageUrl.trim()) {
+        try {
+          await itemsService.eliminarImagen(itemId);
+        } catch (e) {
+          console.warn("Aviso al eliminar imagen:", e);
+        }
+      }
 
       // Subir imagen si se seleccionó archivo o url remota
       if (itemId && uploadFile) {
@@ -2142,22 +2158,104 @@ export default function ItemsPage() {
               </div>
 
               {/* FOTOGRAFÍA */}
-              <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
                 <span className="font-bold text-slate-700">Fotografía del Producto:</span>
-                <div className="flex flex-wrap items-center gap-3">
+
+                {/* Si el item ya tiene una foto guardada y no se ha marcado para borrar */}
+                {itemForm.ImagenUrl && !eliminarFoto && (
+                  <div className="flex items-center justify-between gap-3 p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={resolveImageUrl(itemForm.ImagenUrl, { apiBaseUrl: API_URL })}
+                        alt="Foto actual"
+                        className="h-12 w-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-800 block truncate">Foto actual asignada</span>
+                        <span className="text-[10px] text-slate-400">Puedes reemplazarla abajo o eliminarla</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEliminarFoto(true);
+                        setUploadFile(null);
+                        setRemoteImageUrl("");
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 text-xs transition-all cursor-pointer shrink-0 active:scale-95"
+                      title="Eliminar fotografía y borrar archivo del sistema"
+                    >
+                      <svg className="h-3.5 w-3.5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      <span>Borrar foto</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Aviso si se marcó para eliminar la foto */}
+                {eliminarFoto && (
+                  <div className="flex items-center justify-between p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-bold">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <svg className="h-4 w-4 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
+                      <span className="truncate">La fotografía actual se borrará permanentemente al guardar.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEliminarFoto(false)}
+                      className="text-xs text-rose-700 hover:text-rose-950 underline font-black cursor-pointer shrink-0 ml-2"
+                    >
+                      Deshacer
+                    </button>
+                  </div>
+                )}
+
+                {/* Si se seleccionó un archivo nuevo desde el explorador */}
+                {uploadFile && (
+                  <div className="flex items-center justify-between p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 font-bold">
+                    <span className="truncate">Nueva foto lista: {uploadFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setUploadFile(null)}
+                      className="text-xs text-blue-600 hover:text-blue-900 underline font-black cursor-pointer shrink-0 ml-2"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                )}
+
+                {/* Input de archivo y URL */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <input
                     type="file"
                     accept="image/*"
                     className="text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setUploadFile(file);
+                      if (file) {
+                        setEliminarFoto(false);
+                        setRemoteImageUrl("");
+                      }
+                    }}
                   />
                   <span className="text-[11px] text-slate-400">o URL:</span>
                   <input
                     type="url"
                     placeholder="https://ejemplo.com/foto.jpg"
-                    className="flex-1 min-w-[200px] rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+                    className="flex-1 min-w-[180px] rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
                     value={remoteImageUrl}
-                    onChange={(e) => setRemoteImageUrl(e.target.value)}
+                    onChange={(e) => {
+                      setRemoteImageUrl(e.target.value);
+                      if (e.target.value.trim()) {
+                        setEliminarFoto(false);
+                        setUploadFile(null);
+                      }
+                    }}
                   />
                 </div>
               </div>
