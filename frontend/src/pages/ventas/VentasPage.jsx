@@ -877,6 +877,98 @@ export default function VentasPage() {
           </div>
         </div>
       )}
+
+      {/* ===================== TICKET TÉRMICO IMPRIMIBLE ===================== */}
+      {ticketDetalle && createPortal(
+        <div id="printable-pos-ticket" className="hidden" aria-hidden="true">
+          <div style={{ textAlign: "center", marginBottom: "6px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "1px" }}>
+              CERRAJERÍA JMG
+            </div>
+            <div style={{ fontSize: "9px", marginTop: "2px" }}>
+              Duplicados de Llaves • Programación de Módulos
+            </div>
+            <div style={{ fontSize: "9px" }}>
+              Llaves con Chip • Controles • Carcasas
+            </div>
+            <div style={{ fontSize: "9px" }}>
+              Aperturas Automotrices y Más
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+            <div>
+              <strong>Ticket #:</strong>{" "}
+              {ticketDetalle.IdVenta ?? ticketDetalle.id_venta}
+            </div>
+            <div><strong>Fecha:</strong> {formatDateTime(ticketDetalle.FechaVenta ?? ticketDetalle.fecha_venta)}</div>
+            <div><strong>Cliente:</strong> {ticketDetalle.NombreCliente ?? ticketDetalle.nombre_cliente ?? "Mostrador"}</div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <table style={{ width: "100%", fontSize: "10px", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #000", textAlign: "left" }}>
+                <th style={{ width: "18%", paddingBottom: "2px" }}>Cant</th>
+                <th style={{ width: "52%", paddingBottom: "2px" }}>Concepto</th>
+                <th style={{ width: "30%", textAlign: "right", paddingBottom: "2px" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detalleLineas.map((it, idx) => (
+                <tr key={idx} style={{ verticalAlign: "top" }}>
+                  <td style={{ paddingTop: "2px" }}>{it.cantidad}x</td>
+                  <td style={{ paddingTop: "2px" }}>
+                    <div>{it.nombre_producto ?? it.nombre}</div>
+                    {it.codigoUbicacion && (
+                      <div style={{ fontSize: "8px", color: "#333" }}>
+                        [Ubic: {it.codigoUbicacion}]
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ paddingTop: "2px", textAlign: "right", fontWeight: "bold" }}>
+                    {formatMoney(it.subtotal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <div style={{ fontSize: "10px", textAlign: "right", lineHeight: "1.4" }}>
+            <div>Subtotal: {formatMoney(ticketDetalle.Subtotal ?? ticketDetalle.subtotal ?? 0)}</div>
+            {Number(ticketDetalle.MontoIva ?? ticketDetalle.monto_iva ?? 0) > 0 && (
+              <div>IVA (16%): +{formatMoney(ticketDetalle.MontoIva ?? ticketDetalle.monto_iva)}</div>
+            )}
+            <div style={{ fontSize: "13px", fontWeight: "900", marginTop: "2px" }}>
+              TOTAL: {formatMoney(ticketDetalle.Total ?? ticketDetalle.total ?? 0)}
+            </div>
+            <div>Método: {ticketDetalle.MetodoPago ?? ticketDetalle.metodo_pago ?? "Efectivo"}</div>
+            {(ticketDetalle.MetodoPago ?? ticketDetalle.metodo_pago) === "Efectivo" && (
+              <>
+                <div>Recibido: {formatMoney(ticketDetalle.MontoRecibido ?? ticketDetalle.monto_recibido ?? 0)}</div>
+                {Number(ticketDetalle.Cambio ?? ticketDetalle.cambio ?? 0) > 0 && (
+                  <div style={{ fontWeight: "bold" }}>
+                    Cambio: {formatMoney(ticketDetalle.Cambio ?? ticketDetalle.cambio)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+          <div style={{ textAlign: "center", fontSize: "9px", lineHeight: "1.3" }}>
+            <div style={{ fontWeight: "bold" }}>¡Gracias por su preferencia!</div>
+            <div>Garantía en duplicados presentando este comprobante y llave original.</div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -255,6 +255,29 @@ export default function CajaPage() {
     return ventasTotal - gastosTotal;
   }, [resumen, ventasTotal, gastosTotal]);
 
+  const desgloseUnificado = useMemo(() => {
+    const mapa = {};
+    const ventasList = resumen?.ventas_desglose || [];
+    const gastosList = resumen?.gastos_desglose || [];
+
+    for (const v of ventasList) {
+      const metodo = v.metodo_pago;
+      if (!mapa[metodo]) mapa[metodo] = { metodo_pago: metodo, ingresos: 0, egresos: 0 };
+      mapa[metodo].ingresos += Number(v.total_ventas || 0);
+    }
+
+    for (const g of gastosList) {
+      const metodo = g.metodo_pago;
+      if (!mapa[metodo]) mapa[metodo] = { metodo_pago: metodo, ingresos: 0, egresos: 0 };
+      mapa[metodo].egresos += Number(g.total_gastos || 0);
+    }
+
+    return Object.values(mapa).map(item => ({
+      ...item,
+      gananciaNeta: item.ingresos - item.egresos
+    })).sort((a, b) => b.gananciaNeta - a.gananciaNeta);
+  }, [resumen]);
+
   const movimientosFiltrados = useMemo(() => {
     const list = Array.isArray(movimientos) ? movimientos : [];
     if (filtro === "ENTRADA") return list.filter((m) => m?.tipo === "ENTRADA");
@@ -694,111 +717,77 @@ export default function CajaPage() {
         </div>
       </div>
 
-      {/* 4. DESGLOSE POR MÉTODO DE PAGO Y GASTOS */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* DESGLOSE DE VENTAS */}
-        <section className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                <path d="M3 6h18" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
+      {/* 4. DESGLOSE UNIFICADO POR MÉTODO DE PAGO */}
+      <section className="flex flex-col gap-4 rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-5 mb-2 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 shadow-inner">
+              <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
-              <h2 className="text-sm font-black text-slate-800">Ventas por Método de Pago</h2>
             </div>
-            <strong className="text-base font-black text-blue-700">{fmtMoney(ventasTotal)}</strong>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Ganancia Total del Día</h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-semibold">Desglose por método de pago</p>
+            </div>
           </div>
+          <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/40 border border-indigo-200 px-6 py-3 text-right shadow-sm min-w-[200px]">
+            <span className="block text-[11px] font-extrabold uppercase tracking-widest text-indigo-600 mb-0.5">Ganancia Neta</span>
+            <strong className="text-3xl sm:text-4xl font-black text-indigo-700 tracking-tighter">{fmtMoney(gananciaNeta)}</strong>
+          </div>
+        </div>
 
-          <div className="mt-3 flex flex-col gap-2">
-            {(resumen?.ventas_desglose || []).map((v) => (
-              <div
-                key={`v-${v.metodo_pago}`}
-                className="flex items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-700"
-              >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {desgloseUnificado.map((item) => (
+            <div key={`uni-${item.metodo_pago}`} className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-slate-500">
-                    {v.metodo_pago === "Efectivo" ? (
-                      <svg className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {item.metodo_pago === "Efectivo" ? (
+                      <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="6" width="20" height="12" rx="2" />
                         <circle cx="12" cy="12" r="2" />
                       </svg>
-                    ) : v.metodo_pago === "Tarjeta" ? (
-                      <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    ) : item.metodo_pago === "Tarjeta" ? (
+                      <svg className="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect width="20" height="14" x="2" y="5" rx="2" />
                         <line x1="2" x2="22" y1="10" y2="10" />
                       </svg>
                     ) : (
-                      <svg className="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="h-5 w-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
                         <line x1="12" x2="12.01" y1="18" y2="18" />
                       </svg>
                     )}
                   </span>
-                  <span>{v.metodo_pago}</span>
+                  <span className="font-bold text-slate-800 text-sm">{item.metodo_pago}</span>
                 </div>
-                <strong className="text-slate-900">{fmtMoney(v.total_ventas)}</strong>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ganancia Neta</span>
+                  <strong className="text-base font-black text-slate-900">{fmtMoney(item.gananciaNeta)}</strong>
+                </div>
               </div>
-            ))}
-            {(!resumen?.ventas_desglose || resumen.ventas_desglose.length === 0) && (
-              <div className="py-4 text-center text-xs font-semibold text-slate-400">
-                No hay ventas registradas en esta fecha.
-              </div>
-            )}
-          </div>
-        </section>
 
-        {/* DESGLOSE DE GASTOS */}
-        <section className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <svg className="h-4 w-4 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="8" y1="12" x2="16" y2="12" />
-              </svg>
-              <h2 className="text-sm font-black text-slate-800">Gastos / Salidas de Caja Chica</h2>
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 border border-slate-100 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-500">Ingresos</span>
+                  <span className="text-xs font-black text-emerald-600">+{fmtMoney(item.ingresos)}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 border border-slate-100 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-500">Egresos</span>
+                  <span className="text-xs font-black text-rose-600">-{fmtMoney(item.egresos)}</span>
+                </div>
+              </div>
             </div>
-            <strong className="text-base font-black text-rose-700">{fmtMoney(gastosTotal)}</strong>
-          </div>
+          ))}
 
-          <div className="mt-3 flex flex-col gap-2">
-            {(resumen?.gastos_desglose || []).map((g) => (
-              <div
-                key={`g-${g.metodo_pago}`}
-                className="flex items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-700"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500">
-                    {g.metodo_pago === "Efectivo" ? (
-                      <svg className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="2" y="6" width="20" height="12" rx="2" />
-                        <circle cx="12" cy="12" r="2" />
-                      </svg>
-                    ) : g.metodo_pago === "Tarjeta" ? (
-                      <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect width="20" height="14" x="2" y="5" rx="2" />
-                        <line x1="2" x2="22" y1="10" y2="10" />
-                      </svg>
-                    ) : (
-                      <svg className="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-                        <line x1="12" x2="12.01" y1="18" y2="18" />
-                      </svg>
-                    )}
-                  </span>
-                  <span>{g.metodo_pago}</span>
-                </div>
-                <strong className="text-rose-600">-{fmtMoney(g.total_gastos)}</strong>
-              </div>
-            ))}
-            {(!resumen?.gastos_desglose || resumen.gastos_desglose.length === 0) && (
-              <div className="py-4 text-center text-xs font-semibold text-slate-400">
-                No hay gastos registrados en esta fecha.
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+          {desgloseUnificado.length === 0 && (
+            <div className="py-8 text-center text-sm font-semibold text-slate-400 border border-dashed border-slate-200 rounded-2xl lg:col-span-2">
+              No hay movimientos registrados en esta fecha.
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* 5. TABLA DE MOVIMIENTOS DETALLADOS CON FILTROS */}
       <section className="flex flex-col gap-3 rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs">
