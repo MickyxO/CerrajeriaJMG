@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { itemsService } from "../../services/items.service";
 import { ventasService } from "../../services/ventas.service";
@@ -1624,7 +1625,7 @@ export default function PosPage() {
       </header>
 
       {/* ══ TAB SWITCHER MOBILE: Catálogo ↔ Ticket (solo < xl) ══ */}
-      <div className="xl:hidden flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+      <div className="lg:hidden flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         {/* Tab Catálogo */}
         <button
           type="button"
@@ -1673,9 +1674,9 @@ export default function PosPage() {
       </div>
 
       {/* 2. ÁREA PRINCIPAL: DIVIDIDA EN CATÁLOGO TÁCTIL (IZQUIERDA) Y TICKET/COBRO (DERECHA) */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.55fr_1fr] w-full min-w-0 max-w-full">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.55fr_1fr] w-full min-w-0 max-w-full">
         {/* ===================== COLUMNA IZQUIERDA: CATÁLOGO TÁCTIL ===================== */}
-        <section className={`${mobileView === "catalogo" ? "flex" : "hidden"} xl:flex flex-col min-w-0 max-w-full gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs`}>
+        <section className={`${mobileView === "catalogo" ? "flex" : "hidden"} lg:flex flex-col min-w-0 max-w-full gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs`}>
           {/* A. MACRO-PESTAÑAS PRINCIPALES (TOUCH TABS) */}
           <nav className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Macro Categorías">
             <button
@@ -2651,7 +2652,7 @@ export default function PosPage() {
         </section>
 
         {/* ===================== COLUMNA DERECHA: TICKET Y COBRO ===================== */}
-        <section className={`${mobileView === "ticket" ? "flex" : "hidden"} xl:flex flex-col gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs`}>
+        <section className={`${mobileView === "ticket" ? "flex" : "hidden"} lg:flex flex-col gap-3 rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs`}>
           {/* A. CABECERA DEL TICKET */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
@@ -3249,20 +3250,20 @@ export default function PosPage() {
       )}
 
       {/* ===================== TICKET TÉRMICO IMPRIMIBLE POS (58mm / 80mm) ===================== */}
-      {successModal && (
+      {successModal && createPortal(
         <div id="printable-pos-ticket" className="hidden" aria-hidden="true">
           <div style={{ textAlign: "center", marginBottom: "6px" }}>
             <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "1px" }}>
               CERRAJERÍA JMG
             </div>
             <div style={{ fontSize: "9px", marginTop: "2px" }}>
-              Duplicados de Llaves · Chapas · Candados
+              Duplicados de Llaves · Programación de módulos
             </div>
             <div style={{ fontSize: "9px" }}>
               Llaves con Chip · Controles · Carcasas
             </div>
             <div style={{ fontSize: "9px" }}>
-              Aperturas Residenciales y Automotrices
+              Aperturas Automotrices y Más
             </div>
           </div>
 
@@ -3276,7 +3277,6 @@ export default function PosPage() {
                 : successModal.idVenta}
             </div>
             <div><strong>Fecha:</strong> {successModal.fecha}</div>
-            <div><strong>Atendió:</strong> {successModal.vendedor}</div>
             <div><strong>Cliente:</strong> {successModal.nombreCliente}</div>
           </div>
 
@@ -3338,20 +3338,14 @@ export default function PosPage() {
             )}
           </div>
 
-          {successModal.notas && (
-            <div style={{ marginTop: "4px", fontSize: "9px" }}>
-              <strong>Nota:</strong> {successModal.notas}
-            </div>
-          )}
-
           <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
 
           <div style={{ textAlign: "center", fontSize: "9px", lineHeight: "1.3" }}>
             <div style={{ fontWeight: "bold" }}>¡Gracias por su preferencia!</div>
             <div>Garantía en duplicados presentando este comprobante y llave original.</div>
-            <div style={{ marginTop: "2px" }}>Servicio a domicilio y emergencias</div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ===================== 4. MODAL DE GASTO RÁPIDO ===================== */}

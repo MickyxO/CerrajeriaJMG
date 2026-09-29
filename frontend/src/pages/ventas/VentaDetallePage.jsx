@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { ventasService } from "../../services/ventas.service";
 import { useAuth } from "../../hooks/useAuth";
@@ -97,6 +98,14 @@ export default function VentaDetallePage() {
     );
   }, [venta]);
 
+  const handlePrintTicket = useCallback(() => {
+    document.body.classList.add("printing-pos-ticket");
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-pos-ticket");
+    }, 500);
+  }, []);
+
   async function handleAnular() {
     if (!venta?.IdVenta) return;
     setIsAnulando(true);
@@ -140,7 +149,7 @@ export default function VentaDetallePage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handlePrintTicket}
             className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-slate-200 cursor-pointer"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -337,6 +346,103 @@ export default function VentaDetallePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===================== TICKET TÉRMICO IMPRIMIBLE ===================== */}
+      {venta && createPortal(
+        <div id="printable-pos-ticket" className="hidden" aria-hidden="true">
+          <div style={{ textAlign: "center", marginBottom: "6px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "1px" }}>
+              CERRAJERÍA JMG
+            </div>
+            <div style={{ fontSize: "9px", marginTop: "2px" }}>
+              Duplicados de Llaves • Programación de Módulos
+            </div>
+            <div style={{ fontSize: "9px" }}>
+              Llaves con Chip • Controles • Carcasas
+            </div>
+            <div style={{ fontSize: "9px" }}>
+              Aperturas Automotrices y Más
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+            <div>
+              <strong>Ticket #:</strong>{" "}
+              {venta.IdVenta ?? venta.id_venta}
+            </div>
+            <div><strong>Fecha:</strong> {formatDateTime(venta.FechaVenta ?? venta.fecha_venta)}</div>
+            <div><strong>Cliente:</strong> {venta.NombreCliente ?? venta.nombre_cliente ?? "Mostrador"}</div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <table style={{ width: "100%", fontSize: "10px", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #000", textAlign: "left" }}>
+                <th style={{ width: "18%", paddingBottom: "2px" }}>Cant</th>
+                <th style={{ width: "52%", paddingBottom: "2px" }}>Concepto</th>
+                <th style={{ width: "30%", textAlign: "right", paddingBottom: "2px" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineas.map((it, idx) => (
+                <tr key={idx} style={{ verticalAlign: "top" }}>
+                  <td style={{ paddingTop: "2px" }}>{it.cantidad}x</td>
+                  <td style={{ paddingTop: "2px" }}>
+                    <div>{it.nombre_producto ?? it.nombre}</div>
+                    {it.codigoUbicacion && (
+                      <div style={{ fontSize: "8px", color: "#333" }}>
+                        [Ubic: {it.codigoUbicacion}]
+                      </div>
+                    )}
+                    {it.nota && (
+                      <div style={{ fontSize: "8px", fontStyle: "italic", color: "#444" }}>
+                        ({it.nota})
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ paddingTop: "2px", textAlign: "right", fontWeight: "bold" }}>
+                    {formatMoney(it.subtotal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+          <div style={{ fontSize: "10px", textAlign: "right", lineHeight: "1.4" }}>
+            <div>Subtotal: {formatMoney(venta.Subtotal ?? venta.subtotal ?? 0)}</div>
+            {Number(venta.MontoIva ?? venta.monto_iva ?? 0) > 0 && (
+              <div>IVA (16%): +{formatMoney(venta.MontoIva ?? venta.monto_iva)}</div>
+            )}
+            <div style={{ fontSize: "13px", fontWeight: "900", marginTop: "2px" }}>
+              TOTAL: {formatMoney(venta.Total ?? venta.total ?? 0)}
+            </div>
+            <div>Método: {venta.MetodoPago ?? venta.metodo_pago ?? "Efectivo"}</div>
+            {(venta.MetodoPago ?? venta.metodo_pago) === "Efectivo" && (
+              <>
+                <div>Recibido: {formatMoney(venta.MontoRecibido ?? venta.monto_recibido ?? 0)}</div>
+                {Number(venta.Cambio ?? venta.cambio ?? 0) > 0 && (
+                  <div style={{ fontWeight: "bold" }}>
+                    Cambio: {formatMoney(venta.Cambio ?? venta.cambio)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+          <div style={{ textAlign: "center", fontSize: "9px", lineHeight: "1.3" }}>
+            <div style={{ fontWeight: "bold" }}>¡Gracias por su preferencia!</div>
+            <div>Garantía en duplicados presentando este comprobante y llave original.</div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

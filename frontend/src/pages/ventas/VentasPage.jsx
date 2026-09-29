@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ventasService } from "../../services/ventas.service";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmModal } from "../../hooks/useConfirmModal";
@@ -208,6 +209,14 @@ export default function VentasPage() {
       setLoadingDetalle(false);
     }
   }
+
+  const handlePrintTicket = useCallback(() => {
+    document.body.classList.add("printing-pos-ticket");
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-pos-ticket");
+    }, 500);
+  }, []);
 
   function cerrarTicket() {
     setSelectedTicketId(null);
@@ -580,7 +589,7 @@ export default function VentasPage() {
                 <th className="py-3 px-4">Fecha y Hora</th>
                 <th className="py-3 px-4">Cliente</th>
                 <th className="py-3 px-4">Método</th>
-                <th className="py-3 px-4">Atendió</th>
+                
                 <th className="py-3 px-4 text-center">Estado</th>
                 <th className="py-3 px-4 text-right">Total</th>
                 <th className="py-3 px-4 text-center">Acciones</th>
@@ -618,9 +627,7 @@ export default function VentasPage() {
                         {v.MetodoPago || "Efectivo"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-xs font-semibold text-slate-600">
-                      {v.Vendedor || "Mostrador"}
-                    </td>
+                    
                     <td className="py-3.5 px-4 text-center">
                       <span
                         className={`text-xs font-black px-2.5 py-1 rounded-full border ${
@@ -718,10 +725,7 @@ export default function VentasPage() {
                         <span className="text-slate-500">Cliente:</span>
                         <span className="font-bold">{ticketDetalle.NombreCliente ?? ticketDetalle.nombre_cliente ?? "Mostrador"}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Atendió:</span>
-                        <span className="font-bold">{ticketDetalle.Vendedor ?? ticketDetalle.vendedor ?? "-"}</span>
-                      </div>
+                      
                       <div className="flex justify-between">
                         <span className="text-slate-500">Método de pago:</span>
                         <span className="font-bold">{ticketDetalle.MetodoPago ?? ticketDetalle.metodo_pago ?? "Efectivo"}</span>
@@ -838,7 +842,7 @@ export default function VentasPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
                     <button
                       type="button"
-                      onClick={() => window.print()}
+                      onClick={handlePrintTicket}
                       className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-slate-200 cursor-pointer"
                     >
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
