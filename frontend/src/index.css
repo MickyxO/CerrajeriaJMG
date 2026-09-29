@@ -228,17 +228,18 @@
     position: relative !important;
     left: 0 !important;
     top: 0 !important;
-    width: 76mm !important;
-    max-width: 80mm !important;
+    width: 100% !important;
+    max-width: 56mm !important;
     margin: 0 !important;
     padding: 2mm 3mm !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-family: "Courier New", Courier, monospace !important;
+    font-family: "Aptos Black", "Aptos Slab", sans-serif !important; font-weight: bold !important; color: #000 !important;
     font-size: 11px !important;
     line-height: 1.3 !important;
     box-shadow: none !important;
     border: none !important;
+    word-break: break-word !important;
   }
   @page {
     margin: 0;
