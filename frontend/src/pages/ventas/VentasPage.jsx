@@ -912,9 +912,9 @@ export default function VentasPage() {
           <table style={{ width: "100%", fontSize: "10px", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #000", textAlign: "left" }}>
-                <th style={{ width: "18%", paddingBottom: "2px" }}>Cant</th>
-                <th style={{ width: "52%", paddingBottom: "2px" }}>Concepto</th>
-                <th style={{ width: "30%", textAlign: "right", paddingBottom: "2px" }}>Total</th>
+                <th style={{ width: "15%", paddingBottom: "2px" }}>Cant</th>
+                <th style={{ width: "50%", paddingBottom: "2px" }}>Concepto</th>
+                <th style={{ width: "35%", textAlign: "right", paddingBottom: "2px" }}>Total</th>
               </tr>
             </thead>
             <tbody>
